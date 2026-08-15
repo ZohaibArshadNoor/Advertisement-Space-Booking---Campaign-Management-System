@@ -14,10 +14,10 @@ def create_app(config_class=Config):
     # Create the Flask application.
     app = Flask(__name__)
 
-    # Load configuration from the Config class.
+    # Load configuration from the configuration class.
     app.config.from_object(config_class)
 
-    # Initialize SQLAlchemy with this Flask application.
+    # Initialize SQLAlchemy.
     db.init_app(app)
 
     # Initialize Flask-Migrate.
@@ -29,7 +29,7 @@ def create_app(config_class=Config):
     @app.get("/")
     def health_check():
         """
-        Simple endpoint used to verify that the backend is running.
+        Checks that Flask is running.
         """
 
         return {

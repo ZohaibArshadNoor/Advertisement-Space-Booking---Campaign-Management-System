@@ -3,18 +3,19 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
 
-# SQLAlchemy database object.
+# SQLAlchemy database instance.
 #
-# We create it here but do NOT connect it to Flask yet.
-# The connection happens inside the application factory.
+# The database isn't connected to Flask here.
+# The connection happens inside create_app().
 db = SQLAlchemy()
 
 
-# Handles database schema migrations.
+# Flask-Migrate handles database schema migrations.
 migrate = Migrate()
 
 
-# Handles authentication-related functionality.
+# Flask-Login will handle authentication-related functionality.
 #
-# We will configure this properly when we build authentication.
+# JWT will later be the main authentication mechanism
+# for our React API.
 login_manager = LoginManager()

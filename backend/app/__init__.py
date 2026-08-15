@@ -1,29 +1,40 @@
-import os
-from flask import Flask, jsonify
-from config import config_by_name
-from app.extensions import db, migrate, login_manager, cors
+from flask import Flask
 
-def create_app(config_name=None):
-    """Application factory function."""
-    if config_name is None:
-        config_name = os.getenv("FLASK_ENV", "development")
-        
+from config import Config
+from app.extensions import db, migrate, login_manager
+
+
+def create_app(config_class=Config):
+    """
+    Application factory.
+
+    Creates and configures a Flask application instance.
+    """
+
+    # Create the Flask application.
     app = Flask(__name__)
-    app.config.from_object(config_by_name.get(config_name, config_by_name["default"]))
-    
-    # Initialize extensions
+
+    # Load configuration from the Config class.
+    app.config.from_object(config_class)
+
+    # Initialize SQLAlchemy with this Flask application.
     db.init_app(app)
+
+    # Initialize Flask-Migrate.
     migrate.init_app(app, db)
+
+    # Initialize Flask-Login.
     login_manager.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
-    
-    # Health check & root API ping
-    @app.route("/api/health", methods=["GET"])
+
+    @app.get("/")
     def health_check():
-        return jsonify({
-            "status": "healthy",
-            "message": "Advertisement Space Booking & Campaign Management API is running",
-            "version": "1.0.0"
-        }), 200
+        """
+        Simple endpoint used to verify that the backend is running.
+        """
+
+        return {
+            "success": True,
+            "message": "Advertisement Booking API is running"
+        }
 
     return app

@@ -1,3 +1,4 @@
+from app import models
 from flask import Flask
 
 from config import Config

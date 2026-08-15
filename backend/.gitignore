@@ -1,0 +1,34 @@
+# Python Virtual Environments
+venv/
+env/
+myenv/
+ENV/
+.venv/
+
+# Byte-compiled / optimized / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Flask / Database
+instance/
+*.sqlite3
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Uploads (track directory, ignore files)
+uploads/*
+!uploads/.gitkeep
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

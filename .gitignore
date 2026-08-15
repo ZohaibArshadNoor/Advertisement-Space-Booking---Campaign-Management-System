@@ -1,0 +1,62 @@
+# Root .gitignore for Advertisement Space Booking & Campaign Management System
+
+# Environment Variables (Secrets)
+.env
+.env.*
+!.env.example
+*.local
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+env/
+myenv/
+ENV/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+instance/
+*.sqlite3
+
+# Uploads & User Generated Content
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# IDE & Editor Configs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

@@ -1,8 +1,11 @@
 from app import models
-from flask import Flask
+import click
+from app.auth import auth_bp
+from flasgger import Swagger
 
+from flask import Flask
 from config import Config
-from app.extensions import db, migrate, login_manager
+from app.extensions import db, migrate
 
 
 def create_app(config_class=Config):
@@ -15,6 +18,9 @@ def create_app(config_class=Config):
     # Create the Flask application.
     app = Flask(__name__)
 
+    # Initialize Swagger for API documentation.
+    Swagger(app)
+
     # Load configuration from the configuration class.
     app.config.from_object(config_class)
 
@@ -24,8 +30,9 @@ def create_app(config_class=Config):
     # Initialize Flask-Migrate.
     migrate.init_app(app, db)
 
-    # Initialize Flask-Login.
-    login_manager.init_app(app)
+
+    # Register the authentication Blueprint.
+    app.register_blueprint(auth_bp)
 
     @app.get("/")
     def health_check():
@@ -37,5 +44,17 @@ def create_app(config_class=Config):
             "success": True,
             "message": "Advertisement Booking API is running"
         }
+    
+    @app.cli.command("seed")
+    def seed():
+        """
+        Seed required reference data into the database.
+        """
+
+        from app.seed.seed_data import seed_roles
+
+        seed_roles()
+
+        click.echo("Database seed completed successfully.")
 
     return app

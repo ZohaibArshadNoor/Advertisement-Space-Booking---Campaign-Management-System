@@ -16,6 +16,8 @@ from flask_jwt_extended import (
     jwt_required
 )
 
+from app.common.decorators import roles_required
+
 registration_schema = RegistrationSchema()
 
 
@@ -324,6 +326,34 @@ def get_current_user():
             "is_active": user.is_active
         }
     }), 200
+
+@auth_bp.get("/admin-test")
+@roles_required("Administrator")
+def admin_test():
+    """
+    Test Administrator-only authorization.
+
+    ---
+    tags:
+      - Authorization
+    summary: Administrator authorization test
+    description: Test endpoint accessible only to Administrator users.
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Authorization successful
+      401:
+        description: Authentication required
+      403:
+        description: Insufficient permissions
+    """
+
+    return jsonify({
+        "success": True,
+        "message": "Administrator authorization successful."
+    }), 200
+
 
 
 

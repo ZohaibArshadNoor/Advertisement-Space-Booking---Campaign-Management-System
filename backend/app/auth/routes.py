@@ -11,7 +11,9 @@ from app.models.user import User
 
 from flask_jwt_extended import (
     create_access_token,
-    create_refresh_token
+    create_refresh_token,
+    get_jwt_identity,
+    jwt_required
 )
 
 registration_schema = RegistrationSchema()
@@ -275,4 +277,55 @@ def login():
             "is_active": user.is_active
         }
     }), 200    
+
+@auth_bp.get("/me")
+@jwt_required()
+def get_current_user():
+    """
+    Return the currently authenticated user.
+
+    ---
+    tags:
+      - Authentication
+    summary: Get current authenticated user
+    description: Returns the user associated with the supplied JWT access token.
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Authenticated user information
+      401:
+        description: Missing or invalid access token
+      404:
+        description: User no longer exists
+    """
+
+    # Get the user ID stored inside the JWT.
+    user_id = get_jwt_identity()
+
+    # Load the actual user from PostgreSQL.
+    user = db.session.get(User, int(user_id))
+
+    # A token may still exist even if the corresponding
+    # database user has subsequently been deleted.
+    if user is None:
+        return jsonify({
+            "success": False,
+            "message": "User account no longer exists."
+        }), 404
+
+    return jsonify({
+        "success": True,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role.name,
+            "is_active": user.is_active
+        }
+    }), 200
+
+
+
+
     

@@ -5,7 +5,7 @@ from flasgger import Swagger
 
 from flask import Flask
 from config import Config
-from app.extensions import db, migrate
+from app.extensions import db, migrate, jwt
 
 
 def create_app(config_class=Config):
@@ -29,6 +29,9 @@ def create_app(config_class=Config):
 
     # Initialize Flask-Migrate.
     migrate.init_app(app, db)
+    
+    # Initialize JWT
+    jwt.init_app(app)
 
 
     # Register the authentication Blueprint.

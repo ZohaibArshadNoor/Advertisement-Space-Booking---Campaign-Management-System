@@ -20,3 +20,9 @@ class Config:
 
     # We don't need SQLAlchemy's event tracking system.
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    #Fetch Scret Key from .env 
+    JWT_SECRET_KEY = os.getenv(
+        "JWT_SECRET_KEY",
+        "development-jwt-secret-change-me"
+    )

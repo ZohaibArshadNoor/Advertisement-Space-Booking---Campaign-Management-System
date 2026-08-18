@@ -1,7 +1,6 @@
-from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-
+from flask_jwt_extended import JWTManager
 
 # SQLAlchemy database instance.
 #
@@ -9,13 +8,10 @@ from flask_sqlalchemy import SQLAlchemy
 # The connection happens inside create_app().
 db = SQLAlchemy()
 
-
 # Flask-Migrate handles database schema migrations.
 migrate = Migrate()
 
+# Flask-JWT-Extended will handle JWT authentication for our API.
+jwt = JWTManager()
 
-# Flask-Login will handle authentication-related functionality.
-#
-# JWT will later be the main authentication mechanism
-# for our React API.
-login_manager = LoginManager()
+

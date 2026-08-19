@@ -6,6 +6,7 @@ from flasgger import Swagger
 from config import Config
 from app.auth import auth_bp
 from app.extensions import db, migrate, jwt
+from app.users import users_bp
 
 
 def create_app(config_class=Config):
@@ -67,6 +68,9 @@ def create_app(config_class=Config):
 
     # Register the authentication Blueprint.
     app.register_blueprint(auth_bp)
+    
+    # Register the user management Blueprint.
+    app.register_blueprint(users_bp)
 
     @app.get("/")
     def health_check():

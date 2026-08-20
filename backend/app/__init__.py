@@ -7,6 +7,7 @@ from config import Config
 from app.auth import auth_bp
 from app.extensions import db, migrate, jwt
 from app.users import users_bp
+from app.advertisers import advertisers_bp
 
 
 def create_app(config_class=Config):
@@ -72,6 +73,9 @@ def create_app(config_class=Config):
     # Register the user management Blueprint.
     app.register_blueprint(users_bp)
 
+    # Register the advertiser management Blueprint.
+    app.register_blueprint(advertisers_bp)
+    
     @app.get("/")
     def health_check():
         """

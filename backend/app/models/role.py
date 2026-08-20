@@ -52,6 +52,8 @@ class Role(db.Model):
         back_populates="role"
     )
 
+    
+    
     def __repr__(self):
         """
         Useful representation when debugging in the Flask shell.

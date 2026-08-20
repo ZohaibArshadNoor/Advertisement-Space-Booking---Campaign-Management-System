@@ -7,9 +7,26 @@ them when Flask-Migrate examines the application's metadata.
 
 from app.models.role import Role
 from app.models.user import User
-
+from app.models.space import (
+    SpaceCategory,
+    Location,
+    AdvertisingSpace,
+    RateCard,
+    SpaceAvailability,
+)
+from app.models.advertiser import (
+    Advertiser,
+    AdvertiserContact,
+)
 
 __all__ = [
     "Role",
     "User",
+    "SpaceCategory",
+    "Location",
+    "AdvertisingSpace",
+    "RateCard",
+    "SpaceAvailability",
+    "Advertiser",
+    "AdvertiserContact",
 ]

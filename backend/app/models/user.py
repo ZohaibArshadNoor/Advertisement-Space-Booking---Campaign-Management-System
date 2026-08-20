@@ -48,6 +48,18 @@ class User(UserMixin, db.Model):
         nullable=False
     )
 
+    # Foreign key connecting an advertiser user to an advertiser company.
+    #
+    # This is nullable because internal users such as Administrators,
+    # Sales Executives, Finance Officers, and Space Managers do not
+    # belong to an advertiser organization.
+    advertiser_id = db.Column(
+        db.Integer,
+        db.ForeignKey("advertisers.id"),
+        nullable=True,
+        index=True
+    )
+
     # Allows an administrator to deactivate an account
     # without deleting its historical records.
     is_active = db.Column(
@@ -66,6 +78,13 @@ class User(UserMixin, db.Model):
     # Relationship back to Role.
     role = db.relationship(
         "Role",
+        back_populates="users"
+    )
+    
+    # Relationship to the advertiser organization.
+    # An advertiser organization can have multiple user accounts.
+    advertiser = db.relationship(
+        "Advertiser",
         back_populates="users"
     )
 

@@ -157,3 +157,47 @@ class LocationUpdateSchema(Schema):
             raise ValidationError(
                 "Longitude must be between -180 and 180."
             )
+            
+
+class SpaceCategoryCreateSchema(Schema):
+    """
+    Validates data when creating a new advertising space category.
+
+    Examples:
+    - Billboard
+    - Digital Screen
+    - Transit Advertisement
+    - Website Advertisement
+    """
+
+    name = fields.String(
+        required=True,
+        validate=validate.Length(
+            min=2,
+            max=100
+        )
+    )
+
+
+class SpaceCategoryUpdateSchema(Schema):
+    """
+    Validates data when updating an advertising space category.
+
+    The name is optional because this schema is used for updates.
+    """
+
+    name = fields.String(
+        required=False,
+        validate=validate.Length(
+            min=2,
+            max=100
+        )
+    )            
+            
+            
+            
+            
+            
+            
+            
+            

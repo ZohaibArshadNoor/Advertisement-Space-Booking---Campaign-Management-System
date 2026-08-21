@@ -1,7 +1,8 @@
 from app.extensions import db
 from app.models.space import (
     Location,
-    SpaceCategory
+    SpaceCategory,
+    AdvertisingSpace
 )
 
 
@@ -187,5 +188,172 @@ class SpaceCategoryService:
         return True    
     
     
+class AdvertisingSpaceService:
+    """
+    Handles advertising space database operations.
+
+    AdvertisingSpace is the main inventory record representing
+    a bookable advertising asset.
+    """
+
+    @staticmethod
+    def get_all(
+        page,
+        per_page,
+        category_id=None,
+        location_id=None,
+        city=None,
+        search=None,
+        is_active=None
+    ):
+        """
+        Returns advertising spaces with optional filtering
+        and pagination.
+        """
+
+        query = AdvertisingSpace.query.join(
+            Location
+        ).join(
+            SpaceCategory
+        )
+
+        # Filter by category.
+        if category_id is not None:
+            query = query.filter(
+                AdvertisingSpace.category_id == category_id
+            )
+
+        # Filter by location.
+        if location_id is not None:
+            query = query.filter(
+                AdvertisingSpace.location_id == location_id
+            )
+
+        # Filter by city.
+        if city:
+            query = query.filter(
+                db.func.lower(Location.city)
+                == city.lower()
+            )
+
+        # Search by advertising space name.
+        if search:
+            query = query.filter(
+                AdvertisingSpace.name.ilike(
+                    f"%{search}%"
+                )
+            )
+
+        # Filter by active or inactive status.
+        if is_active is not None:
+            query = query.filter(
+                AdvertisingSpace.is_active == is_active
+            )
+
+        return query.order_by(
+            AdvertisingSpace.name.asc()
+        ).paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+
+    @staticmethod
+    def get_by_id(space_id):
+        """
+        Returns one advertising space by ID.
+
+        Returns None if the space does not exist.
+        """
+
+        return db.session.get(
+            AdvertisingSpace,
+            space_id
+        )
+
+    @staticmethod
+    def create(data):
+        """
+        Creates a new advertising space.
+        """
+
+        space = AdvertisingSpace(
+            category_id=data["category_id"],
+            location_id=data["location_id"],
+            name=data["name"].strip(),
+            description=data.get("description"),
+            dimensions=data.get("dimensions"),
+            base_rate=data["base_rate"]
+        )
+
+        db.session.add(space)
+        db.session.commit()
+
+        return space
+
+    @staticmethod
+    def update(space, data):
+        """
+        Updates only the fields provided by the client.
+        """
+
+        for field, value in data.items():
+
+            # Prevent accidental leading or trailing spaces
+            # in the advertising space name.
+            if field == "name":
+                value = value.strip()
+
+            setattr(
+                space,
+                field,
+                value
+            )
+
+        db.session.commit()
+
+        return space
+
+    @staticmethod
+    def update_status(space, is_active):
+        """
+        Activates or deactivates an advertising space.
+
+        Deactivation is preferred over deletion because
+        spaces may later be connected to bookings, campaigns,
+        contracts, and financial records.
+        """
+
+        space.is_active = is_active
+
+        db.session.commit()
+
+        return space
+
+    @staticmethod
+    def delete(space):
+        """
+        Deletes an advertising space.
+
+        For now, deletion is allowed only if the space has
+        no rate card or availability records.
+
+        As the system grows, booking and campaign relationships
+        will also be checked before deletion.
+        """
+
+        if (
+            space.rate_cards
+            or space.availability_periods
+        ):
+            return False
+
+        db.session.delete(space)
+        db.session.commit()
+
+        return True 
     
+    
+    
+       
     

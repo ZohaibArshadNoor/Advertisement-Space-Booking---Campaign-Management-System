@@ -6,23 +6,29 @@ from app.spaces.schemas import (
     LocationCreateSchema,
     LocationUpdateSchema,
     SpaceCategoryCreateSchema,
-    SpaceCategoryUpdateSchema
+    SpaceCategoryUpdateSchema,
+    AdvertisingSpaceCreateSchema,
+    AdvertisingSpaceUpdateSchema,
+    AdvertisingSpaceStatusSchema
 )
 
 from app.spaces.service import (
     LocationService,
-    SpaceCategoryService
+    SpaceCategoryService,
+    AdvertisingSpaceService
 )
 
 from app.common.decorators import roles_required
 
 
+# ===========================================================================
 # HELPER FUNCTIONS
+# ===========================================================================
+
 def location_to_dict(location):
     """
     Convert a Location database object into JSON-safe data.
     """
-
     return {
         "id": location.id,
         "name": location.name,
@@ -36,7 +42,6 @@ def location_to_dict(location):
             if location.latitude is not None
             else None
         ),
-
         "longitude": (
             str(location.longitude)
             if location.longitude is not None
@@ -47,17 +52,61 @@ def location_to_dict(location):
 
 def category_to_dict(category):
     """
-    Convert a SpaceCategory database object
-    into JSON-safe data.
+    Convert a SpaceCategory database object into JSON-safe data.
     """
-
     return {
         "id": category.id,
         "name": category.name
     }
 
 
+def space_to_dict(space):
+    """
+    Converts an AdvertisingSpace model object into
+    JSON-safe data.
+
+    Related category and location information is included
+    because the frontend will normally need these details
+    when displaying inventory.
+    """
+
+    return {
+        "id": space.id,
+
+        "name": space.name,
+
+        "description": space.description,
+
+        "dimensions": space.dimensions,
+
+        # Decimal values are converted to strings to avoid
+        # JSON precision problems.
+        "base_rate": str(space.base_rate),
+
+        "is_active": space.is_active,
+
+        "created_at": space.created_at.isoformat(),
+
+        "updated_at": space.updated_at.isoformat(),
+
+        "category": {
+            "id": space.category.id,
+            "name": space.category.name
+        },
+
+        "location": {
+            "id": space.location.id,
+            "name": space.location.name,
+            "city": space.location.city,
+            "address": space.location.address
+        }
+    }
+
+
+# ===========================================================================
 # LOCATION ENDPOINTS
+# ===========================================================================
+
 # 1. LIST ALL LOCATIONS
 @spaces_bp.get("/locations")
 @roles_required(
@@ -118,7 +167,6 @@ def get_locations():
       403:
         description: Insufficient permissions
     """
-
     # Step 1: Get all locations from the service layer.
     locations = LocationService.get_all()
 
@@ -203,7 +251,6 @@ def get_location(location_id):
       404:
         description: Location not found
     """
-
     # Step 1: Find the requested location.
     location = LocationService.get_by_id(
         location_id
@@ -222,7 +269,6 @@ def get_location(location_id):
 
 
 # 3. CREATE LOCATION
-
 @spaces_bp.post("/locations")
 @roles_required(
     "Administrator",
@@ -295,7 +341,6 @@ def create_location():
       403:
         description: Insufficient permissions
     """
-
     # Step 1: Read JSON data from the request.
     data = request.get_json()
 
@@ -407,7 +452,6 @@ def update_location(location_id):
       404:
         description: Location not found
     """
-
     # Step 1: Find the existing location.
     location = LocationService.get_by_id(
         location_id
@@ -497,7 +541,6 @@ def delete_location(location_id):
       409:
         description: Cannot delete location with associated advertising spaces
     """
-
     # Step 1: Find the location.
     location = LocationService.get_by_id(
         location_id
@@ -532,7 +575,6 @@ def delete_location(location_id):
 # ===========================================================================
 # SPACE CATEGORY ENDPOINTS
 # ===========================================================================
-
 
 # 6. LIST ALL SPACE CATEGORIES
 @spaces_bp.get("/categories")
@@ -582,7 +624,6 @@ def get_space_categories():
       403:
         description: Insufficient permissions
     """
-
     # Step 1: Get all categories from the service layer.
     categories = SpaceCategoryService.get_all()
 
@@ -653,7 +694,6 @@ def get_space_category(category_id):
       404:
         description: Space category not found
     """
-
     # Step 1: Find the requested category.
     category = SpaceCategoryService.get_by_id(
         category_id
@@ -729,7 +769,6 @@ def create_space_category():
       409:
         description: Space category already exists
     """
-
     # Step 1: Read the request body.
     data = request.get_json()
 
@@ -844,7 +883,6 @@ def update_space_category(category_id):
       409:
         description: Space category name already exists
     """
-
     # Step 1: Find the category.
     category = SpaceCategoryService.get_by_id(
         category_id
@@ -878,7 +916,6 @@ def update_space_category(category_id):
     # Step 4: Check whether the new category name
     # is already being used by another category.
     if "name" in data:
-
         existing_category = (
             SpaceCategoryService.get_by_name(
                 data["name"].strip()
@@ -959,7 +996,6 @@ def delete_space_category(category_id):
       409:
         description: Cannot delete category with associated advertising spaces
     """
-
     # Step 1: Find the category.
     category = SpaceCategoryService.get_by_id(
         category_id
@@ -990,4 +1026,548 @@ def delete_space_category(category_id):
         "message": (
             "Space category deleted successfully."
         )
+    }), 200
+    
+    
+# ==========================================
+# ADVERTISING SPACE ENDPOINTS
+# ==========================================    
+    
+    
+@spaces_bp.get("/")
+@roles_required(
+    "Administrator",
+    "Sales Executive",
+    "Space Manager"
+)
+def get_advertising_spaces():
+    """
+    Return all advertising spaces with filtering and pagination.
+    ---
+    tags:
+      - Advertising Space Management
+
+    summary: List all advertising spaces
+
+    description: >
+      Returns advertising spaces with support for pagination,
+      category, location, city filtering, name search, and active status.
+      Accessible by Administrator, Sales Executive, and Space Manager.
+
+    security:
+      - Bearer: []
+
+    parameters:
+      - name: page
+        in: query
+        type: integer
+        required: false
+        default: 1
+        minimum: 1
+        description: Page number.
+
+      - name: per_page
+        in: query
+        type: integer
+        required: false
+        default: 10
+        minimum: 1
+        maximum: 100
+        description: Number of records per page.
+
+      - name: category_id
+        in: query
+        type: integer
+        required: false
+        description: Filter advertising spaces by category ID.
+
+      - name: location_id
+        in: query
+        type: integer
+        required: false
+        description: Filter advertising spaces by location ID.
+
+      - name: city
+        in: query
+        type: string
+        required: false
+        description: Filter advertising spaces by city.
+
+      - name: search
+        in: query
+        type: string
+        required: false
+        description: Search advertising spaces by name.
+
+      - name: is_active
+        in: query
+        type: boolean
+        required: false
+        description: Filter advertising spaces by active status.
+
+    responses:
+      200:
+        description: Advertising spaces retrieved successfully.
+
+      400:
+        description: Invalid pagination parameters.
+
+      401:
+        description: Authentication required.
+
+      403:
+        description: User does not have permission to access advertising spaces.
+    """
+
+    page = request.args.get(
+        "page",
+        default=1,
+        type=int
+    )
+
+    per_page = request.args.get(
+        "per_page",
+        default=10,
+        type=int
+    )
+
+    category_id = request.args.get(
+        "category_id",
+        type=int
+    )
+
+    location_id = request.args.get(
+        "location_id",
+        type=int
+    )
+
+    city = request.args.get(
+        "city",
+        type=str
+    )
+
+    search = request.args.get(
+        "search",
+        type=str
+    )
+
+    is_active_value = request.args.get(
+        "is_active"
+    )
+
+    is_active = None
+
+    if is_active_value is not None:
+
+        normalized_value = (
+            is_active_value.lower().strip()
+        )
+
+        if normalized_value == "true":
+            is_active = True
+
+        elif normalized_value == "false":
+            is_active = False
+
+        else:
+            return jsonify({
+                "message": (
+                    "is_active must be true or false."
+                )
+            }), 400
+            
+            
+    # Prevent invalid pagination values.
+    if page < 1:
+        return jsonify({
+            "message": "Page must be greater than zero."
+        }), 400
+
+    # Prevent clients from requesting extremely large datasets.
+    if per_page < 1 or per_page > 100:
+        return jsonify({
+            "message": (
+                "per_page must be between 1 and 100."
+            )
+        }), 400
+
+    spaces = AdvertisingSpaceService.get_all(
+        page=page,
+        per_page=per_page,
+        category_id=category_id,
+        location_id=location_id,
+        city=city,
+        search=search,
+        is_active=is_active
+    )
+
+    return jsonify({
+        "spaces": [
+            space_to_dict(space)
+            for space in spaces.items
+        ],
+
+        "pagination": {
+            "page": spaces.page,
+            "per_page": spaces.per_page,
+            "total": spaces.total,
+            "pages": spaces.pages,
+            "has_next": spaces.has_next,
+            "has_prev": spaces.has_prev
+        }
+    }), 200
+
+
+# 2. GET SINGLE ADVERTISING SPACE
+@spaces_bp.get("/<int:space_id>")
+@roles_required(
+    "Administrator",
+    "Sales Executive",
+    "Space Manager",
+    "Advertiser"
+)
+def get_advertising_space(space_id):
+    """
+    Return a single advertising space by ID.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Get an advertising space
+    description: >
+      Returns detailed information for a specific advertising space
+      including its category and physical location.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the advertising space.
+    responses:
+      200:
+        description: Advertising space found.
+      401:
+        description: Authentication required.
+      403:
+        description: Insufficient permissions.
+      404:
+        description: Advertising space not found.
+    """
+    space = AdvertisingSpaceService.get_by_id(space_id)
+
+    if not space:
+        return jsonify({
+            "message": f"Advertising space with ID {space_id} not found."
+        }), 404
+
+    return jsonify({
+        "space": space_to_dict(space)
+    }), 200
+
+
+# 3. CREATE ADVERTISING SPACE
+@spaces_bp.post("/")
+@spaces_bp.post("")
+@roles_required(
+    "Administrator",
+    "Space Manager"
+)
+def create_advertising_space():
+    """
+    Create a new advertising space.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Create an advertising space
+    description: >
+      Creates a new advertising space associated with a valid
+      category and location.
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+            - category_id
+            - location_id
+            - base_rate
+          properties:
+            name:
+              type: string
+              example: "Billboard A-01"
+            category_id:
+              type: integer
+              example: 1
+            location_id:
+              type: integer
+              example: 1
+            description:
+              type: string
+              example: "Large digital billboard facing North highway"
+            dimensions:
+              type: string
+              example: "20x10 ft"
+            base_rate:
+              type: string
+              example: "1500.00"
+    responses:
+      201:
+        description: Space created successfully.
+      400:
+        description: Validation error or invalid category/location.
+      401:
+        description: Authentication required.
+      403:
+        description: Insufficient permissions.
+    """
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    errors = AdvertisingSpaceCreateSchema().validate(data)
+    if errors:
+        return jsonify({
+            "errors": errors
+        }), 400
+
+    # Ensure referenced category exists
+    category = SpaceCategoryService.get_by_id(data["category_id"])
+    if not category:
+        return jsonify({
+            "message": f"SpaceCategory with ID {data['category_id']} does not exist."
+        }), 400
+
+    # Ensure referenced location exists
+    location = LocationService.get_by_id(data["location_id"])
+    if not location:
+        return jsonify({
+            "message": f"Location with ID {data['location_id']} does not exist."
+        }), 400
+
+    space = AdvertisingSpaceService.create(data)
+
+    return jsonify({
+        "message": "Advertising space created successfully.",
+        "space": space_to_dict(space)
+    }), 201
+
+
+# 4. UPDATE ADVERTISING SPACE
+@spaces_bp.put("/<int:space_id>")
+@roles_required(
+    "Administrator",
+    "Space Manager"
+)
+def update_advertising_space(space_id):
+    """
+    Update an existing advertising space.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Update an advertising space
+    description: >
+      Updates advertising space properties like name, dimensions,
+      base rate, category, or location.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            category_id:
+              type: integer
+            location_id:
+              type: integer
+            description:
+              type: string
+            dimensions:
+              type: string
+            base_rate:
+              type: string
+    responses:
+      200:
+        description: Space updated successfully.
+      400:
+        description: Validation error or invalid foreign key.
+      404:
+        description: Space not found.
+    """
+    space = AdvertisingSpaceService.get_by_id(space_id)
+    if not space:
+        return jsonify({
+            "message": f"Advertising space with ID {space_id} not found."
+        }), 404
+
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    errors = AdvertisingSpaceUpdateSchema().validate(data)
+    if errors:
+        return jsonify({
+            "errors": errors
+        }), 400
+
+    # If updating category_id, verify it exists
+    if "category_id" in data:
+        category = SpaceCategoryService.get_by_id(data["category_id"])
+        if not category:
+            return jsonify({
+                "message": f"SpaceCategory with ID {data['category_id']} does not exist."
+            }), 400
+
+    # If updating location_id, verify it exists
+    if "location_id" in data:
+        location = LocationService.get_by_id(data["location_id"])
+        if not location:
+            return jsonify({
+                "message": f"Location with ID {data['location_id']} does not exist."
+            }), 400
+
+    updated_space = AdvertisingSpaceService.update(space, data)
+
+    return jsonify({
+        "message": "Advertising space updated successfully.",
+        "space": space_to_dict(updated_space)
+    }), 200
+
+
+# 5. UPDATE SPACE STATUS (ACTIVATE / DEACTIVATE)
+@spaces_bp.patch("/<int:space_id>/status")
+@spaces_bp.put("/<int:space_id>/status")
+@roles_required(
+    "Administrator",
+    "Space Manager"
+)
+def update_advertising_space_status(space_id):
+    """
+    Activate or deactivate an advertising space.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Update space active status
+    description: >
+      Sets an advertising space to active or inactive.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - is_active
+          properties:
+            is_active:
+              type: boolean
+    responses:
+      200:
+        description: Space status updated successfully.
+      400:
+        description: Validation error.
+      404:
+        description: Space not found.
+    """
+    space = AdvertisingSpaceService.get_by_id(space_id)
+    if not space:
+        return jsonify({
+            "message": f"Advertising space with ID {space_id} not found."
+        }), 404
+
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    errors = AdvertisingSpaceStatusSchema().validate(data)
+    if errors:
+        return jsonify({
+            "errors": errors
+        }), 400
+
+    updated_space = AdvertisingSpaceService.update_status(
+        space,
+        data["is_active"]
+    )
+
+    status_text = "activated" if data["is_active"] else "deactivated"
+    return jsonify({
+        "message": f"Advertising space successfully {status_text}.",
+        "space": space_to_dict(updated_space)
+    }), 200
+
+
+# 6. DELETE ADVERTISING SPACE
+@spaces_bp.delete("/<int:space_id>")
+@roles_required(
+    "Administrator",
+    "Space Manager"
+)
+def delete_advertising_space(space_id):
+    """
+    Delete an advertising space.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Delete an advertising space
+    description: >
+      Deletes an advertising space. Deletion is blocked if the space has
+      associated rate cards, availability records, or bookings.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Space deleted successfully.
+      400:
+        description: Cannot delete space with dependent records.
+      404:
+        description: Space not found.
+    """
+    space = AdvertisingSpaceService.get_by_id(space_id)
+    if not space:
+        return jsonify({
+            "message": f"Advertising space with ID {space_id} not found."
+        }), 404
+
+    deleted = AdvertisingSpaceService.delete(space)
+    if not deleted:
+        return jsonify({
+            "message": (
+                "Cannot delete this advertising space because it has linked "
+                "rate cards, bookings, or availability schedules. Deactivate it instead."
+            )
+        }), 400
+
+    return jsonify({
+        "message": "Advertising space deleted successfully."
     }), 200

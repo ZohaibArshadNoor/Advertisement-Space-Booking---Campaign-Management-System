@@ -195,9 +195,122 @@ class SpaceCategoryUpdateSchema(Schema):
     )            
             
             
-            
-            
-            
-            
-            
-            
+class AdvertisingSpaceCreateSchema(Schema):
+    """
+    Validates data when creating an advertising space.
+
+    Every advertising space must belong to:
+    1. A space category.
+    2. A location.
+    """
+
+    category_id = fields.Integer(
+        required=True,
+        strict=True
+    )
+
+    location_id = fields.Integer(
+        required=True,
+        strict=True
+    )
+
+    name = fields.String(
+        required=True,
+        validate=validate.Length(
+            min=2,
+            max=150
+        )
+    )
+
+    description = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    dimensions = fields.String(
+        required=False,
+        allow_none=True,
+        validate=validate.Length(max=100)
+    )
+
+    base_rate = fields.Decimal(
+        required=True,
+        as_string=True,
+        places=2
+    )
+
+    @validates("base_rate")
+    def validate_base_rate(self, value, **kwargs):
+        """
+        Ensures that the base rate is greater than zero.
+        """
+
+        if value <= 0:
+            raise ValidationError(
+                "Base rate must be greater than zero."
+            )
+
+
+class AdvertisingSpaceUpdateSchema(Schema):
+    """
+    Validates data when updating an advertising space.
+
+    All fields are optional because an update may change
+    only one or more fields.
+    """
+
+    category_id = fields.Integer(
+        required=False,
+        strict=True
+    )
+
+    location_id = fields.Integer(
+        required=False,
+        strict=True
+    )
+
+    name = fields.String(
+        required=False,
+        validate=validate.Length(
+            min=2,
+            max=150
+        )
+    )
+
+    description = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    dimensions = fields.String(
+        required=False,
+        allow_none=True,
+        validate=validate.Length(max=100)
+    )
+
+    base_rate = fields.Decimal(
+        required=False,
+        as_string=True,
+        places=2
+    )
+
+    @validates("base_rate")
+    def validate_base_rate(self, value, **kwargs):
+        """
+        Ensures that the base rate is greater than zero.
+        """
+
+        if value is not None and value <= 0:
+            raise ValidationError(
+                "Base rate must be greater than zero."
+            )
+
+
+class AdvertisingSpaceStatusSchema(Schema):
+    """
+    Validates data when changing the active status of an advertising space.
+    """
+
+    is_active = fields.Boolean(
+        required=True
+    )

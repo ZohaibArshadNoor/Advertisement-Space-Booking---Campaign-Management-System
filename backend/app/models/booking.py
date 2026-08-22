@@ -167,6 +167,8 @@ class Booking(db.Model):
         "Campaign",
         back_populates="bookings"
     )
+    
+    
 
     def __repr__(self):
         return (

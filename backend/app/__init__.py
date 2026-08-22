@@ -10,6 +10,9 @@ from app.users import users_bp
 from app.advertisers import advertisers_bp
 from app.spaces import spaces_bp
 from app.availability import availability_bp
+from app.bookings import bookings_bp
+
+
 
 def create_app(config_class=Config):
     """
@@ -82,6 +85,9 @@ def create_app(config_class=Config):
 
     # Register the space availability management Blueprint.
     app.register_blueprint(availability_bp)
+    
+    # Register the booking management Blueprint.
+    app.register_blueprint(bookings_bp)
     
     @app.get("/")
     def health_check():

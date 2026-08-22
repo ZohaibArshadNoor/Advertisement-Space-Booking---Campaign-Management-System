@@ -12,11 +12,19 @@ from app.models.space import (
     Location,
     AdvertisingSpace,
     RateCard,
-    SpaceAvailability,
+    SpaceAvailability
 )
 from app.models.advertiser import (
     Advertiser,
-    AdvertiserContact,
+    AdvertiserContact
+)
+from app.models.booking import (
+    Booking,
+    BookingStatus
+)
+from app.models.campaign import (
+    Campaign,
+    CampaignStatus
 )
 
 __all__ = [
@@ -29,4 +37,8 @@ __all__ = [
     "SpaceAvailability",
     "Advertiser",
     "AdvertiserContact",
+    "Booking",
+    "BookingStatus",
+    "Campaign",
+    "CampaignStatus"
 ]

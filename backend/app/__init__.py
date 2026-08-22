@@ -9,6 +9,7 @@ from app.extensions import db, migrate, jwt
 from app.users import users_bp
 from app.advertisers import advertisers_bp
 from app.spaces import spaces_bp
+from app.availability import availability_bp
 
 def create_app(config_class=Config):
     """
@@ -78,6 +79,9 @@ def create_app(config_class=Config):
     
     # Register the advertising space management Blueprint.
     app.register_blueprint(spaces_bp)
+
+    # Register the space availability management Blueprint.
+    app.register_blueprint(availability_bp)
     
     @app.get("/")
     def health_check():

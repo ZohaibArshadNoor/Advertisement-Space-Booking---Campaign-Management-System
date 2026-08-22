@@ -432,11 +432,3 @@ class RateCardUpdateSchema(Schema):
                     ]
                 }
             )
-
-
-
-
-
-
-
-

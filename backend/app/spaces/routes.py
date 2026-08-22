@@ -1,7 +1,16 @@
+from datetime import date
 from flask import jsonify, request
+from flask_jwt_extended import jwt_required
+from marshmallow import ValidationError
 
+from app.extensions import db
 from app.spaces import spaces_bp
-
+from app.models.space import (
+    AdvertisingSpace,
+    Location,
+    RateCard,
+    SpaceCategory
+)
 from app.spaces.schemas import (
     LocationCreateSchema,
     LocationUpdateSchema,
@@ -9,21 +18,48 @@ from app.spaces.schemas import (
     SpaceCategoryUpdateSchema,
     AdvertisingSpaceCreateSchema,
     AdvertisingSpaceUpdateSchema,
-    AdvertisingSpaceStatusSchema
+    AdvertisingSpaceStatusSchema,
+    RateCardCreateSchema,
+    RateCardUpdateSchema
 )
-
 from app.spaces.service import (
     LocationService,
     SpaceCategoryService,
     AdvertisingSpaceService
 )
-
 from app.common.decorators import roles_required
+
+
+# ===========================================================================
+# SCHEMA INSTANCES
+# ===========================================================================
+
+# Schema used to validate data when creating a rate card.
+rate_card_create_schema = RateCardCreateSchema()
+
+# Schema used to validate data when updating a rate card.
+rate_card_update_schema = RateCardUpdateSchema()
 
 
 # ===========================================================================
 # HELPER FUNCTIONS
 # ===========================================================================
+
+def get_rate_card_or_404(space_id, rate_card_id):
+    """
+    Returns a rate card only if it belongs to the specified
+    advertising space.
+
+    This prevents someone from accessing a rate card belonging
+    to another advertising space through an incorrect URL.
+    """
+    return RateCard.query.filter_by(
+        id=rate_card_id,
+        space_id=space_id
+    ).first_or_404(
+        description="Rate card not found for this advertising space."
+    )
+
 
 def location_to_dict(location):
     """
@@ -101,6 +137,8 @@ def space_to_dict(space):
             "address": space.location.address
         }
     }
+
+
 
 
 # ===========================================================================
@@ -1571,3 +1609,419 @@ def delete_advertising_space(space_id):
     return jsonify({
         "message": "Advertising space deleted successfully."
     }), 200
+
+
+# ===========================================================================
+# RATE CARD ENDPOINTS
+# ===========================================================================
+
+# 1. CREATE RATE CARD
+@spaces_bp.post("/<int:space_id>/rate-cards")
+@jwt_required()
+@roles_required("Administrator", "Space Manager")
+def create_rate_card(space_id):
+    """
+    Create a new rate card for an advertising space.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Create a rate card for an advertising space
+    description: >
+      Creates a new rate card defining the price of an advertising space
+      for a specific date range. Accessible by Administrator and Space Manager.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the advertising space.
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - rate_type
+            - price
+            - effective_from
+          properties:
+            rate_type:
+              type: string
+              example: "monthly"
+            price:
+              type: string
+              example: "250000.00"
+            effective_from:
+              type: string
+              format: date
+              example: "2026-01-01"
+            effective_to:
+              type: string
+              format: date
+              example: "2026-12-31"
+    responses:
+      201:
+        description: Rate card created successfully.
+      400:
+        description: Validation error or invalid dates.
+      401:
+        description: Authentication required.
+      403:
+        description: Insufficient permissions.
+      404:
+        description: Advertising space not found.
+    """
+    # Confirm that the advertising space exists.
+    space = AdvertisingSpace.query.get_or_404(
+        space_id,
+        description="Advertising space not found."
+    )
+
+    # Read JSON sent by the client.
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    try:
+        # Validate and convert the incoming data.
+        validated_data = rate_card_create_schema.load(data)
+    except ValidationError as error:
+        return jsonify({
+            "errors": error.messages
+        }), 400
+
+    # Create the new rate card.
+    rate_card = RateCard(
+        space_id=space.id,
+        rate_type=validated_data["rate_type"],
+        price=validated_data["price"],
+        effective_from=validated_data["effective_from"],
+        effective_to=validated_data.get("effective_to")
+    )
+
+    # Save the record.
+    db.session.add(rate_card)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Rate card created successfully.",
+        "rate_card": {
+            "id": rate_card.id,
+            "space_id": rate_card.space_id,
+            "rate_type": rate_card.rate_type,
+            "price": str(rate_card.price),
+            "effective_from": rate_card.effective_from.isoformat(),
+            "effective_to": (
+                rate_card.effective_to.isoformat()
+                if rate_card.effective_to
+                else None
+            )
+        }
+    }), 201
+
+
+# 2. GET ALL RATE CARDS FOR A SPACE
+@spaces_bp.get("/<int:space_id>/rate-cards")
+@jwt_required()
+def get_rate_cards(space_id):
+    """
+    Return all rate cards belonging to one advertising space.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: List all rate cards for a space
+    description: >
+      Returns all rate cards belonging to the specified advertising space.
+      Accessible by any authenticated user.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the advertising space.
+    responses:
+      200:
+        description: Rate cards retrieved successfully.
+      401:
+        description: Authentication required.
+      404:
+        description: Advertising space not found.
+    """
+    # Confirm the advertising space exists.
+    AdvertisingSpace.query.get_or_404(
+        space_id,
+        description="Advertising space not found."
+    )
+
+    # Get all rate cards belonging to this space.
+    rate_cards = RateCard.query.filter_by(
+        space_id=space_id
+    ).order_by(
+        RateCard.effective_from.desc()
+    ).all()
+
+    return jsonify({
+        "rate_cards": [
+            {
+                "id": rate_card.id,
+                "space_id": rate_card.space_id,
+                "rate_type": rate_card.rate_type,
+                "price": str(rate_card.price),
+                "effective_from": rate_card.effective_from.isoformat(),
+                "effective_to": (
+                    rate_card.effective_to.isoformat()
+                    if rate_card.effective_to
+                    else None
+                )
+            }
+            for rate_card in rate_cards
+        ]
+    }), 200
+
+
+# 3. GET ONE RATE CARD
+@spaces_bp.get("/<int:space_id>/rate-cards/<int:rate_card_id>")
+@jwt_required()
+def get_rate_card(space_id, rate_card_id):
+    """
+    Return one specific rate card belonging to an advertising space.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Get a specific rate card
+    description: >
+      Returns one rate card only if it belongs to the specified advertising space.
+      Accessible by any authenticated user.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the advertising space.
+      - name: rate_card_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the rate card.
+    responses:
+      200:
+        description: Rate card retrieved successfully.
+      401:
+        description: Authentication required.
+      404:
+        description: Rate card not found for this space.
+    """
+    rate_card = get_rate_card_or_404(
+        space_id,
+        rate_card_id
+    )
+
+    return jsonify({
+        "rate_card": {
+            "id": rate_card.id,
+            "space_id": rate_card.space_id,
+            "rate_type": rate_card.rate_type,
+            "price": str(rate_card.price),
+            "effective_from": rate_card.effective_from.isoformat(),
+            "effective_to": (
+                rate_card.effective_to.isoformat()
+                if rate_card.effective_to
+                else None
+            )
+        }
+    }), 200
+
+
+# 4. UPDATE A RATE CARD
+@spaces_bp.put("/<int:space_id>/rate-cards/<int:rate_card_id>")
+@jwt_required()
+@roles_required("Administrator", "Space Manager")
+def update_rate_card(space_id, rate_card_id):
+    """
+    Update an existing rate card.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Update a rate card
+    description: >
+      Updates rate type, price, or date ranges for an existing rate card.
+      Accessible by Administrator and Space Manager.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the advertising space.
+      - name: rate_card_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the rate card.
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            rate_type:
+              type: string
+              example: "monthly"
+            price:
+              type: string
+              example: "275000.00"
+            effective_from:
+              type: string
+              format: date
+              example: "2026-02-01"
+            effective_to:
+              type: string
+              format: date
+              example: "2026-12-31"
+    responses:
+      200:
+        description: Rate card updated successfully.
+      400:
+        description: Validation error or invalid date combination.
+      401:
+        description: Authentication required.
+      403:
+        description: Insufficient permissions.
+      404:
+        description: Rate card not found for this space.
+    """
+    rate_card = get_rate_card_or_404(
+        space_id,
+        rate_card_id
+    )
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    try:
+        validated_data = rate_card_update_schema.load(data)
+    except ValidationError as error:
+        return jsonify({
+            "errors": error.messages
+        }), 400
+
+    # Calculate the final dates before updating the record.
+    # This is important because the request may contain only one
+    # of the two date fields.
+    final_effective_from = validated_data.get(
+        "effective_from",
+        rate_card.effective_from
+    )
+
+    final_effective_to = validated_data.get(
+        "effective_to",
+        rate_card.effective_to
+    )
+
+    # Ensure the final date combination is valid.
+    if (
+        final_effective_to is not None
+        and final_effective_to < final_effective_from
+    ):
+        return jsonify({
+            "errors": {
+                "effective_to": [
+                    "effective_to cannot be earlier than effective_from."
+                ]
+            }
+        }), 400
+
+    # Update only fields provided by the client.
+    if "rate_type" in validated_data:
+        rate_card.rate_type = validated_data["rate_type"]
+
+    if "price" in validated_data:
+        rate_card.price = validated_data["price"]
+
+    rate_card.effective_from = final_effective_from
+    rate_card.effective_to = final_effective_to
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Rate card updated successfully.",
+        "rate_card": {
+            "id": rate_card.id,
+            "space_id": rate_card.space_id,
+            "rate_type": rate_card.rate_type,
+            "price": str(rate_card.price),
+            "effective_from": rate_card.effective_from.isoformat(),
+            "effective_to": (
+                rate_card.effective_to.isoformat()
+                if rate_card.effective_to
+                else None
+            )
+        }
+    }), 200
+
+
+# 5. DELETE A RATE CARD
+@spaces_bp.delete("/<int:space_id>/rate-cards/<int:rate_card_id>")
+@jwt_required()
+@roles_required("Administrator", "Space Manager")
+def delete_rate_card(space_id, rate_card_id):
+    """
+    Delete a rate card from an advertising space.
+    ---
+    tags:
+      - Advertising Space Management
+    summary: Delete a rate card
+    description: >
+      Deletes a rate card from an advertising space.
+      Accessible by Administrator and Space Manager.
+    security:
+      - Bearer: []
+    parameters:
+      - name: space_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the advertising space.
+      - name: rate_card_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the rate card.
+    responses:
+      200:
+        description: Rate card deleted successfully.
+      401:
+        description: Authentication required.
+      403:
+        description: Insufficient permissions.
+      404:
+        description: Rate card not found for this space.
+    """
+    rate_card = get_rate_card_or_404(
+        space_id,
+        rate_card_id
+    )
+
+    db.session.delete(rate_card)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Rate card deleted successfully."
+    }), 200
+
+
+    

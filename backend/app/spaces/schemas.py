@@ -5,9 +5,9 @@ from marshmallow import (
     fields,
     validate,
     validates,
-    ValidationError
+    ValidationError,
+    validates_schema
 )
-
 
 class LocationCreateSchema(Schema):
     """
@@ -314,3 +314,129 @@ class AdvertisingSpaceStatusSchema(Schema):
     is_active = fields.Boolean(
         required=True
     )
+    
+
+class RateCardCreateSchema(Schema):
+    """
+    Validates data when creating a new rate card.
+
+    A rate card defines the price of an advertising space
+    for a specific period of time.
+    """
+
+    rate_type = fields.String(
+        required=True,
+        validate=validate.Length(
+            min=2,
+            max=50
+        )
+    )
+
+    price = fields.Decimal(
+        required=True,
+        as_string=True,
+        places=2,
+        validate=validate.Range(
+            min=0.01
+        )
+    )
+
+    effective_from = fields.Date(
+        required=True
+    )
+
+    effective_to = fields.Date(
+        required=False,
+        allow_none=True
+    )
+
+    @validates_schema
+    def validate_dates(self, data, **kwargs):
+        """
+        Ensures that the end date is not earlier than
+        the start date.
+        """
+
+        effective_from = data.get("effective_from")
+        effective_to = data.get("effective_to")
+
+        if (
+            effective_from
+            and effective_to
+            and effective_to < effective_from
+        ):
+            raise ValidationError(
+                {
+                    "effective_to": [
+                        "effective_to cannot be earlier than effective_from."
+                    ]
+                }
+            )
+
+
+class RateCardUpdateSchema(Schema):
+    """
+    Validates data when updating an existing rate card.
+
+    All fields are optional because an update may modify
+    only one or several fields.
+    """
+
+    rate_type = fields.String(
+        required=False,
+        validate=validate.Length(
+            min=2,
+            max=50
+        )
+    )
+
+    price = fields.Decimal(
+        required=False,
+        as_string=True,
+        places=2,
+        validate=validate.Range(
+            min=0.01
+        )
+    )
+
+    effective_from = fields.Date(
+        required=False
+    )
+
+    effective_to = fields.Date(
+        required=False,
+        allow_none=True
+    )
+
+    @validates_schema
+    def validate_dates(self, data, **kwargs):
+        """
+        Validates dates when both dates are supplied.
+
+        More complete validation against the existing
+        database record will also happen in the route.
+        """
+
+        effective_from = data.get("effective_from")
+        effective_to = data.get("effective_to")
+
+        if (
+            effective_from
+            and effective_to
+            and effective_to < effective_from
+        ):
+            raise ValidationError(
+                {
+                    "effective_to": [
+                        "effective_to cannot be earlier than effective_from."
+                    ]
+                }
+            )
+
+
+
+
+
+
+
+

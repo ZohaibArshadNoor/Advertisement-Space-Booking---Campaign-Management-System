@@ -31,7 +31,11 @@ from app.models.payment import (
     InvoiceStatus,
     Payment,
     PaymentStatus,
-    PaymentMethod
+    PaymentMethod    
+)
+from app.models.notification import (
+    Notification,
+    NotificationType 
 )
 
 __all__ = [
@@ -52,5 +56,7 @@ __all__ = [
     "InvoiceStatus",
     "Payment",
     "PaymentStatus",
-    "PaymentMethod"
+    "PaymentMethod",
+    "Notification",
+    "NotificationType"
 ]

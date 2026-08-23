@@ -1,6 +1,6 @@
 import click
 
-from flask import Flask
+from flask import Flask, app
 from flasgger import Swagger
 
 from config import Config
@@ -15,6 +15,8 @@ from app.campaigns import campaigns_bp
 from app.invoices import invoices_bp
 from app.payments import payments_bp
 from app.dashboard import dashboard_bp
+from app.notifications import notifications_bp
+
 
 
 
@@ -104,6 +106,10 @@ def create_app(config_class=Config):
 
     # Register the dashboard analytics Blueprint.
     app.register_blueprint(dashboard_bp)
+
+    # Register the notifications management Blueprint.
+    app.register_blueprint(notifications_bp)
+
 
     @app.get("/")
     def health_check():

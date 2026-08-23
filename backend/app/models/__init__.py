@@ -37,6 +37,10 @@ from app.models.notification import (
     Notification,
     NotificationType 
 )
+from app.models.audit import (
+    AuditLog,
+    AuditAction
+)
 
 __all__ = [
     "Role",
@@ -58,5 +62,7 @@ __all__ = [
     "PaymentStatus",
     "PaymentMethod",
     "Notification",
-    "NotificationType"
+    "NotificationType",
+    "AuditLog",
+    "AuditAction"   
 ]

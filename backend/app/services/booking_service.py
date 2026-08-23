@@ -5,6 +5,8 @@ from app.extensions import db
 from app.models.booking import Booking, BookingStatus
 from app.models.space import AdvertisingSpace
 from app.services.availability_service import AvailabilityService
+from app.services.audit_service import AuditService
+from app.models.audit import AuditAction
 
 
 class BookingService:
@@ -143,19 +145,43 @@ class BookingService:
 
         db.session.add(booking)
         db.session.commit()
+        
+        # 1. Send Notification to Advertiser
+        try:
+            from app.services.notification_service import NotificationService
+            from app.models.notification import NotificationType
+            NotificationService.send_notification(
+                user_id=user_id,
+                title="Booking Request Submitted",
+                message=f"Your booking request {booking.booking_reference} for {space.name} has been received and is pending confirmation.",
+                notification_type=NotificationType.BOOKING,
+                link=f"/bookings/{booking.id}"
+            )
+        except Exception:
+            pass
+
+        # 2. Record Audit Log
+        AuditService.log(
+            user_id=user_id,
+            action=AuditAction.CREATE,
+            entity_type="Booking",
+            entity_id=booking.id,
+            new_values={
+                "booking_reference": booking.booking_reference,
+                "space_id": booking.space_id,
+                "start_date": booking.start_date.isoformat(),
+                "end_date": booking.end_date.isoformat(),
+                "total_price": str(booking.total_price),
+                "status": booking.status
+            }
+        )
 
         return booking, None
 
     @staticmethod
-    def update_status(booking, new_status):
+    def update_status(booking, new_status, user_id=None):
         """
         Updates the booking status and manages availability blocks.
-
-        When status transitions to CONFIRMED:
-            An active SpaceAvailability block is created to prevent double bookings.
-
-        When status transitions to CANCELLED:
-            Any active availability block for these dates is removed.
         """
         if new_status not in BookingStatus.ALL:
             return None, f"Invalid status. Must be one of {BookingStatus.ALL}"
@@ -185,6 +211,32 @@ class BookingService:
                 db.session.delete(schedule)
 
         db.session.commit()
+
+        # 1. Send In-App Notification to Booking Owner (Advertiser)
+        try:
+            from app.services.notification_service import NotificationService
+            from app.models.notification import NotificationType
+            space_name = booking.space.name if booking.space else "Space"
+            NotificationService.send_notification(
+                user_id=booking.user_id,
+                title=f"Booking Status: {new_status}",
+                message=f"Your booking {booking.booking_reference} for {space_name} has been updated to {new_status}.",
+                notification_type=NotificationType.BOOKING,
+                link=f"/bookings/{booking.id}"
+            )
+        except Exception:
+            pass
+
+        # 2. Record Audit Log for the Staff Member
+        AuditService.log(
+            user_id=user_id,
+            action=AuditAction.UPDATE_STATUS,
+            entity_type="Booking",
+            entity_id=booking.id,
+            old_values={"status": old_status},
+            new_values={"status": new_status}
+        )
+
         return booking, None
 
     @staticmethod
@@ -209,4 +261,14 @@ class BookingService:
 
         db.session.delete(booking)
         db.session.commit()
+        
+        AuditService.log(
+            action=AuditAction.DELETE,
+            entity_type="Booking",
+            entity_id=booking.id,
+            old_values={
+                "booking_reference": booking.booking_reference,
+                "status": booking.status
+            }
+        )
         return True

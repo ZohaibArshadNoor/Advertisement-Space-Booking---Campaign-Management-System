@@ -348,6 +348,7 @@ def update_booking_status(booking_id):
       Transitions a booking between PENDING, CONFIRMED, CANCELLED, or COMPLETED.
       When CONFIRMED, the system automatically locks the availability schedule.
       When CANCELLED, any active availability schedule is released.
+      Automatically records an audit trail and dispatches an in-app notification to the advertiser.
       Accessible by Administrator and Space Manager only.
 
     security:
@@ -377,6 +378,10 @@ def update_booking_status(booking_id):
         description: Booking status updated successfully.
       400:
         description: Invalid status value.
+      401:
+        description: Authentication required.
+      403:
+        description: Insufficient permissions.
       404:
         description: Booking not found.
     """
@@ -404,10 +409,14 @@ def update_booking_status(booking_id):
             "errors": error.messages
         }), 400
 
-    # Step 4: Perform status transition in service layer.
+    # Step 4: Extract actor identity.
+    current_user_id = int(get_jwt_identity())
+
+    # Step 5: Perform status transition in service layer.
     updated_booking, error = BookingService.update_status(
         booking=booking,
-        new_status=validated_data["status"]
+        new_status=validated_data["status"],
+        user_id=current_user_id
     )
 
     if error:
@@ -415,12 +424,11 @@ def update_booking_status(booking_id):
             "message": error
         }), 400
 
-    # Step 5: Return updated booking record.
+    # Step 6: Return updated booking record.
     return jsonify({
         "message": f"Booking status updated to {validated_data['status']}.",
         "booking": booking_to_dict(updated_booking)
     }), 200
-
 
 # 5. DELETE BOOKING
 @bookings_bp.delete("/<int:booking_id>")

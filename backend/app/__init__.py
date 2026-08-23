@@ -16,7 +16,7 @@ from app.invoices import invoices_bp
 from app.payments import payments_bp
 from app.dashboard import dashboard_bp
 from app.notifications import notifications_bp
-
+from app.audit_logs import audit_logs_bp
 
 
 
@@ -110,6 +110,8 @@ def create_app(config_class=Config):
     # Register the notifications management Blueprint.
     app.register_blueprint(notifications_bp)
 
+    # Register the audit logs Blueprint.
+    app.register_blueprint(audit_logs_bp)
 
     @app.get("/")
     def health_check():

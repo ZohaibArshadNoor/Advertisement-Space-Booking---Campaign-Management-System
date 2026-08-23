@@ -41,6 +41,11 @@ from app.models.audit import (
     AuditLog,
     AuditAction
 )
+from app.models.creative import (
+    Creative,
+    MediaAsset,
+    MediaStatus
+)
 
 __all__ = [
     "Role",
@@ -64,5 +69,8 @@ __all__ = [
     "Notification",
     "NotificationType",
     "AuditLog",
-    "AuditAction"   
+    "AuditAction",
+    "Creative",
+    "MediaAsset",
+    "MediaStatus"
 ]

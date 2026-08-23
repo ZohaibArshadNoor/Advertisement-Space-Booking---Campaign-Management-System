@@ -17,6 +17,7 @@ from app.payments import payments_bp
 from app.dashboard import dashboard_bp
 from app.notifications import notifications_bp
 from app.audit_logs import audit_logs_bp
+from app.reports import reports_bp
 
 
 
@@ -112,6 +113,9 @@ def create_app(config_class=Config):
 
     # Register the audit logs Blueprint.
     app.register_blueprint(audit_logs_bp)
+
+    # Register the reports & analytics Blueprint.
+    app.register_blueprint(reports_bp)
 
     @app.get("/")
     def health_check():

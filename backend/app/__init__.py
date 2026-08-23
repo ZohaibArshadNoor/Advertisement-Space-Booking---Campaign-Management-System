@@ -14,6 +14,8 @@ from app.bookings import bookings_bp
 from app.campaigns import campaigns_bp
 from app.invoices import invoices_bp
 from app.payments import payments_bp
+from app.dashboard import dashboard_bp
+
 
 
 def create_app(config_class=Config):
@@ -100,6 +102,8 @@ def create_app(config_class=Config):
     # Register the payment management Blueprint.
     app.register_blueprint(payments_bp)
 
+    # Register the dashboard analytics Blueprint.
+    app.register_blueprint(dashboard_bp)
 
     @app.get("/")
     def health_check():

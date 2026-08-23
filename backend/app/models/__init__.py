@@ -26,6 +26,13 @@ from app.models.campaign import (
     Campaign,
     CampaignStatus
 )
+from app.models.payment import (
+    Invoice,
+    InvoiceStatus,
+    Payment,
+    PaymentStatus,
+    PaymentMethod
+)
 
 __all__ = [
     "Role",
@@ -40,5 +47,10 @@ __all__ = [
     "Booking",
     "BookingStatus",
     "Campaign",
-    "CampaignStatus"
+    "CampaignStatus",
+    "Invoice",
+    "InvoiceStatus",
+    "Payment",
+    "PaymentStatus",
+    "PaymentMethod"
 ]

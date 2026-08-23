@@ -12,7 +12,8 @@ from app.spaces import spaces_bp
 from app.availability import availability_bp
 from app.bookings import bookings_bp
 from app.campaigns import campaigns_bp
-
+from app.invoices import invoices_bp
+from app.payments import payments_bp
 
 
 def create_app(config_class=Config):
@@ -92,6 +93,13 @@ def create_app(config_class=Config):
 
     # Register the campaign management Blueprint.
     app.register_blueprint(campaigns_bp)
+    
+    # Register the invoice management Blueprint.
+    app.register_blueprint(invoices_bp)
+    
+    # Register the payment management Blueprint.
+    app.register_blueprint(payments_bp)
+
 
     @app.get("/")
     def health_check():

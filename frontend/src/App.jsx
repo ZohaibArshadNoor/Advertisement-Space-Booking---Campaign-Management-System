@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Campaigns from './pages/Campaigns';
 import SpacesPage from './features/spaces/pages/SpacePage';
+import BookingsPage from './features/bookings/pages/BookingsPage';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/campaigns" element={<Campaigns />} />
                 <Route path="/spaces" element={<SpacesPage />} />
+                <Route path="/bookings" element={<BookingsPage />} />
               </Route>
 
               {/* Fallback */}

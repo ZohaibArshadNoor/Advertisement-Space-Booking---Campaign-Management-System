@@ -125,12 +125,21 @@ def get_campaign_media(campaign_id):
     responses:
       200:
         description: Media assets retrieved.
+      403:
+        description: Forbidden.
       404:
         description: Campaign not found.
     """
     campaign = db.session.get(Campaign, campaign_id)
     if not campaign:
         return jsonify({"message": "Campaign not found."}), 404
+
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+
+    if current_user and current_user.role.name == "Advertiser":
+        if campaign.user_id != current_user.id:
+            return jsonify({"message": "You do not have permission to view assets for this campaign."}), 403
 
     assets = MediaService.get_by_campaign(campaign_id)
     return jsonify({
@@ -160,12 +169,21 @@ def get_media_asset(media_id):
     responses:
       200:
         description: Media asset metadata returned.
+      403:
+        description: Forbidden.
       404:
         description: Media asset not found.
     """
     asset = MediaService.get_by_id(media_id)
     if not asset:
         return jsonify({"message": "Media asset not found."}), 404
+
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+
+    if current_user and current_user.role.name == "Advertiser":
+        if asset.uploaded_by != current_user.id and (not asset.campaign or asset.campaign.user_id != current_user.id):
+            return jsonify({"message": "You do not have permission to view this media asset."}), 403
 
     return jsonify({"media_asset": media_to_dict(asset)}), 200
 
@@ -190,12 +208,21 @@ def download_media_file(media_id):
     responses:
       200:
         description: File binary stream.
+      403:
+        description: Forbidden.
       404:
         description: File not found on disk.
     """
     asset = MediaService.get_by_id(media_id)
     if not asset:
         return jsonify({"message": "Media asset not found."}), 404
+
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+
+    if current_user and current_user.role.name == "Advertiser":
+        if asset.uploaded_by != current_user.id and (not asset.campaign or asset.campaign.user_id != current_user.id):
+            return jsonify({"message": "You do not have permission to download this media asset."}), 403
 
     full_path = os.path.join(os.getcwd(), asset.file_path)
     if not os.path.exists(full_path):

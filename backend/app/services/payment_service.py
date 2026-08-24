@@ -21,6 +21,7 @@ class PaymentService:
         page=1,
         per_page=10,
         invoice_id=None,
+        advertiser_id=None,
         status=None,
         payment_method=None,
         search=None,
@@ -37,6 +38,9 @@ class PaymentService:
 
         if invoice_id is not None:
             query = query.filter(Payment.invoice_id == invoice_id)
+
+        if advertiser_id is not None:
+            query = query.join(Invoice).filter(Invoice.advertiser_id == advertiser_id)
 
         if status:
             query = query.filter(Payment.status == status)

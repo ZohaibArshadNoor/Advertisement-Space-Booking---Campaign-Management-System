@@ -93,7 +93,7 @@ def record_payment():
 
 # 2. LIST PAYMENTS
 @payments_bp.get("")
-@roles_required("Administrator", "Finance Officer", "Sales Executive")
+@roles_required("Administrator", "Finance Officer", "Sales Executive", "Advertiser")
 def get_payments():
     """
     List all payment transactions with pagination.
@@ -164,10 +164,18 @@ def get_payments():
     if per_page < 1 or per_page > 100:
         return jsonify({"message": "per_page must be between 1 and 100."}), 400
 
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+
+    advertiser_filter = None
+    if current_user and current_user.role.name == "Advertiser":
+        advertiser_filter = current_user.advertiser_id
+
     payments_page = PaymentService.get_all(
         page=page,
         per_page=per_page,
         invoice_id=invoice_id,
+        advertiser_id=advertiser_filter,
         status=status,
         payment_method=payment_method,
         search=search,
@@ -190,7 +198,7 @@ def get_payments():
 
 # 3. GET SINGLE PAYMENT
 @payments_bp.get("/<int:payment_id>")
-@roles_required("Administrator", "Finance Officer", "Sales Executive")
+@roles_required("Administrator", "Finance Officer", "Sales Executive", "Advertiser")
 def get_payment(payment_id):
     """
     Get payment transaction details.
@@ -208,12 +216,21 @@ def get_payment(payment_id):
     responses:
       200:
         description: Payment found.
+      403:
+        description: Forbidden.
       404:
         description: Payment not found.
     """
     payment = PaymentService.get_by_id(payment_id)
     if not payment:
         return jsonify({"message": "Payment not found."}), 404
+
+    current_user_id = int(get_jwt_identity())
+    current_user = db.session.get(User, current_user_id)
+
+    if current_user and current_user.role.name == "Advertiser":
+        if not payment.invoice or payment.invoice.advertiser_id != current_user.advertiser_id:
+            return jsonify({"message": "You do not have permission to view this payment transaction."}), 403
 
     return jsonify({"payment": payment_to_dict(payment)}), 200
 

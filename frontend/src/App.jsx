@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Campaigns from './pages/Campaigns';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/campaigns" element={<Campaigns />} />
           </Route>
 
           {/* Fallback & Redirection */}

@@ -88,36 +88,48 @@ class PaymentService:
         transaction_reference: str = None
     ):
         """
-        Records a new payment against an invoice and updates invoice status.
+        Records a new payment against an invoice with pessimistic row-locking
+        and atomic status reconciliation.
         """
-        invoice = db.session.get(Invoice, invoice_id)
-        if not invoice:
-            return None, "Invoice not found."
+        try:
+            # Step 1: Lock parent invoice against concurrent payments
+            invoice = Invoice.query.filter_by(
+                id=invoice_id
+            ).with_for_update().first()
 
-        if invoice.status == InvoiceStatus.CANCELLED:
-            return None, "Cannot record payment on a cancelled invoice."
+            if not invoice:
+                return None, "Invoice not found."
 
-        if invoice.status == InvoiceStatus.PAID:
-            return None, "This invoice is already fully paid."
+            if invoice.status == InvoiceStatus.CANCELLED:
+                return None, "Cannot record payment on a cancelled invoice."
 
-        amount_dec = Decimal(str(amount))
-        if amount_dec <= Decimal("0.00"):
-            return None, "Payment amount must be greater than zero."
+            if invoice.status == InvoiceStatus.PAID:
+                return None, "This invoice is already fully paid."
 
-        payment = Payment(
-            invoice_id=invoice.id,
-            amount=amount_dec,
-            payment_method=payment_method,
-            transaction_reference=transaction_reference,
-            status=PaymentStatus.COMPLETED,
-            paid_at=datetime.now(timezone.utc)
-        )
+            amount_dec = Decimal(str(amount))
+            if amount_dec <= Decimal("0.00"):
+                return None, "Payment amount must be greater than zero."
 
-        db.session.add(payment)
-        db.session.commit()
+            # Step 2: Create Payment record
+            payment = Payment(
+                invoice_id=invoice.id,
+                amount=amount_dec,
+                payment_method=payment_method,
+                transaction_reference=transaction_reference,
+                status=PaymentStatus.COMPLETED,
+                paid_at=datetime.now(timezone.utc)
+            )
 
-        # Reconcile parent invoice status
-        InvoiceService.reconcile_status(invoice)
+            db.session.add(payment)
+
+            # Step 3: Reconcile parent invoice status in same transaction
+            InvoiceService.reconcile_status(invoice)
+
+            db.session.commit()
+
+        except Exception as err:
+            db.session.rollback()
+            return None, f"Payment transaction failed: {str(err)}"
 
         return payment, None
 
@@ -125,15 +137,17 @@ class PaymentService:
     def update_status(payment: Payment, new_status: str):
         """
         Updates payment status (e.g. COMPLETED -> REFUNDED)
-        and re-evaluates the invoice balance.
+        and re-evaluates the invoice balance with rollback protection.
         """
         if new_status not in PaymentStatus.ALL:
             return None, f"Invalid status. Must be one of {PaymentStatus.ALL}"
 
-        payment.status = new_status
-        db.session.commit()
-
-        # Reconcile parent invoice status after payment change
-        InvoiceService.reconcile_status(payment.invoice)
+        try:
+            payment.status = new_status
+            InvoiceService.reconcile_status(payment.invoice)
+            db.session.commit()
+        except Exception as err:
+            db.session.rollback()
+            return None, f"Payment status update failed: {str(err)}"
 
         return payment, None

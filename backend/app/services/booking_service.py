@@ -147,58 +147,61 @@ class BookingService:
         notes=None
     ):
         """
-        Creates a new booking request.
-
-        Validates:
-        1. Advertising space exists and is active.
-        2. Date range does not conflict with existing booked schedules.
-        3. Computes total price.
+        Creates a new booking request with pessimistic row-level locking
+        to prevent race conditions and overlapping double-bookings.
         """
-        # Step 1: Confirm the advertising space exists.
-        space = db.session.get(AdvertisingSpace, space_id)
-        if not space:
-            return None, "Advertising space not found."
+        try:
+            # Step 1: Lock the AdvertisingSpace inventory row against concurrent requests
+            space = AdvertisingSpace.query.filter_by(
+                id=space_id
+            ).with_for_update().first()
 
-        # Step 2: Ensure the inventory space is active.
-        if not space.is_active:
-            return None, "This advertising space is currently inactive."
+            if not space:
+                return None, "Advertising space not found."
 
-        # Step 3: Check for scheduling conflicts with existing bookings.
-        is_available, conflict = AvailabilityService.check_availability(
-            space_id=space.id,
-            start_date=start_date,
-            end_date=end_date
-        )
+            if not space.is_active:
+                return None, "This advertising space is currently inactive."
 
-        if not is_available:
-            return None, (
-                f"Conflict detected: Space is already booked from "
-                f"{conflict.start_date} to {conflict.end_date}."
+            # Step 2: Check for scheduling conflicts while holding the lock
+            is_available, conflict = AvailabilityService.check_availability(
+                space_id=space.id,
+                start_date=start_date,
+                end_date=end_date
             )
 
-        # Step 4: Calculate total price.
-        total_price = BookingService.calculate_price(
-            space=space,
-            start_date=start_date,
-            end_date=end_date
-        )
+            if not is_available:
+                return None, (
+                    f"Conflict detected: Space is already booked from "
+                    f"{conflict.start_date} to {conflict.end_date}."
+                )
 
-        # Step 5: Instantiate and save the booking record.
-        booking = Booking(
-            user_id=user_id,
-            advertiser_id=advertiser_id,
-            space_id=space.id,
-            start_date=start_date,
-            end_date=end_date,
-            status=BookingStatus.PENDING,
-            total_price=total_price,
-            notes=notes.strip() if notes else None
-        )
+            # Step 3: Calculate total price
+            total_price = BookingService.calculate_price(
+                space=space,
+                start_date=start_date,
+                end_date=end_date
+            )
 
-        db.session.add(booking)
-        db.session.commit()
-        
-        # 1. Send Notification to Advertiser
+            # Step 4: Instantiate and save the booking record
+            booking = Booking(
+                user_id=user_id,
+                advertiser_id=advertiser_id,
+                space_id=space.id,
+                start_date=start_date,
+                end_date=end_date,
+                status=BookingStatus.PENDING,
+                total_price=total_price,
+                notes=notes.strip() if notes else None
+            )
+
+            db.session.add(booking)
+            db.session.commit()
+
+        except Exception as err:
+            db.session.rollback()
+            return None, f"Database transaction failed: {str(err)}"
+
+        # Step 5: Post-transaction non-blocking side effects
         try:
             from app.services.notification_service import NotificationService
             from app.models.notification import NotificationType
@@ -212,59 +215,82 @@ class BookingService:
         except Exception:
             pass
 
-        # 2. Record Audit Log
-        AuditService.log(
-            user_id=user_id,
-            action=AuditAction.CREATE,
-            entity_type="Booking",
-            entity_id=booking.id,
-            new_values={
-                "booking_reference": booking.booking_reference,
-                "space_id": booking.space_id,
-                "start_date": booking.start_date.isoformat(),
-                "end_date": booking.end_date.isoformat(),
-                "total_price": str(booking.total_price),
-                "status": booking.status
-            }
-        )
+        try:
+            AuditService.log(
+                user_id=user_id,
+                action=AuditAction.CREATE,
+                entity_type="Booking",
+                entity_id=booking.id,
+                new_values={
+                    "booking_reference": booking.booking_reference,
+                    "space_id": booking.space_id,
+                    "start_date": booking.start_date.isoformat(),
+                    "end_date": booking.end_date.isoformat(),
+                    "total_price": str(booking.total_price),
+                    "status": booking.status
+                }
+            )
+        except Exception:
+            pass
 
         return booking, None
 
     @staticmethod
     def update_status(booking, new_status, user_id=None):
         """
-        Updates the booking status and manages availability blocks.
+        Updates the booking status with atomic availability management and rollback safety.
         """
         if new_status not in BookingStatus.ALL:
             return None, f"Invalid status. Must be one of {BookingStatus.ALL}"
 
         old_status = booking.status
-        booking.status = new_status
 
-        # If confirming, officially lock the availability dates.
-        if new_status == BookingStatus.CONFIRMED and old_status != BookingStatus.CONFIRMED:
-            AvailabilityService.create(
-                space_id=booking.space_id,
-                start_date=booking.start_date,
-                end_date=booking.end_date,
-                is_booked=True
-            )
+        try:
+            # Lock the space inventory row for availability consistency
+            space = AdvertisingSpace.query.filter_by(
+                id=booking.space_id
+            ).with_for_update().first()
 
-        # If cancelling a previously confirmed booking, release the availability block.
-        elif new_status == BookingStatus.CANCELLED and old_status == BookingStatus.CONFIRMED:
-            from app.models.space import SpaceAvailability
-            matching_schedules = SpaceAvailability.query.filter_by(
-                space_id=booking.space_id,
-                start_date=booking.start_date,
-                end_date=booking.end_date,
-                is_booked=True
-            ).all()
-            for schedule in matching_schedules:
-                db.session.delete(schedule)
+            booking.status = new_status
 
-        db.session.commit()
+            # If confirming, officially lock the availability dates.
+            if new_status == BookingStatus.CONFIRMED and old_status != BookingStatus.CONFIRMED:
+                # Double-check availability before locking
+                is_available, conflict = AvailabilityService.check_availability(
+                    space_id=booking.space_id,
+                    start_date=booking.start_date,
+                    end_date=booking.end_date
+                )
+                if not is_available:
+                    db.session.rollback()
+                    return None, f"Cannot confirm booking: Date conflict with {conflict.start_date} to {conflict.end_date}."
 
-        # 1. Send In-App Notification to Booking Owner (Advertiser)
+                AvailabilityService.create(
+                    space_id=booking.space_id,
+                    start_date=booking.start_date,
+                    end_date=booking.end_date,
+                    is_booked=True
+                )
+
+            # If cancelling a previously confirmed booking, release the availability block.
+            elif new_status == BookingStatus.CANCELLED and old_status == BookingStatus.CONFIRMED:
+                from app.models.space import SpaceAvailability
+                matching_schedules = SpaceAvailability.query.filter_by(
+                    space_id=booking.space_id,
+                    start_date=booking.start_date,
+                    end_date=booking.end_date,
+                    is_booked=True
+                ).all()
+                for schedule in matching_schedules:
+                    db.session.delete(schedule)
+
+            db.session.commit()
+
+        except Exception as err:
+            db.session.rollback()
+            return None, f"Status update failed: {str(err)}"
+
+        # Non-blocking notification dispatch
         try:
             from app.services.notification_service import NotificationService
             from app.models.notification import NotificationType
@@ -279,48 +305,62 @@ class BookingService:
         except Exception:
             pass
 
-        # 2. Record Audit Log for the Staff Member
-        AuditService.log(
-            user_id=user_id,
-            action=AuditAction.UPDATE_STATUS,
-            entity_type="Booking",
-            entity_id=booking.id,
-            old_values={"status": old_status},
-            new_values={"status": new_status}
-        )
+        # Non-blocking audit log
+        try:
+            AuditService.log(
+                user_id=user_id,
+                action=AuditAction.UPDATE_STATUS,
+                entity_type="Booking",
+                entity_id=booking.id,
+                old_values={"status": old_status},
+                new_values={"status": new_status}
+            )
+        except Exception:
+            pass
 
         return booking, None
 
     @staticmethod
-    def delete(booking):
+    def delete(booking, user_id=None):
         """
-        Deletes a booking record.
-
-        If the booking was confirmed, releases the corresponding
-        SpaceAvailability block so inventory is available again.
+        Deletes a booking record and releases availability schedules atomically.
         """
-        # If the booking was confirmed, release any linked availability schedule.
-        if booking.status == BookingStatus.CONFIRMED:
-            from app.models.space import SpaceAvailability
-            matching_schedules = SpaceAvailability.query.filter_by(
-                space_id=booking.space_id,
-                start_date=booking.start_date,
-                end_date=booking.end_date,
-                is_booked=True
-            ).all()
-            for schedule in matching_schedules:
-                db.session.delete(schedule)
+        try:
+            # If the booking was confirmed, release any linked availability schedule.
+            if booking.status == BookingStatus.CONFIRMED:
+                from app.models.space import SpaceAvailability
+                matching_schedules = SpaceAvailability.query.filter_by(
+                    space_id=booking.space_id,
+                    start_date=booking.start_date,
+                    end_date=booking.end_date,
+                    is_booked=True
+                ).all()
+                for schedule in matching_schedules:
+                    db.session.delete(schedule)
 
-        db.session.delete(booking)
-        db.session.commit()
-        
-        AuditService.log(
-            action=AuditAction.DELETE,
-            entity_type="Booking",
-            entity_id=booking.id,
-            old_values={
-                "booking_reference": booking.booking_reference,
-                "status": booking.status
-            }
-        )
+            booking_ref = booking.booking_reference
+            booking_id = booking.id
+            booking_status = booking.status
+
+            db.session.delete(booking)
+            db.session.commit()
+
+        except Exception as err:
+            db.session.rollback()
+            return False
+
+        try:
+            AuditService.log(
+                user_id=user_id,
+                action=AuditAction.DELETE,
+                entity_type="Booking",
+                entity_id=booking_id,
+                old_values={
+                    "booking_reference": booking_ref,
+                    "status": booking_status
+                }
+            )
+        except Exception:
+            pass
+
         return True

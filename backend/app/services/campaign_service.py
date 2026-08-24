@@ -173,8 +173,39 @@ class CampaignService:
     @staticmethod
     def delete(campaign: Campaign):
         """
-        Deletes a campaign and cascades deletion to linked bookings.
+        Deletes a campaign, releases linked availability blocks,
+        and ensures no active financial invoices exist.
         """
-        db.session.delete(campaign)
-        db.session.commit()
-        return True
+        from app.models.payment import Invoice, InvoiceStatus
+        from app.models.space import SpaceAvailability
+        from app.models.booking import BookingStatus
+
+        # 1. Prevent deleting campaigns with active or settled invoices
+        active_invoices = Invoice.query.filter(
+            Invoice.campaign_id == campaign.id,
+            Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.PAID])
+        ).count()
+
+        if active_invoices > 0:
+            return False, "Cannot delete a campaign with active or paid invoices."
+
+        try:
+            # 2. Release space availability blocks for any confirmed bookings
+            for booking in campaign.bookings:
+                if booking.status == BookingStatus.CONFIRMED:
+                    SpaceAvailability.query.filter_by(
+                        space_id=booking.space_id,
+                        start_date=booking.start_date,
+                        end_date=booking.end_date,
+                        is_booked=True
+                    ).delete()
+
+            # 3. Delete campaign (cascades to bookings & creatives)
+            db.session.delete(campaign)
+            db.session.commit()
+
+        except Exception as err:
+            db.session.rollback()
+            return False, f"Failed to delete campaign: {str(err)}"
+
+        return True, None

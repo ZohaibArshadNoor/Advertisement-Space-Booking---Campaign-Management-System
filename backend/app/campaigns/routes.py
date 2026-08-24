@@ -574,7 +574,9 @@ def delete_campaign(campaign_id):
                 "message": "You do not have permission to delete this campaign."
             }), 403
 
-    CampaignService.delete(campaign)
+    success, error = CampaignService.delete(campaign)
+    if not success:
+        return jsonify({"message": error or "Failed to delete campaign."}), 400
 
     return jsonify({
         "message": "Campaign deleted successfully."

@@ -77,6 +77,10 @@ def create_app(config_class=Config):
     # Initialize Flask-Migrate.
     migrate.init_app(app, db)
 
+    # Initialize Flask-CORS with whitelisted origins.
+    from flask_cors import CORS
+    CORS(app, origins=app.config.get("CORS_ORIGINS", "*"), supports_credentials=True)
+
     # Initialize JWT.
     jwt.init_app(app)
 
@@ -126,14 +130,43 @@ def create_app(config_class=Config):
     register_error_handlers(app)
 
     @app.get("/")
-    def health_check():
+    def root_health():
         """
-        Checks that Flask is running.
+        Root health check.
         """
         return {
             "success": True,
             "message": "Advertisement Booking API is running"
         }
+
+    @app.get("/api/health")
+    def api_health():
+        """
+        Production health check endpoint verifying application and database connectivity.
+        ---
+        tags:
+          - System & Health
+        summary: Service health check
+        responses:
+          200:
+            description: System and database are operational.
+          503:
+            description: Database connectivity failure.
+        """
+        from sqlalchemy import text
+        db_status = "connected"
+        http_status = 200
+        try:
+            db.session.execute(text("SELECT 1"))
+        except Exception:
+            db_status = "disconnected"
+            http_status = 503
+
+        return {
+            "status": "healthy" if http_status == 200 else "unhealthy",
+            "database": db_status,
+            "version": "1.0.0"
+        }, http_status
 
     @app.cli.command("seed")
     def seed():
@@ -141,9 +174,15 @@ def create_app(config_class=Config):
         Seed required reference data into the database.
         """
         from app.seed.seed_data import seed_roles
-
         seed_roles()
-
         click.echo("Database seed completed successfully.")
+
+    @app.cli.command("seed-demo")
+    def seed_demo():
+        """
+        Seed rich, realistic demo data across all modules.
+        """
+        from app.seed.seed_demo import seed_demo_data
+        seed_demo_data()
 
     return app

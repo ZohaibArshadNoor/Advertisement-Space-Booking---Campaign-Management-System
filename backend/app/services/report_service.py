@@ -34,52 +34,70 @@ class ReportService:
         if not start_date:
             start_date = end_date - timedelta(days=30)
 
-        # 1. Invoices query
-        invoice_query = Invoice.query.filter(
+        # 1. SQL Aggregated Invoices query
+        inv_base = db.session.query(
+            func.coalesce(func.sum(Invoice.subtotal), Decimal("0.00")),
+            func.coalesce(func.sum(Invoice.tax), Decimal("0.00")),
+            func.coalesce(func.sum(Invoice.total_amount), Decimal("0.00")),
+            func.count(Invoice.id)
+        ).filter(
             Invoice.created_at >= start_date,
             Invoice.created_at <= end_date + timedelta(days=1),
             Invoice.status != InvoiceStatus.CANCELLED
         )
         if advertiser_id:
-            invoice_query = invoice_query.filter_by(advertiser_id=advertiser_id)
+            inv_base = inv_base.filter(Invoice.advertiser_id == advertiser_id)
 
-        invoices = invoice_query.all()
+        total_subtotal, total_tax, total_invoiced, total_invoices_count = inv_base.first()
 
-        total_subtotal = sum((Decimal(i.subtotal) for i in invoices), Decimal("0.00"))
-        total_tax = sum((Decimal(i.tax) for i in invoices), Decimal("0.00"))
-        total_invoiced = sum((Decimal(i.total_amount) for i in invoices), Decimal("0.00"))
-
-        # 2. Payments query
-        payment_query = Payment.query.filter(
+        # 2. SQL Aggregated Payments query
+        pay_base = db.session.query(
+            func.coalesce(func.sum(Payment.amount), Decimal("0.00")),
+            func.count(Payment.id)
+        ).filter(
             Payment.paid_at >= start_date,
             Payment.paid_at <= end_date + timedelta(days=1),
             Payment.status == PaymentStatus.COMPLETED
         )
         if advertiser_id:
-            payment_query = payment_query.join(Invoice).filter(Invoice.advertiser_id == advertiser_id)
+            pay_base = pay_base.join(Invoice).filter(Invoice.advertiser_id == advertiser_id)
 
-        payments = payment_query.all()
-        total_collected = sum((Decimal(p.amount) for p in payments), Decimal("0.00"))
-        outstanding_balance = max(Decimal("0.00"), total_invoiced - total_collected)
+        total_collected, total_payments_count = pay_base.first()
+        outstanding_balance = max(Decimal("0.00"), Decimal(str(total_invoiced)) - Decimal(str(total_collected)))
 
         collection_rate = (
-            round(float(total_collected / total_invoiced * 100), 2)
-            if total_invoiced > Decimal("0.00")
+            round(float(Decimal(str(total_collected)) / Decimal(str(total_invoiced)) * 100), 2)
+            if Decimal(str(total_invoiced)) > Decimal("0.00")
             else 0.0
         )
 
-        # Payment methods breakdown
-        payment_methods_breakdown = {}
-        for p in payments:
-            method = p.payment_method
-            payment_methods_breakdown[method] = str(
-                Decimal(payment_methods_breakdown.get(method, "0.00")) + Decimal(p.amount)
-            )
+        # Payment methods breakdown via GROUP BY
+        pay_group = db.session.query(
+            Payment.payment_method,
+            func.coalesce(func.sum(Payment.amount), Decimal("0.00"))
+        ).filter(
+            Payment.paid_at >= start_date,
+            Payment.paid_at <= end_date + timedelta(days=1),
+            Payment.status == PaymentStatus.COMPLETED
+        )
+        if advertiser_id:
+            pay_group = pay_group.join(Invoice).filter(Invoice.advertiser_id == advertiser_id)
 
-        # Status breakdown
-        invoice_status_counts = {}
-        for i in invoices:
-            invoice_status_counts[i.status] = invoice_status_counts.get(i.status, 0) + 1
+        payment_methods_breakdown = {row[0]: str(row[1]) for row in pay_group.group_by(Payment.payment_method).all()}
+
+        # Status breakdown via GROUP BY
+        inv_group = db.session.query(
+            Invoice.status,
+            func.count(Invoice.id)
+        ).filter(
+            Invoice.created_at >= start_date,
+            Invoice.created_at <= end_date + timedelta(days=1),
+            Invoice.status != InvoiceStatus.CANCELLED
+        )
+        if advertiser_id:
+            inv_group = inv_group.filter(Invoice.advertiser_id == advertiser_id)
+
+        invoice_status_counts = {row[0]: row[1] for row in inv_group.group_by(Invoice.status).all()}
 
         return {
             "period": {

@@ -41,7 +41,12 @@ class InvoiceService:
         Returns paginated invoices with advanced filtering,
         invoice number search, amount thresholds, and whitelisted sorting.
         """
-        query = Invoice.query
+        from sqlalchemy.orm import joinedload
+
+        query = Invoice.query.options(
+            joinedload(Invoice.campaign),
+            joinedload(Invoice.advertiser)
+        )
 
         if campaign_id is not None:
             query = query.filter(Invoice.campaign_id == campaign_id)

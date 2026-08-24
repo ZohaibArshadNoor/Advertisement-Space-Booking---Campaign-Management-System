@@ -34,7 +34,11 @@ class PaymentService:
         Returns paginated payments with advanced filtering,
         reference search, amount range, and whitelisted sorting.
         """
-        query = Payment.query
+        from sqlalchemy.orm import joinedload
+
+        query = Payment.query.options(
+            joinedload(Payment.invoice)
+        )
 
         if invoice_id is not None:
             query = query.filter(Payment.invoice_id == invoice_id)

@@ -68,7 +68,14 @@ class BookingService:
         Returns paginated booking records with advanced filtering,
         keyword search, date boundaries, and whitelisted sorting.
         """
-        query = Booking.query.join(AdvertisingSpace)
+        from sqlalchemy.orm import joinedload
+
+        query = Booking.query.options(
+            joinedload(Booking.space),
+            joinedload(Booking.user),
+            joinedload(Booking.advertiser),
+            joinedload(Booking.campaign)
+        ).join(AdvertisingSpace)
 
         # 1. Filter by creator user ID
         if user_id is not None:

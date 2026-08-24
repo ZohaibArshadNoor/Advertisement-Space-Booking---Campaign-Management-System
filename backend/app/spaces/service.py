@@ -214,7 +214,12 @@ class AdvertisingSpaceService:
         Returns advertising spaces with advanced multi-criteria filtering,
         keyword search, price ranges, and SQL-injection-safe sorting.
         """
-        query = AdvertisingSpace.query.join(
+        from sqlalchemy.orm import joinedload
+
+        query = AdvertisingSpace.query.options(
+            joinedload(AdvertisingSpace.location),
+            joinedload(AdvertisingSpace.category)
+        ).join(
             Location
         ).join(
             SpaceCategory

@@ -45,7 +45,12 @@ class CampaignService:
         Returns paginated campaigns with advanced multi-criteria filtering,
         keyword search, budget limits, and whitelisted sorting.
         """
-        query = Campaign.query
+        from sqlalchemy.orm import joinedload
+
+        query = Campaign.query.options(
+            joinedload(Campaign.advertiser),
+            joinedload(Campaign.user)
+        )
 
         # 1. Filter by owner user ID
         if user_id is not None:

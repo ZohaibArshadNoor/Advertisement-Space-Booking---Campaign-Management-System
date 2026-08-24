@@ -162,8 +162,20 @@ def create_booking():
     )
 
     if error:
+        if "Conflict detected" in error or "already booked" in error:
+            return jsonify({
+                "success": False,
+                "message": error,
+                "error": {
+                    "code": "BOOKING_CONFLICT"
+                }
+            }), 409
         return jsonify({
-            "message": error
+            "success": False,
+            "message": error,
+            "error": {
+                "code": "BOOKING_ERROR"
+            }
         }), 400
 
     # Step 5: Return newly created booking record.

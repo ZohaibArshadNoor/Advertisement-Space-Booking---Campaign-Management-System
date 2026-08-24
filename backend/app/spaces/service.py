@@ -198,63 +198,81 @@ class AdvertisingSpaceService:
 
     @staticmethod
     def get_all(
-        page,
-        per_page,
+        page=1,
+        per_page=10,
         category_id=None,
         location_id=None,
         city=None,
         search=None,
-        is_active=None
+        is_active=None,
+        min_price=None,
+        max_price=None,
+        sort_by="name",
+        sort_order="asc"
     ):
         """
-        Returns advertising spaces with optional filtering
-        and pagination.
+        Returns advertising spaces with advanced multi-criteria filtering,
+        keyword search, price ranges, and SQL-injection-safe sorting.
         """
-
         query = AdvertisingSpace.query.join(
             Location
         ).join(
             SpaceCategory
         )
 
-        # Filter by category.
+        # 1. Filter by category
         if category_id is not None:
-            query = query.filter(
-                AdvertisingSpace.category_id == category_id
-            )
+            query = query.filter(AdvertisingSpace.category_id == category_id)
 
-        # Filter by location.
+        # 2. Filter by location ID
         if location_id is not None:
-            query = query.filter(
-                AdvertisingSpace.location_id == location_id
-            )
+            query = query.filter(AdvertisingSpace.location_id == location_id)
 
-        # Filter by city.
+        # 3. Filter by city
         if city:
-            query = query.filter(
-                db.func.lower(Location.city)
-                == city.lower()
-            )
+            query = query.filter(db.func.lower(Location.city) == city.strip().lower())
 
-        # Search by advertising space name.
+        # 4. Multi-field Keyword Search (name, description, location name, location city)
         if search:
+            search_term = f"%{search.strip()}%"
             query = query.filter(
-                AdvertisingSpace.name.ilike(
-                    f"%{search}%"
+                db.or_(
+                    AdvertisingSpace.name.ilike(search_term),
+                    AdvertisingSpace.description.ilike(search_term),
+                    Location.name.ilike(search_term),
+                    Location.city.ilike(search_term)
                 )
             )
 
-        # Filter by active or inactive status.
+        # 5. Filter by active status
         if is_active is not None:
-            query = query.filter(
-                AdvertisingSpace.is_active == is_active
-            )
+            query = query.filter(AdvertisingSpace.is_active == is_active)
 
-        return query.order_by(
-            AdvertisingSpace.name.asc()
-        ).paginate(
-            page=page,
-            per_page=per_page,
+        # 6. Price range filtering
+        if min_price is not None:
+            query = query.filter(AdvertisingSpace.base_rate >= min_price)
+        if max_price is not None:
+            query = query.filter(AdvertisingSpace.base_rate <= max_price)
+
+        # 7. Safe whitelisted sorting
+        sort_fields = {
+            "name": AdvertisingSpace.name,
+            "base_rate": AdvertisingSpace.base_rate,
+            "created_at": AdvertisingSpace.created_at
+        }
+        sort_column = sort_fields.get(sort_by, AdvertisingSpace.name)
+        if str(sort_order).lower() == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+
+        # 8. Capped pagination
+        safe_per_page = min(max(1, per_page), 100)
+        safe_page = max(1, page)
+
+        return query.paginate(
+            page=safe_page,
+            per_page=safe_per_page,
             error_out=False
         )
 

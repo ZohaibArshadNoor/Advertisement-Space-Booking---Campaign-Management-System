@@ -17,7 +17,22 @@ class PaymentService:
         return db.session.get(Payment, payment_id)
 
     @staticmethod
-    def get_all(page=1, per_page=10, invoice_id=None, status=None):
+    def get_all(
+        page=1,
+        per_page=10,
+        invoice_id=None,
+        status=None,
+        payment_method=None,
+        search=None,
+        min_amount=None,
+        max_amount=None,
+        sort_by="created_at",
+        sort_order="desc"
+    ):
+        """
+        Returns paginated payments with advanced filtering,
+        reference search, amount range, and whitelisted sorting.
+        """
         query = Payment.query
 
         if invoice_id is not None:
@@ -26,11 +41,42 @@ class PaymentService:
         if status:
             query = query.filter(Payment.status == status)
 
-        return query.order_by(
-            Payment.created_at.desc()
-        ).paginate(
-            page=page,
-            per_page=per_page,
+        if payment_method:
+            query = query.filter(Payment.payment_method == payment_method)
+
+        if min_amount is not None:
+            query = query.filter(Payment.amount >= min_amount)
+
+        if max_amount is not None:
+            query = query.filter(Payment.amount <= max_amount)
+
+        if search:
+            search_term = f"%{search.strip()}%"
+            query = query.filter(
+                db.or_(
+                    Payment.payment_reference.ilike(search_term),
+                    Payment.transaction_reference.ilike(search_term)
+                )
+            )
+
+        sort_fields = {
+            "created_at": Payment.created_at,
+            "amount": Payment.amount,
+            "paid_at": Payment.paid_at,
+            "status": Payment.status
+        }
+        sort_column = sort_fields.get(sort_by, Payment.created_at)
+        if str(sort_order).lower() == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+
+        safe_per_page = min(max(1, per_page), 100)
+        safe_page = max(1, page)
+
+        return query.paginate(
+            page=safe_page,
+            per_page=safe_per_page,
             error_out=False
         )
 

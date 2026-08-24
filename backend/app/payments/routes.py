@@ -119,6 +119,30 @@ def get_payments():
         in: query
         type: string
         enum: [PENDING, COMPLETED, FAILED, REFUNDED]
+      - name: payment_method
+        in: query
+        type: string
+        enum: [BANK_TRANSFER, CREDIT_CARD, CHEQUE, CASH, ONLINE]
+      - name: search
+        in: query
+        type: string
+        description: Keyword search on payment reference or transaction reference.
+      - name: min_amount
+        in: query
+        type: number
+      - name: max_amount
+        in: query
+        type: number
+      - name: sort_by
+        in: query
+        type: string
+        enum: [created_at, amount, paid_at, status]
+        default: created_at
+      - name: sort_order
+        in: query
+        type: string
+        enum: [asc, desc]
+        default: desc
     responses:
       200:
         description: Payments retrieved.
@@ -127,12 +151,30 @@ def get_payments():
     per_page = request.args.get("per_page", 10, type=int)
     invoice_id = request.args.get("invoice_id", type=int)
     status = request.args.get("status")
+    payment_method = request.args.get("payment_method")
+    search = request.args.get("search")
+    min_amount = request.args.get("min_amount", type=float)
+    max_amount = request.args.get("max_amount", type=float)
+    sort_by = request.args.get("sort_by", default="created_at")
+    sort_order = request.args.get("sort_order", default="desc")
+
+    if page < 1:
+        return jsonify({"message": "Page must be greater than zero."}), 400
+
+    if per_page < 1 or per_page > 100:
+        return jsonify({"message": "per_page must be between 1 and 100."}), 400
 
     payments_page = PaymentService.get_all(
         page=page,
         per_page=per_page,
         invoice_id=invoice_id,
-        status=status
+        status=status,
+        payment_method=payment_method,
+        search=search,
+        min_amount=min_amount,
+        max_amount=max_amount,
+        sort_by=sort_by,
+        sort_order=sort_order
     )
 
     return jsonify({

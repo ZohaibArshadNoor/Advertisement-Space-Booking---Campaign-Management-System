@@ -54,34 +54,86 @@ class BookingService:
         user_id=None,
         advertiser_id=None,
         space_id=None,
-        status=None
+        campaign_id=None,
+        status=None,
+        start_date=None,
+        end_date=None,
+        min_price=None,
+        max_price=None,
+        search=None,
+        sort_by="created_at",
+        sort_order="desc"
     ):
         """
-        Returns paginated booking records with optional filtering.
+        Returns paginated booking records with advanced filtering,
+        keyword search, date boundaries, and whitelisted sorting.
         """
-        query = Booking.query
+        query = Booking.query.join(AdvertisingSpace)
 
-        # Filter by creator user ID.
+        # 1. Filter by creator user ID
         if user_id is not None:
             query = query.filter(Booking.user_id == user_id)
 
-        # Filter by advertiser company ID.
+        # 2. Filter by advertiser company ID
         if advertiser_id is not None:
             query = query.filter(Booking.advertiser_id == advertiser_id)
 
-        # Filter by specific space ID.
+        # 3. Filter by space ID
         if space_id is not None:
             query = query.filter(Booking.space_id == space_id)
 
-        # Filter by workflow status.
+        # 4. Filter by campaign ID
+        if campaign_id is not None:
+            query = query.filter(Booking.campaign_id == campaign_id)
+
+        # 5. Filter by workflow status
         if status:
             query = query.filter(Booking.status == status)
 
-        return query.order_by(
-            Booking.created_at.desc()
-        ).paginate(
-            page=page,
-            per_page=per_page,
+        # 6. Date boundaries
+        if start_date is not None:
+            query = query.filter(Booking.start_date >= start_date)
+        if end_date is not None:
+            query = query.filter(Booking.end_date <= end_date)
+
+        # 7. Price range
+        if min_price is not None:
+            query = query.filter(Booking.total_price >= min_price)
+        if max_price is not None:
+            query = query.filter(Booking.total_price <= max_price)
+
+        # 8. Keyword search (booking reference, notes, space name)
+        if search:
+            search_term = f"%{search.strip()}%"
+            query = query.filter(
+                db.or_(
+                    Booking.booking_reference.ilike(search_term),
+                    Booking.notes.ilike(search_term),
+                    AdvertisingSpace.name.ilike(search_term)
+                )
+            )
+
+        # 9. Whitelisted sorting
+        sort_fields = {
+            "created_at": Booking.created_at,
+            "start_date": Booking.start_date,
+            "end_date": Booking.end_date,
+            "total_price": Booking.total_price,
+            "status": Booking.status
+        }
+        sort_column = sort_fields.get(sort_by, Booking.created_at)
+        if str(sort_order).lower() == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+
+        # 10. Capped pagination
+        safe_per_page = min(max(1, per_page), 100)
+        safe_page = max(1, page)
+
+        return query.paginate(
+            page=safe_page,
+            per_page=safe_per_page,
             error_out=False
         )
 

@@ -56,6 +56,32 @@ def get_notifications():
         in: query
         type: boolean
         default: false
+      - name: type
+        in: query
+        type: string
+        enum: [BOOKING, CAMPAIGN, INVOICE, PAYMENT, SYSTEM]
+      - name: search
+        in: query
+        type: string
+        description: Keyword search on notification title or message.
+      - name: start_date
+        in: query
+        type: string
+        format: date
+      - name: end_date
+        in: query
+        type: string
+        format: date
+      - name: sort_by
+        in: query
+        type: string
+        enum: [created_at, title, type]
+        default: created_at
+      - name: sort_order
+        in: query
+        type: string
+        enum: [asc, desc]
+        default: desc
     responses:
       200:
         description: Notifications retrieved successfully.
@@ -66,12 +92,30 @@ def get_notifications():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 20, type=int)
     unread_only = request.args.get("unread_only", "false").lower() == "true"
+    notification_type = request.args.get("type")
+    search = request.args.get("search")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    sort_by = request.args.get("sort_by", default="created_at")
+    sort_order = request.args.get("sort_order", default="desc")
+
+    if page < 1:
+        return jsonify({"message": "Page must be greater than zero."}), 400
+
+    if per_page < 1 or per_page > 100:
+        return jsonify({"message": "per_page must be between 1 and 100."}), 400
 
     notifications_page = NotificationService.get_user_notifications(
         user_id=current_user_id,
         page=page,
         per_page=per_page,
-        unread_only=unread_only
+        unread_only=unread_only,
+        notification_type=notification_type,
+        search=search,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+        sort_order=sort_order
     )
 
     unread_count = NotificationService.get_unread_count(current_user_id)

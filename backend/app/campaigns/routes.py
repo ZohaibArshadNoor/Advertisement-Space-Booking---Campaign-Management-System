@@ -231,6 +231,34 @@ def get_campaigns():
         in: query
         type: string
         enum: [DRAFT, ACTIVE, PAUSED, COMPLETED, CANCELLED]
+      - name: start_date
+        in: query
+        type: string
+        format: date
+      - name: end_date
+        in: query
+        type: string
+        format: date
+      - name: min_budget
+        in: query
+        type: number
+      - name: max_budget
+        in: query
+        type: number
+      - name: search
+        in: query
+        type: string
+        description: Keyword search on name, description, or reference.
+      - name: sort_by
+        in: query
+        type: string
+        enum: [created_at, name, start_date, budget, status]
+        default: created_at
+      - name: sort_order
+        in: query
+        type: string
+        enum: [asc, desc]
+        default: desc
 
     responses:
       200:
@@ -240,6 +268,13 @@ def get_campaigns():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     status = request.args.get("status")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    min_budget = request.args.get("min_budget", type=float)
+    max_budget = request.args.get("max_budget", type=float)
+    search = request.args.get("search")
+    sort_by = request.args.get("sort_by", default="created_at")
+    sort_order = request.args.get("sort_order", default="desc")
 
     if page < 1:
         return jsonify({"message": "Page must be greater than zero."}), 400
@@ -260,7 +295,14 @@ def get_campaigns():
         page=page,
         per_page=per_page,
         user_id=user_filter,
-        status=status
+        status=status,
+        start_date=start_date,
+        end_date=end_date,
+        min_budget=min_budget,
+        max_budget=max_budget,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order
     )
 
     # Step 4: Return response.

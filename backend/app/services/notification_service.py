@@ -36,21 +36,57 @@ class NotificationService:
         user_id: int,
         page: int = 1,
         per_page: int = 20,
-        unread_only: bool = False
+        unread_only: bool = False,
+        notification_type: str = None,
+        search: str = None,
+        start_date = None,
+        end_date = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc"
     ):
         """
-        Returns paginated notifications for a specific user.
+        Returns paginated notifications for a specific user with advanced filtering.
         """
         query = Notification.query.filter_by(user_id=user_id)
 
         if unread_only:
             query = query.filter_by(is_read=False)
 
-        return query.order_by(
-            Notification.created_at.desc()
-        ).paginate(
-            page=page,
-            per_page=per_page,
+        if notification_type:
+            query = query.filter_by(type=notification_type)
+
+        if start_date:
+            query = query.filter(Notification.created_at >= start_date)
+
+        if end_date:
+            query = query.filter(Notification.created_at <= end_date)
+
+        if search:
+            search_term = f"%{search.strip()}%"
+            query = query.filter(
+                db.or_(
+                    Notification.title.ilike(search_term),
+                    Notification.message.ilike(search_term)
+                )
+            )
+
+        sort_fields = {
+            "created_at": Notification.created_at,
+            "title": Notification.title,
+            "type": Notification.type
+        }
+        sort_column = sort_fields.get(sort_by, Notification.created_at)
+        if str(sort_order).lower() == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+
+        safe_per_page = min(max(1, per_page), 100)
+        safe_page = max(1, page)
+
+        return query.paginate(
+            page=safe_page,
+            per_page=safe_per_page,
             error_out=False
         )
 

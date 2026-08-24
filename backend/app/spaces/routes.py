@@ -1143,6 +1143,34 @@ def get_advertising_spaces():
         required: false
         description: Filter advertising spaces by active status.
 
+      - name: min_price
+        in: query
+        type: number
+        required: false
+        description: Minimum base rate price filter.
+
+      - name: max_price
+        in: query
+        type: number
+        required: false
+        description: Maximum base rate price filter.
+
+      - name: sort_by
+        in: query
+        type: string
+        enum: [name, base_rate, created_at]
+        default: name
+        required: false
+        description: Sort field.
+
+      - name: sort_order
+        in: query
+        type: string
+        enum: [asc, desc]
+        default: asc
+        required: false
+        description: Sort direction.
+
     responses:
       200:
         description: Advertising spaces retrieved successfully.
@@ -1157,77 +1185,34 @@ def get_advertising_spaces():
         description: User does not have permission to access advertising spaces.
     """
 
-    page = request.args.get(
-        "page",
-        default=1,
-        type=int
-    )
+    page = request.args.get("page", default=1, type=int)
+    per_page = request.args.get("per_page", default=10, type=int)
+    category_id = request.args.get("category_id", type=int)
+    location_id = request.args.get("location_id", type=int)
+    city = request.args.get("city", type=str)
+    search = request.args.get("search", type=str)
+    min_price = request.args.get("min_price", type=float)
+    max_price = request.args.get("max_price", type=float)
+    sort_by = request.args.get("sort_by", default="name", type=str)
+    sort_order = request.args.get("sort_order", default="asc", type=str)
 
-    per_page = request.args.get(
-        "per_page",
-        default=10,
-        type=int
-    )
-
-    category_id = request.args.get(
-        "category_id",
-        type=int
-    )
-
-    location_id = request.args.get(
-        "location_id",
-        type=int
-    )
-
-    city = request.args.get(
-        "city",
-        type=str
-    )
-
-    search = request.args.get(
-        "search",
-        type=str
-    )
-
-    is_active_value = request.args.get(
-        "is_active"
-    )
-
+    is_active_value = request.args.get("is_active")
     is_active = None
 
     if is_active_value is not None:
-
-        normalized_value = (
-            is_active_value.lower().strip()
-        )
-
+        normalized_value = is_active_value.lower().strip()
         if normalized_value == "true":
             is_active = True
-
         elif normalized_value == "false":
             is_active = False
-
         else:
-            return jsonify({
-                "message": (
-                    "is_active must be true or false."
-                )
-            }), 400
-            
-            
-    # Prevent invalid pagination values.
-    if page < 1:
-        return jsonify({
-            "message": "Page must be greater than zero."
-        }), 400
+            return jsonify({"message": "is_active must be true or false."}), 400
 
-    # Prevent clients from requesting extremely large datasets.
+    if page < 1:
+        return jsonify({"message": "Page must be greater than zero."}), 400
+
     if per_page < 1 or per_page > 100:
-        return jsonify({
-            "message": (
-                "per_page must be between 1 and 100."
-            )
-        }), 400
+        return jsonify({"message": "per_page must be between 1 and 100."}), 400
 
     spaces = AdvertisingSpaceService.get_all(
         page=page,
@@ -1236,7 +1221,11 @@ def get_advertising_spaces():
         location_id=location_id,
         city=city,
         search=search,
-        is_active=is_active
+        is_active=is_active,
+        min_price=min_price,
+        max_price=max_price,
+        sort_by=sort_by,
+        sort_order=sort_order
     )
 
     return jsonify({
@@ -1244,7 +1233,6 @@ def get_advertising_spaces():
             space_to_dict(space)
             for space in spaces.items
         ],
-
         "pagination": {
             "page": spaces.page,
             "per_page": spaces.per_page,

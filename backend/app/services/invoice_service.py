@@ -28,8 +28,19 @@ class InvoiceService:
         per_page=10,
         campaign_id=None,
         advertiser_id=None,
-        status=None
+        status=None,
+        search=None,
+        min_amount=None,
+        max_amount=None,
+        due_date_from=None,
+        due_date_to=None,
+        sort_by="created_at",
+        sort_order="desc"
     ):
+        """
+        Returns paginated invoices with advanced filtering,
+        invoice number search, amount thresholds, and whitelisted sorting.
+        """
         query = Invoice.query
 
         if campaign_id is not None:
@@ -41,11 +52,40 @@ class InvoiceService:
         if status:
             query = query.filter(Invoice.status == status)
 
-        return query.order_by(
-            Invoice.created_at.desc()
-        ).paginate(
-            page=page,
-            per_page=per_page,
+        if min_amount is not None:
+            query = query.filter(Invoice.total_amount >= min_amount)
+
+        if max_amount is not None:
+            query = query.filter(Invoice.total_amount <= max_amount)
+
+        if due_date_from is not None:
+            query = query.filter(Invoice.due_date >= due_date_from)
+
+        if due_date_to is not None:
+            query = query.filter(Invoice.due_date <= due_date_to)
+
+        if search:
+            search_term = f"%{search.strip()}%"
+            query = query.filter(Invoice.invoice_number.ilike(search_term))
+
+        sort_fields = {
+            "created_at": Invoice.created_at,
+            "total_amount": Invoice.total_amount,
+            "due_date": Invoice.due_date,
+            "status": Invoice.status
+        }
+        sort_column = sort_fields.get(sort_by, Invoice.created_at)
+        if str(sort_order).lower() == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+
+        safe_per_page = min(max(1, per_page), 100)
+        safe_page = max(1, page)
+
+        return query.paginate(
+            page=safe_page,
+            per_page=safe_per_page,
             error_out=False
         )
 

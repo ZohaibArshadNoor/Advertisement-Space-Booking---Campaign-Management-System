@@ -218,6 +218,34 @@ def get_bookings():
         in: query
         type: integer
         description: Filter by space ID.
+      - name: campaign_id
+        in: query
+        type: integer
+        description: Filter by parent campaign ID.
+      - name: start_date
+        in: query
+        type: string
+        format: date
+        description: Filter bookings starting on or after this date.
+      - name: end_date
+        in: query
+        type: string
+        format: date
+        description: Filter bookings ending on or before this date.
+      - name: search
+        in: query
+        type: string
+        description: Keyword search on reference, notes, or space name.
+      - name: sort_by
+        in: query
+        type: string
+        enum: [created_at, start_date, end_date, total_price, status]
+        default: created_at
+      - name: sort_order
+        in: query
+        type: string
+        enum: [asc, desc]
+        default: desc
 
     responses:
       200:
@@ -230,6 +258,12 @@ def get_bookings():
     per_page = request.args.get("per_page", 10, type=int)
     status = request.args.get("status")
     space_id = request.args.get("space_id", type=int)
+    campaign_id = request.args.get("campaign_id", type=int)
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    search = request.args.get("search")
+    sort_by = request.args.get("sort_by", default="created_at")
+    sort_order = request.args.get("sort_order", default="desc")
 
     if page < 1:
         return jsonify({"message": "Page must be greater than zero."}), 400
@@ -251,7 +285,13 @@ def get_bookings():
         per_page=per_page,
         user_id=user_filter,
         space_id=space_id,
-        status=status
+        campaign_id=campaign_id,
+        status=status,
+        start_date=start_date,
+        end_date=end_date,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order
     )
 
     # Step 4: Return response.

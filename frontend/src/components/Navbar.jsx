@@ -89,6 +89,18 @@ const Navbar = () => {
                   >
                     Billing & Payments
                   </NavLink>
+                {user?.role === 'Administrator' && (
+                  <NavLink 
+                    to="/admin" 
+                    className={({ isActive }) => 
+                      `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                        isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
+                      }`
+                    }
+                  >
+                    🛡️ Admin Portal
+                  </NavLink>
+                )}
             </nav>
           )}
         </div>

@@ -13,7 +13,7 @@ import BookingsPage from './features/bookings/pages/BookingsPage';
 import CreativesPage from './features/creatives/pages/CreativesPage';
 import PaymentsPage from './features/payments/pages/PaymentsPage';
 import NotificationsPage from './features/notifications/pages/NotificationsPage';
-
+import AdminPage from './features/admin/pages/AdminPage';
 
 function App() {
   return (
@@ -36,6 +36,10 @@ function App() {
                 <Route path="/creatives" element={<CreativesPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
+                <Route path="/admin" element={<AdminPage />} />
               </Route>
 
               {/* Fallback */}

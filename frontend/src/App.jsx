@@ -11,6 +11,7 @@ import Campaigns from './pages/Campaigns';
 import SpacesPage from './features/spaces/pages/SpacePage';
 import BookingsPage from './features/bookings/pages/BookingsPage';
 import CreativesPage from './features/creatives/pages/CreativesPage';
+import PaymentsPage from './features/payments/pages/PaymentsPage';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/spaces" element={<SpacesPage />} />
                 <Route path="/bookings" element={<BookingsPage />} />
                 <Route path="/creatives" element={<CreativesPage />} />
+                <Route path="/payments" element={<PaymentsPage />} />
               </Route>
 
               {/* Fallback */}

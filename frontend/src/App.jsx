@@ -6,12 +6,13 @@ import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './features/dashboard/pages/DashboardPage';
 import Campaigns from './pages/Campaigns';
 import SpacesPage from './features/spaces/pages/SpacePage';
 import BookingsPage from './features/bookings/pages/BookingsPage';
 import CreativesPage from './features/creatives/pages/CreativesPage';
 import PaymentsPage from './features/payments/pages/PaymentsPage';
+
 
 function App() {
   return (

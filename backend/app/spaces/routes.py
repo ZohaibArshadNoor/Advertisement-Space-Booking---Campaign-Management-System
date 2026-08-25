@@ -150,7 +150,8 @@ def space_to_dict(space):
 @roles_required(
     "Administrator",
     "Sales Executive",
-    "Space Manager"
+    "Space Manager",
+    "Advertiser"
 )
 def get_locations():
     """
@@ -619,7 +620,8 @@ def delete_location(location_id):
 @roles_required(
     "Administrator",
     "Sales Executive",
-    "Space Manager"
+    "Space Manager",
+    "Advertiser"
 )
 def get_space_categories():
     """
@@ -1076,7 +1078,8 @@ def delete_space_category(category_id):
 @roles_required(
     "Administrator",
     "Sales Executive",
-    "Space Manager"
+    "Space Manager",
+    "Advertiser"
 )
 def get_advertising_spaces():
     """

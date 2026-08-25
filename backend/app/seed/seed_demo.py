@@ -18,7 +18,7 @@ def seed_demo_data():
     """
     Populates rich, realistic demo data across all modules for testing and UI demonstration.
     """
-    print("🌱 Starting demo data seeding...")
+    print("[SEED] Starting demo data seeding...")
 
     # -------------------------------------------------------------------------
     # 1. ROLES & USERS
@@ -331,7 +331,7 @@ def seed_demo_data():
         )
 
     db.session.commit()
-    print("✅ Demo data seeded successfully!")
-    print("\n🔑 Ready Test Accounts (Password: 'password123'):")
+    print("[SEED] Demo data seeded successfully!")
+    print("\n[AUTH] Ready Test Accounts (Password: 'password123'):")
     for role_name, user_obj in users_map.items():
-        print(f"  • {role_name:18} -> {user_obj.email}")
+        print(f"  * {role_name:18} -> {user_obj.email}")

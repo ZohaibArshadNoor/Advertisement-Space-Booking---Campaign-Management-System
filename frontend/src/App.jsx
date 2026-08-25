@@ -13,6 +13,7 @@ import BookingsPage from './features/bookings/pages/BookingsPage';
 import CreativesPage from './features/creatives/pages/CreativesPage';
 import PaymentsPage from './features/payments/pages/PaymentsPage';
 import NotificationsPage from './features/notifications/pages/NotificationsPage';
+import AvailabilityPage from './features/availability/pages/AvailabilityPage';
 import AdminPage from './features/admin/pages/AdminPage';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/campaigns" element={<Campaigns />} />
                 <Route path="/spaces" element={<SpacesPage />} />
+                <Route path="/availability" element={<AvailabilityPage />} />
                 <Route path="/bookings" element={<BookingsPage />} />
                 <Route path="/creatives" element={<CreativesPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />

@@ -60,6 +60,16 @@ const Navbar = () => {
                 Ad Spaces
               </NavLink>
               <NavLink 
+                to="/availability" 
+                className={({ isActive }) => 
+                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                    isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
+                  }`
+                }
+              >
+                Availability
+              </NavLink>
+              <NavLink 
                 to="/bookings" 
                 className={({ isActive }) => 
                     `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${

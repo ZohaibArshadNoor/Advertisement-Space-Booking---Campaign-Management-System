@@ -68,6 +68,16 @@ const Navbar = () => {
                 >
                 Bookings
                 </NavLink>
+              <NavLink 
+                to="/creatives" 
+                className={({ isActive }) => 
+                    `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                    isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
+                    }`
+                }
+                >
+                Creatives
+                </NavLink>
             </nav>
           )}
         </div>

@@ -17,6 +17,19 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 
+import { 
+  Building2, 
+  Zap, 
+  MapPin, 
+  Megaphone, 
+  CalendarDays, 
+  Image as ImageIcon, 
+  CreditCard,
+  TrendingUp,
+  Layers,
+  CalendarCheck
+} from 'lucide-react';
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -108,11 +121,13 @@ const DashboardPage = () => {
           <h2 className="fw-bold mb-1">
             Welcome back, {user?.name}!
           </h2>
-          <p className="text-muted small mb-0">
-            System Identity: <span className="badge bg-primary me-2">{user?.role}</span>
+          <p className="text-muted small mb-0 d-flex align-items-center gap-2">
+            <span>System Identity:</span> 
+            <span className="badge bg-primary">{user?.role}</span>
             {summary?.profile?.advertiser?.company_name && (
-              <span className="badge bg-light text-dark border">
-                🏢 {summary.profile.advertiser.company_name}
+              <span className="badge bg-light text-dark border d-inline-flex align-items-center gap-1">
+                <Building2 size={12} className="text-muted" />
+                <span>{summary.profile.advertiser.company_name}</span>
               </span>
             )}
           </p>
@@ -185,22 +200,34 @@ const DashboardPage = () => {
       {/* Quick Action Shortcuts */}
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-body">
-          <h6 className="fw-bold mb-3 text-secondary text-uppercase small">⚡ Quick Actions & Workflows</h6>
+          <h6 className="fw-bold mb-3 text-secondary text-uppercase small d-flex align-items-center gap-1.5">
+            <Zap size={15} className="text-primary" />
+            <span>Quick Actions & Workflows</span>
+          </h6>
           <div className="d-flex flex-wrap gap-2">
-            <Link to="/spaces" className="btn btn-outline-primary btn-sm">
-              📍 Browse Ad Spaces
+            <Link to="/spaces" className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1.5">
+              <MapPin size={14} />
+              <span>Browse Ad Spaces</span>
             </Link>
-            <Link to="/campaigns" className="btn btn-outline-primary btn-sm">
-              🚀 Launch Campaign
+            <Link to="/availability" className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1.5">
+              <CalendarCheck size={14} />
+              <span>Check Availability</span>
             </Link>
-            <Link to="/bookings" className="btn btn-outline-primary btn-sm">
-              📅 Book Advertising Space
+            <Link to="/campaigns" className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1.5">
+              <Megaphone size={14} />
+              <span>Launch Campaign</span>
             </Link>
-            <Link to="/creatives" className="btn btn-outline-primary btn-sm">
-              🎨 Upload Creative Assets
+            <Link to="/bookings" className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1.5">
+              <Layers size={14} />
+              <span>Book Space</span>
             </Link>
-            <Link to="/payments" className="btn btn-outline-primary btn-sm">
-              💳 Invoices & Payments
+            <Link to="/creatives" className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1.5">
+              <ImageIcon size={14} />
+              <span>Upload Creatives</span>
+            </Link>
+            <Link to="/payments" className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1.5">
+              <CreditCard size={14} />
+              <span>Invoices & Payments</span>
             </Link>
           </div>
         </div>

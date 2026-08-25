@@ -1,12 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { notificationsApi } from '../notificationsApi';
+import { 
+  Bell, 
+  Megaphone, 
+  CalendarDays, 
+  CreditCard, 
+  Image as ImageIcon, 
+  Info, 
+  CheckCheck, 
+  Trash2,
+  Inbox
+} from 'lucide-react';
 
-const TYPE_ICONS = {
-  CAMPAIGN: '🚀',
-  BOOKING: '📅',
-  INVOICE: '💳',
-  CREATIVE: '🎨',
-  SYSTEM: '🔔',
+const renderTypeIcon = (type) => {
+  switch (type) {
+    case 'CAMPAIGN':
+      return <Megaphone size={22} className="text-primary" />;
+    case 'BOOKING':
+      return <CalendarDays size={22} className="text-success" />;
+    case 'INVOICE':
+      return <CreditCard size={22} className="text-warning" />;
+    case 'CREATIVE':
+      return <ImageIcon size={22} className="text-info" />;
+    default:
+      return <Info size={22} className="text-secondary" />;
+  }
 };
 
 const NotificationsPage = () => {
@@ -75,11 +93,15 @@ const NotificationsPage = () => {
     <div className="container-fluid px-0">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="fw-bold mb-1">Notifications & System Alerts</h2>
+          <h2 className="fw-bold mb-1 d-flex align-items-center gap-2">
+            <Bell className="text-primary" size={28} />
+            Notifications & System Alerts
+          </h2>
           <p className="text-muted small mb-0">Track real-time workflow events, media reviews, and billing notices</p>
         </div>
-        <button className="btn btn-outline-primary btn-sm" onClick={handleMarkAllRead}>
-          ✓ Mark All as Read
+        <button className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1.5" onClick={handleMarkAllRead}>
+          <CheckCheck size={16} />
+          <span>Mark All as Read</span>
         </button>
       </div>
 
@@ -124,6 +146,7 @@ const NotificationsPage = () => {
             </div>
           ) : notifications.length === 0 ? (
             <div className="text-center py-5">
+              <Inbox size={40} className="text-muted mb-2" />
               <h5>No notifications to display</h5>
               <p className="text-muted small">You are all caught up!</p>
             </div>
@@ -137,7 +160,9 @@ const NotificationsPage = () => {
                   }`}
                 >
                   <div className="d-flex align-items-start gap-3">
-                    <span className="fs-3">{TYPE_ICONS[item.type] || '📢'}</span>
+                    <div className="p-2 rounded bg-light border mt-1">
+                      {renderTypeIcon(item.type)}
+                    </div>
                     <div>
                       <div className="d-flex align-items-center gap-2 mb-1">
                         <h6 className="fw-bold mb-0">{item.title}</h6>
@@ -161,10 +186,12 @@ const NotificationsPage = () => {
                       </button>
                     )}
                     <button
-                      className="btn btn-sm btn-outline-danger"
+                      className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
                       onClick={() => handleDelete(item.id)}
+                      title="Delete alert"
                     >
-                      Delete
+                      <Trash2 size={14} />
+                      <span className="d-none d-md-inline">Delete</span>
                     </button>
                   </div>
                 </div>
@@ -201,4 +228,4 @@ const NotificationsPage = () => {
   );
 };
 
-export default NotificationsPage;
+export default NotificationsPage;

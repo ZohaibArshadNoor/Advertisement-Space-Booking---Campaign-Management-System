@@ -332,27 +332,119 @@ def get_current_user():
 def admin_test():
     """
     Test Administrator-only authorization.
-
-    ---
-    tags:
-      - Authorization
-    summary: Administrator authorization test
-    description: Test endpoint accessible only to Administrator users.
-    security:
-      - Bearer: []
-    responses:
-      200:
-        description: Authorization successful
-      401:
-        description: Authentication required
-      403:
-        description: Insufficient permissions
     """
-
     return jsonify({
         "success": True,
         "message": "Administrator authorization successful."
     }), 200
+
+
+@auth_bp.put("/profile")
+@jwt_required()
+def update_profile():
+    """
+    Update currently authenticated user's profile (name, email, phone).
+    """
+    user_id = get_jwt_identity()
+    user = db.session.get(User, int(user_id))
+
+    if user is None:
+        return jsonify({
+            "success": False,
+            "message": "User account no longer exists."
+        }), 404
+
+    data = request.get_json(silent=True) or {}
+
+    if "name" in data and data["name"].strip():
+        user.name = data["name"].strip()
+
+    if "email" in data and data["email"].strip():
+        new_email = data["email"].strip().lower()
+        if new_email != user.email:
+            existing = User.query.filter_by(email=new_email).first()
+            if existing:
+                return jsonify({
+                    "success": False,
+                    "message": "This email address is already in use by another account."
+                }), 409
+            user.email = new_email
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": "Failed to update profile."
+        }), 500
+
+    return jsonify({
+        "success": True,
+        "message": "Profile updated successfully.",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role.name,
+            "is_active": user.is_active
+        }
+    }), 200
+
+
+@auth_bp.post("/change-password")
+@jwt_required()
+def change_password():
+    """
+    Change currently authenticated user's password.
+    """
+    user_id = get_jwt_identity()
+    user = db.session.get(User, int(user_id))
+
+    if user is None:
+        return jsonify({
+            "success": False,
+            "message": "User account no longer exists."
+        }), 404
+
+    data = request.get_json(silent=True) or {}
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+
+    if not current_password or not new_password:
+        return jsonify({
+            "success": False,
+            "message": "Both current_password and new_password are required."
+        }), 400
+
+    if not user.check_password(current_password):
+        return jsonify({
+            "success": False,
+            "message": "Incorrect current password."
+        }), 400
+
+    if len(new_password) < 6:
+        return jsonify({
+            "success": False,
+            "message": "New password must be at least 6 characters long."
+        }), 400
+
+    user.set_password(new_password)
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": "Failed to update password."
+        }), 500
+
+    return jsonify({
+        "success": True,
+        "message": "Password changed successfully."
+    }), 200
+
 
 
 

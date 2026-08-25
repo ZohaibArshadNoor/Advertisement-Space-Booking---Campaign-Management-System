@@ -3,6 +3,20 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import NotificationBell from '../features/notifications/components/NotificationBell';
+import { 
+  Sun, 
+  Moon, 
+  User, 
+  LogOut, 
+  ShieldCheck, 
+  LayoutDashboard, 
+  Megaphone, 
+  MapPin, 
+  CalendarDays, 
+  Layers, 
+  Image as ImageIcon, 
+  CreditCard 
+} from 'lucide-react';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -32,85 +46,93 @@ const Navbar = () => {
               <NavLink 
                 to="/dashboard" 
                 className={({ isActive }) => 
-                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm d-flex align-items-center gap-1.5 ${
                     isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
                   }`
                 }
               >
-                Dashboard
+                <LayoutDashboard size={16} />
+                <span>Dashboard</span>
               </NavLink>
               <NavLink 
                 to="/campaigns" 
                 className={({ isActive }) => 
-                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm d-flex align-items-center gap-1.5 ${
                     isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
                   }`
                 }
               >
-                Campaigns
+                <Megaphone size={16} />
+                <span>Campaigns</span>
               </NavLink>
               <NavLink 
                 to="/spaces" 
                 className={({ isActive }) => 
-                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm d-flex align-items-center gap-1.5 ${
                     isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
                   }`
                 }
               >
-                Ad Spaces
+                <MapPin size={16} />
+                <span>Ad Spaces</span>
               </NavLink>
               <NavLink 
                 to="/availability" 
                 className={({ isActive }) => 
-                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm d-flex align-items-center gap-1.5 ${
                     isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
                   }`
                 }
               >
-                Availability
+                <CalendarDays size={16} />
+                <span>Availability</span>
               </NavLink>
               <NavLink 
                 to="/bookings" 
                 className={({ isActive }) => 
-                    `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm d-flex align-items-center gap-1.5 ${
                     isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
-                    }`
+                  }`
                 }
-                >
-                Bookings
-                </NavLink>
+              >
+                <Layers size={16} />
+                <span>Bookings</span>
+              </NavLink>
               <NavLink 
                 to="/creatives" 
                 className={({ isActive }) => 
-                    `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
+                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm d-flex align-items-center gap-1.5 ${
                     isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
-                    }`
+                  }`
                 }
-                >
-                Creatives
-                </NavLink>
+              >
+                <ImageIcon size={16} />
+                <span>Creatives</span>
+              </NavLink>
+              <NavLink 
+                to="/payments" 
+                className={({ isActive }) => 
+                  `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm d-flex align-items-center gap-1.5 ${
+                    isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
+                  }`
+                }
+              >
+                <CreditCard size={16} />
+                <span>Billing</span>
+              </NavLink>
+              {user?.role === 'Administrator' && (
                 <NavLink 
-                    to="/payments" 
-                    className={({ isActive }) => 
-                      `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
-                        isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
-                      }`
-                    }
-                  >
-                    Billing & Payments
-                  </NavLink>
-                {user?.role === 'Administrator' && (
-                  <NavLink 
-                    to="/admin" 
-                    className={({ isActive }) => 
-                      `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm ${
-                        isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
-                      }`
-                    }
-                  >
-                    🛡️ Admin Portal
-                  </NavLink>
-                )}
+                  to="/admin" 
+                  className={({ isActive }) => 
+                    `px-3 py-2 rounded-2 text-decoration-none fw-medium text-sm d-flex align-items-center gap-1.5 ${
+                      isActive ? 'text-primary bg-primary-subtle' : 'text-secondary'
+                    }`
+                  }
+                >
+                  <ShieldCheck size={16} />
+                  <span>Admin</span>
+                </NavLink>
+              )}
             </nav>
           )}
         </div>
@@ -123,7 +145,8 @@ const Navbar = () => {
             className="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 d-flex align-items-center gap-2"
             title="Toggle theme"
           >
-            <span>{theme === 'dark' ? '🌙 Dark' : '☀️ Light'}</span>
+            {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+            <span className="small">{theme === 'dark' ? 'Dark' : 'Light'}</span>
           </button>
 
           {isAuthenticated ? (
@@ -131,16 +154,28 @@ const Navbar = () => {
               {/* Real-time Notification Bell */}
               <NotificationBell />
 
-              <div className="text-end d-none d-sm-block">
-                <div className="fw-semibold small" style={{ color: 'var(--text-primary)' }}>
-                  {user?.name}
+              {/* User Account / Profile Link */}
+              <Link
+                to="/profile"
+                className="text-decoration-none text-end d-none d-sm-block p-1 rounded-2 hover-bg"
+                title="Manage Profile & Settings"
+              >
+                <div className="fw-semibold small d-flex align-items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+                  <User size={14} className="text-primary" />
+                  <span>{user?.name}</span>
                 </div>
                 <div className="text-muted" style={{ fontSize: '0.75rem' }}>
                   {user?.role}
                 </div>
-              </div>
-              <button onClick={handleLogout} className="btn btn-sm btn-outline-danger rounded-2">
-                Logout
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="btn btn-sm btn-outline-danger rounded-2 d-flex align-items-center gap-1"
+                title="Sign out of account"
+              >
+                <LogOut size={14} />
+                <span className="d-none d-md-inline">Logout</span>
               </button>
             </div>
           ) : (

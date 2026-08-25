@@ -1,13 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { notificationsApi } from '../notificationsApi';
+import { 
+  Bell, 
+  Megaphone, 
+  CalendarDays, 
+  CreditCard, 
+  Image as ImageIcon, 
+  Info, 
+  CheckCheck, 
+  ArrowRight 
+} from 'lucide-react';
 
-const TYPE_ICONS = {
-  CAMPAIGN: '🚀',
-  BOOKING: '📅',
-  INVOICE: '💳',
-  CREATIVE: '🎨',
-  SYSTEM: '🔔',
+const renderTypeIcon = (type) => {
+  switch (type) {
+    case 'CAMPAIGN':
+      return <Megaphone size={18} className="text-primary" />;
+    case 'BOOKING':
+      return <CalendarDays size={18} className="text-success" />;
+    case 'INVOICE':
+      return <CreditCard size={18} className="text-warning" />;
+    case 'CREATIVE':
+      return <ImageIcon size={18} className="text-info" />;
+    default:
+      return <Info size={18} className="text-secondary" />;
+  }
 };
 
 const NotificationBell = () => {
@@ -94,7 +111,7 @@ const NotificationBell = () => {
         onClick={toggleDropdown}
         title="Notifications"
       >
-        <span style={{ fontSize: '1rem' }}>🔔</span>
+        <Bell size={16} />
         {unreadCount > 0 && (
           <span
             className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -117,14 +134,16 @@ const NotificationBell = () => {
         >
           {/* Header */}
           <div className="p-3 border-bottom d-flex justify-content-between align-items-center">
-            <h6 className="fw-bold mb-0" style={{ color: 'var(--text-primary)' }}>
+            <h6 className="fw-bold mb-0 d-flex align-items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+              <Bell size={16} className="text-primary" />
               Notifications
             </h6>
             {unreadCount > 0 && (
               <button
-                className="btn btn-link btn-sm p-0 text-decoration-none small"
+                className="btn btn-link btn-sm p-0 text-decoration-none small d-flex align-items-center gap-1"
                 onClick={handleMarkAllRead}
               >
+                <CheckCheck size={14} />
                 Mark all as read
               </button>
             )}
@@ -145,8 +164,10 @@ const NotificationBell = () => {
                   }`}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="d-flex align-items-start gap-2">
-                    <span className="fs-5">{TYPE_ICONS[item.type] || '📢'}</span>
+                  <div className="d-flex align-items-start gap-2.5">
+                    <div className="p-1 rounded bg-light border mt-0.5">
+                      {renderTypeIcon(item.type)}
+                    </div>
                     <div className="flex-grow-1">
                       <div className="d-flex justify-content-between align-items-baseline">
                         <span className="fw-semibold small" style={{ color: 'var(--text-primary)' }}>
@@ -179,10 +200,11 @@ const NotificationBell = () => {
           <div className="p-2 border-top text-center bg-light rounded-bottom">
             <Link
               to="/notifications"
-              className="text-decoration-none small fw-semibold text-primary"
+              className="text-decoration-none small fw-semibold text-primary d-inline-flex align-items-center gap-1"
               onClick={() => setIsOpen(false)}
             >
-              View All Notifications &rarr;
+              <span>View All Notifications</span>
+              <ArrowRight size={14} />
             </Link>
           </div>
         </div>

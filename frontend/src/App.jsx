@@ -15,6 +15,7 @@ import PaymentsPage from './features/payments/pages/PaymentsPage';
 import NotificationsPage from './features/notifications/pages/NotificationsPage';
 import AvailabilityPage from './features/availability/pages/AvailabilityPage';
 import AdminPage from './features/admin/pages/AdminPage';
+import ProfilePage from './features/profile/pages/ProfilePage';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
                 <Route path="/creatives" element={<CreativesPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
               </Route>
 
               <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>

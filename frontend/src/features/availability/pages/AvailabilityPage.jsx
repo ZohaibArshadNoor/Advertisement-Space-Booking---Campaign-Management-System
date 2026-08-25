@@ -4,6 +4,19 @@ import { availabilityApi } from '../availabilityApi';
 import { spacesApi } from '../../spaces/spacesApi';
 import { useAuth } from '../../../context/AuthContext';
 
+import { 
+  CalendarDays, 
+  Search, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Lock, 
+  Megaphone, 
+  Layers, 
+  Clock, 
+  ArrowRight,
+  ShieldAlert
+} from 'lucide-react';
+
 const AvailabilityPage = () => {
   const { user } = useAuth();
   const [spaces, setSpaces] = useState([]);
@@ -131,12 +144,16 @@ const AvailabilityPage = () => {
     <div className="container-fluid px-0">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="fw-bold mb-1">Space Availability & Booking Calendar</h2>
+          <h2 className="fw-bold mb-1 d-flex align-items-center gap-2">
+            <CalendarDays className="text-primary" size={28} />
+            Space Availability & Booking Calendar
+          </h2>
           <p className="text-muted small mb-0">Inspect occupancy timelines, verify slot availability, and prevent scheduling collisions</p>
         </div>
         {isStaff && selectedSpaceId && (
-          <button className="btn btn-outline-danger" onClick={() => setShowBlockModal(true)}>
-            🔒 Block Dates (Maintenance)
+          <button className="btn btn-outline-danger d-inline-flex align-items-center gap-1.5" onClick={() => setShowBlockModal(true)}>
+            <Lock size={15} />
+            <span>Block Dates (Maintenance)</span>
           </button>
         )}
       </div>
@@ -190,7 +207,10 @@ const AvailabilityPage = () => {
       {/* Collision & Availability Checker */}
       <div className="card shadow-sm border-0 mb-4">
         <div className="card-header bg-white py-3 border-bottom">
-          <h5 className="fw-bold mb-0">⚡ Live Date Range Availability Checker</h5>
+          <h5 className="fw-bold mb-0 d-flex align-items-center gap-2">
+            <Search size={18} className="text-primary" />
+            Live Date Range Availability Checker
+          </h5>
         </div>
         <div className="card-body">
           <form className="row g-3 align-items-end" onSubmit={handleCheckAvailability}>
@@ -215,8 +235,9 @@ const AvailabilityPage = () => {
               />
             </div>
             <div className="col-md-4">
-              <button type="submit" className="btn btn-primary w-100" disabled={checking}>
-                {checking ? 'Checking Collisions...' : '🔍 Check Availability'}
+              <button type="submit" className="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2" disabled={checking}>
+                <Search size={16} />
+                {checking ? 'Checking Collisions...' : 'Check Availability'}
               </button>
             </div>
           </form>
@@ -225,15 +246,23 @@ const AvailabilityPage = () => {
           {checkResult && (
             <div className={`mt-3 p-3 rounded border ${checkResult.available ? 'bg-success-subtle border-success' : 'bg-danger-subtle border-danger'}`}>
               <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 className={`fw-bold mb-1 ${checkResult.available ? 'text-success' : 'text-danger'}`}>
-                    {checkResult.available ? '✓ Available for Reservation!' : '⚠️ Conflict Detected / Unavailable'}
-                  </h6>
-                  <p className="small mb-0 text-dark">{checkResult.message}</p>
+                <div className="d-flex align-items-start gap-2">
+                  {checkResult.available ? (
+                    <CheckCircle2 className="text-success mt-0.5" size={20} />
+                  ) : (
+                    <AlertTriangle className="text-danger mt-0.5" size={20} />
+                  )}
+                  <div>
+                    <h6 className={`fw-bold mb-1 ${checkResult.available ? 'text-success' : 'text-danger'}`}>
+                      {checkResult.available ? 'Available for Reservation' : 'Conflict Detected / Unavailable'}
+                    </h6>
+                    <p className="small mb-0 text-dark">{checkResult.message}</p>
+                  </div>
                 </div>
                 {checkResult.available && (
-                  <Link to="/bookings" className="btn btn-sm btn-success">
-                    🚀 Book This Space Now
+                  <Link to="/bookings" className="btn btn-sm btn-success d-inline-flex align-items-center gap-1">
+                    <span>Book Space Now</span>
+                    <ArrowRight size={14} />
                   </Link>
                 )}
               </div>

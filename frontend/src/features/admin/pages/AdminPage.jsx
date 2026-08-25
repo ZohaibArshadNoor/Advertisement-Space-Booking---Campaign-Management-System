@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../adminApi';
+import { 
+  Users, 
+  Building2, 
+  ShieldCheck, 
+  UserPlus, 
+  Edit3, 
+  Key, 
+  Trash2, 
+  Shield, 
+  Search, 
+  Filter,
+  CheckCircle,
+  XCircle,
+  Clock
+} from 'lucide-react';
 
 const ROLE_BADGES = {
   Administrator: 'bg-danger',
@@ -272,26 +287,29 @@ const AdminPage = () => {
       <ul className="nav nav-pills mb-4">
         <li className="nav-item">
           <button
-            className={`nav-link ${activeTab === 'users' ? 'active' : ''}`}
+            className={`nav-link d-inline-flex align-items-center gap-1.5 ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => setActiveTab('users')}
           >
-            👥 User Accounts
+            <Users size={16} />
+            <span>User Accounts</span>
           </button>
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link ${activeTab === 'advertisers' ? 'active' : ''}`}
+            className={`nav-link d-inline-flex align-items-center gap-1.5 ${activeTab === 'advertisers' ? 'active' : ''}`}
             onClick={() => setActiveTab('advertisers')}
           >
-            🏢 Customer / Company Profiles
+            <Building2 size={16} />
+            <span>Customer / Company Profiles</span>
           </button>
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link ${activeTab === 'audit' ? 'active' : ''}`}
+            className={`nav-link d-inline-flex align-items-center gap-1.5 ${activeTab === 'audit' ? 'active' : ''}`}
             onClick={() => setActiveTab('audit')}
           >
-            🛡️ Security Audit Logs
+            <ShieldCheck size={16} />
+            <span>Security Audit Logs</span>
           </button>
         </li>
       </ul>
@@ -389,10 +407,11 @@ const AdminPage = () => {
                           <td><small className="text-muted">{u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}</small></td>
                           <td className="text-end">
                             <button
-                              className="btn btn-sm btn-outline-primary me-1"
+                              className="btn btn-sm btn-outline-primary me-1 d-inline-flex align-items-center gap-1"
                               onClick={() => openEditUser(u)}
                             >
-                              ✏️ Edit
+                              <Edit3 size={13} />
+                              <span>Edit</span>
                             </button>
                             <button
                               className={`btn btn-sm me-1 ${u.is_active ? 'btn-outline-warning' : 'btn-outline-success'}`}
@@ -492,10 +511,11 @@ const AdminPage = () => {
                         <td><small className="text-muted">{adv.city ? `${adv.city}, ${adv.country}` : (adv.address || 'N/A')}</small></td>
                         <td className="text-end">
                           <button
-                            className="btn btn-sm btn-outline-primary"
+                            className="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
                             onClick={() => openEditAdvertiser(adv)}
                           >
-                            ✏️ Edit Customer
+                            <Edit3 size={13} />
+                            <span>Edit Customer</span>
                           </button>
                         </td>
                       </tr>

@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { paymentsApi } from '../paymentsApi';
 import { campaignService } from '../../../services/campaignService';
 import { useAuth } from '../../../context/AuthContext';
+import { extractErrorMessage } from '../../../utils/errorHandler';
+import { 
+  CreditCard, 
+  Plus, 
+  FileText, 
+  CheckCircle2, 
+  DollarSign, 
+  AlertCircle, 
+  CalendarDays, 
+  Building2 
+} from 'lucide-react';
 
 const INVOICE_STATUS_BADGES = {
   DRAFT: 'bg-secondary',
@@ -81,7 +92,7 @@ const PaymentsPage = () => {
       setInvoices(data.invoices || data.items || []);
       setInvoicePagination(data.pagination || { page: 1, pages: 1, total: 0 });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load invoices.');
+      setError(extractErrorMessage(err, 'Failed to load invoices.'));
     } finally {
       setInvoicesLoading(false);
     }
@@ -97,7 +108,7 @@ const PaymentsPage = () => {
       setPayments(data.payments || data.items || []);
       setPaymentPagination(data.pagination || { page: 1, pages: 1, total: 0 });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load payments.');
+      setError(extractErrorMessage(err, 'Failed to load payments.'));
     } finally {
       setPaymentsLoading(false);
     }
@@ -123,7 +134,7 @@ const PaymentsPage = () => {
       setInvoiceFormData({ campaign_id: '', tax_rate: '16.00', due_date: '' });
       fetchInvoices();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate invoice.');
+      setError(extractErrorMessage(err, 'Failed to generate invoice.'));
     } finally {
       setCreatingInvoice(false);
     }
@@ -146,7 +157,7 @@ const PaymentsPage = () => {
       if (activeTab === 'invoices') fetchInvoices();
       else fetchPayments();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to record payment.');
+      setError(extractErrorMessage(err, 'Failed to record payment.'));
     } finally {
       setSubmittingPayment(false);
     }

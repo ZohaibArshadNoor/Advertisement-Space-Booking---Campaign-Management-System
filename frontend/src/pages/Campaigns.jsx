@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { campaignService } from '../services/campaignService';
+import { extractErrorMessage } from '../utils/errorHandler';
+import { 
+  Megaphone, 
+  Plus, 
+  Search, 
+  CalendarDays, 
+  DollarSign, 
+  Trash2, 
+  AlertCircle, 
+  CheckCircle2, 
+  Filter 
+} from 'lucide-react';
 
 const STATUS_BADGES = {
   DRAFT: 'bg-secondary',
@@ -14,6 +26,7 @@ const Campaigns = () => {
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [modalError, setModalError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   // Filters state
@@ -32,6 +45,8 @@ const Campaigns = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  const todayString = new Date().toISOString().split('T')[0];
+
   // Fetch campaigns from backend
   const fetchCampaigns = async () => {
     setLoading(true);
@@ -45,7 +60,7 @@ const Campaigns = () => {
       setCampaigns(data.campaigns || []);
       setPagination(data.pagination || { page: 1, pages: 1, total: 0 });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load campaigns.');
+      setError(extractErrorMessage(err, 'Failed to load campaigns.'));
     } finally {
       setLoading(false);
     }
@@ -61,10 +76,30 @@ const Campaigns = () => {
     fetchCampaigns();
   };
 
+  const handleOpenModal = () => {
+    setModalError('');
+    setFormData({ name: '', description: '', start_date: '', end_date: '', budget: '' });
+    setShowModal(true);
+  };
+
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setModalError('');
     setError('');
+
+    if (formData.start_date < todayString) {
+      setModalError(`Campaign start date (${formData.start_date}) cannot be in the past. Please choose today (${todayString}) or a future date.`);
+      setSubmitting(false);
+      return;
+    }
+
+    if (formData.end_date < formData.start_date) {
+      setModalError(`Campaign end date (${formData.end_date}) cannot be earlier than start date (${formData.start_date}).`);
+      setSubmitting(false);
+      return;
+    }
+
     try {
       await campaignService.createCampaign({
         ...formData,
@@ -75,7 +110,9 @@ const Campaigns = () => {
       setFormData({ name: '', description: '', start_date: '', end_date: '', budget: '' });
       fetchCampaigns();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create campaign.');
+      const detailed = extractErrorMessage(err, 'Failed to create campaign.');
+      setModalError(detailed);
+      setError(detailed);
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +124,7 @@ const Campaigns = () => {
       setSuccessMsg(`Status updated to ${newStatus}`);
       fetchCampaigns();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update status.');
+      setError(extractErrorMessage(err, 'Failed to update status.'));
     }
   };
 
@@ -98,7 +135,7 @@ const Campaigns = () => {
       setSuccessMsg('Campaign deleted.');
       fetchCampaigns();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete campaign.');
+      setError(extractErrorMessage(err, 'Failed to delete campaign.'));
     }
   };
 
@@ -275,6 +312,13 @@ const Campaigns = () => {
               </div>
               <form onSubmit={handleCreateSubmit}>
                 <div className="modal-body">
+                  {modalError && (
+                    <div className="alert alert-danger d-flex align-items-center gap-2 small mb-3">
+                      <AlertCircle size={18} className="flex-shrink-0" />
+                      <div>{modalError}</div>
+                    </div>
+                  )}
+
                   <div className="mb-3">
                     <label className="form-label">Campaign Name *</label>
                     <input
@@ -300,6 +344,7 @@ const Campaigns = () => {
                       <input
                         type="date"
                         className="form-control"
+                        min={todayString}
                         value={formData.start_date}
                         onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                       />
@@ -309,6 +354,7 @@ const Campaigns = () => {
                       <input
                         type="date"
                         className="form-control"
+                        min={formData.start_date || todayString}
                         value={formData.end_date}
                         onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                       />

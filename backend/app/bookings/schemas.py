@@ -40,16 +40,27 @@ class BookingCreateSchema(Schema):
     @validates_schema
     def validate_dates(self, data, **kwargs):
         """
-        Ensures end_date is not earlier than start_date.
+        Ensures start_date is not in the past and end_date is not earlier than start_date.
         """
+        from datetime import date
+        today = date.today()
         start_date = data.get("start_date")
         end_date = data.get("end_date")
+
+        if start_date and start_date < today:
+            raise ValidationError(
+                {
+                    "start_date": [
+                        f"Booking start date ({start_date}) cannot be in the past. Please choose today ({today}) or a future date."
+                    ]
+                }
+            )
 
         if start_date and end_date and end_date < start_date:
             raise ValidationError(
                 {
                     "end_date": [
-                        "end_date cannot be earlier than start_date."
+                        f"Booking end date ({end_date}) cannot be earlier than start date ({start_date})."
                     ]
                 }
             )

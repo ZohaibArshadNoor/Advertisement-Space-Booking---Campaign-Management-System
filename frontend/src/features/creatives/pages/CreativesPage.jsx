@@ -2,6 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { creativesApi } from '../creativesApi';
 import { campaignService } from '../../../services/campaignService';
 import { useAuth } from '../../../context/AuthContext';
+import { extractErrorMessage } from '../../../utils/errorHandler';
+import { 
+  Image as ImageIcon, 
+  FileText, 
+  UploadCloud, 
+  CheckCircle2, 
+  XCircle, 
+  Trash2, 
+  Eye, 
+  Download, 
+  AlertCircle,
+  Plus 
+} from 'lucide-react';
 
 const STATUS_BADGES = {
   PENDING: 'bg-warning text-dark',
@@ -47,8 +60,9 @@ const AssetThumbnail = ({ assetId, fileType, alt, onPreview }) => {
 
   if (!blobUrl) {
     return (
-      <div className="bg-light rounded p-3 text-center mb-3 text-muted small">
-        📄 Document File
+      <div className="bg-light rounded p-3 text-center mb-3 text-muted small d-flex align-items-center justify-content-center gap-1.5">
+        <FileText size={16} />
+        <span>Document File</span>
       </div>
     );
   }
@@ -140,7 +154,7 @@ const CreativesPage = () => {
       const data = await creativesApi.getCampaignMedia(campaignId);
       setMediaAssets(data.assets || data.media_assets || data.items || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load media assets.');
+      setError(extractErrorMessage(err, 'Failed to load media assets.'));
       setMediaAssets([]);
     } finally {
       setLoading(false);
@@ -171,7 +185,7 @@ const CreativesPage = () => {
       setFile(null);
       fetchMedia(selectedCampaignId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to upload creative asset.');
+      setError(extractErrorMessage(err, 'Failed to upload creative asset.'));
     } finally {
       setUploading(false);
     }
@@ -188,7 +202,7 @@ const CreativesPage = () => {
       setRejectionReason('');
       fetchMedia(selectedCampaignId);
     } catch (err) {
-      setError(err.response?.data?.message || `Failed to update status to ${status}.`);
+      setError(extractErrorMessage(err, `Failed to update status to ${status}.`));
     }
   };
 
@@ -199,7 +213,7 @@ const CreativesPage = () => {
       setSuccessMsg('Asset deleted.');
       fetchMedia(selectedCampaignId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete asset.');
+      setError(extractErrorMessage(err, 'Failed to delete asset.'));
     }
   };
 

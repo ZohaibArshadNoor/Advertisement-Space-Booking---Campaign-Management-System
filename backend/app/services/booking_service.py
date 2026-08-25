@@ -169,6 +169,13 @@ class BookingService:
             if not space.is_active:
                 return None, "This advertising space is currently inactive."
 
+            today = date.today()
+            if start_date < today:
+                return None, f"Booking start date ({start_date}) cannot be in the past. Please select today ({today}) or a future date."
+
+            if end_date < start_date:
+                return None, f"Booking end date ({end_date}) cannot be earlier than start date ({start_date})."
+
             # Step 2: Check for scheduling conflicts while holding the lock
             is_available, conflict = AvailabilityService.check_availability(
                 space_id=space.id,

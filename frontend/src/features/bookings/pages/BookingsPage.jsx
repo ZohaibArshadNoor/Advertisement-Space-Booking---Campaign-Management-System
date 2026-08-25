@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { bookingsApi } from '../bookingsApi';
 import { spacesApi } from '../../spaces/spacesApi';
 import { campaignService } from '../../../services/campaignService';
+import { extractErrorMessage } from '../../../utils/errorHandler';
+import { 
+  Layers, 
+  Search, 
+  CalendarDays, 
+  Plus, 
+  Trash2, 
+  AlertCircle, 
+  CheckCircle2, 
+  Filter 
+} from 'lucide-react';
 
 const STATUS_BADGES = {
   PENDING: 'bg-warning text-dark',
@@ -17,6 +28,7 @@ const BookingsPage = () => {
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [modalError, setModalError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   // Filters
@@ -34,6 +46,9 @@ const BookingsPage = () => {
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Minimum allowed date is today
+  const todayString = new Date().toISOString().split('T')[0];
 
   // Load spaces and campaigns for dropdown selection
   useEffect(() => {
@@ -64,7 +79,7 @@ const BookingsPage = () => {
       setBookings(data.bookings || []);
       setPagination(data.pagination || { page: 1, pages: 1, total: 0 });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load bookings.');
+      setError(extractErrorMessage(err, 'Failed to load bookings.'));
     } finally {
       setLoading(false);
     }
@@ -80,10 +95,31 @@ const BookingsPage = () => {
     fetchBookings();
   };
 
+  const handleOpenModal = () => {
+    setModalError('');
+    setFormData({ space_id: '', campaign_id: '', start_date: '', end_date: '', notes: '' });
+    setShowModal(true);
+  };
+
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setModalError('');
     setError('');
+
+    // Client-side date check
+    if (formData.start_date < todayString) {
+      setModalError(`Booking start date (${formData.start_date}) cannot be in the past. Please choose today (${todayString}) or a future date.`);
+      setSubmitting(false);
+      return;
+    }
+
+    if (formData.end_date < formData.start_date) {
+      setModalError(`Booking end date (${formData.end_date}) cannot be earlier than start date (${formData.start_date}).`);
+      setSubmitting(false);
+      return;
+    }
+
     try {
       await bookingsApi.createBooking({
         space_id: parseInt(formData.space_id),
@@ -97,7 +133,9 @@ const BookingsPage = () => {
       setFormData({ space_id: '', campaign_id: '', start_date: '', end_date: '', notes: '' });
       fetchBookings();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit booking request.');
+      const detailedMessage = extractErrorMessage(err, 'Failed to submit booking request.');
+      setModalError(detailedMessage);
+      setError(detailedMessage);
     } finally {
       setSubmitting(false);
     }
@@ -109,7 +147,7 @@ const BookingsPage = () => {
       setSuccessMsg(`Booking status updated to ${newStatus}`);
       fetchBookings();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update booking status.');
+      setError(extractErrorMessage(err, 'Failed to update booking status.'));
     }
   };
 
@@ -120,7 +158,7 @@ const BookingsPage = () => {
       setSuccessMsg('Booking deleted.');
       fetchBookings();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete booking.');
+      setError(extractErrorMessage(err, 'Failed to delete booking.'));
     }
   };
 
@@ -128,16 +166,30 @@ const BookingsPage = () => {
     <div className="container-fluid px-0">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="fw-bold mb-1">Space Bookings</h2>
+          <h2 className="fw-bold mb-1 d-flex align-items-center gap-2">
+            <Layers className="text-primary" size={28} />
+            Space Bookings
+          </h2>
           <p className="text-muted small mb-0">Manage schedule reservations and active space placements</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          + Book a Space
+        <button className="btn btn-primary d-inline-flex align-items-center gap-1.5" onClick={handleOpenModal}>
+          <Plus size={16} />
+          <span>Book a Space</span>
         </button>
       </div>
 
-      {error && <div className="alert alert-danger alert-dismissible">{error}</div>}
-      {successMsg && <div className="alert alert-success alert-dismissible">{successMsg}</div>}
+      {error && (
+        <div className="alert alert-danger alert-dismissible d-flex align-items-center gap-2">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+        </div>
+      )}
+      {successMsg && (
+        <div className="alert alert-success alert-dismissible d-flex align-items-center gap-2">
+          <CheckCircle2 size={18} />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="card shadow-sm border-0 mb-4">
@@ -300,6 +352,13 @@ const BookingsPage = () => {
               </div>
               <form onSubmit={handleCreateSubmit}>
                 <div className="modal-body">
+                  {modalError && (
+                    <div className="alert alert-danger d-flex align-items-center gap-2 small mb-3">
+                      <AlertCircle size={18} className="flex-shrink-0" />
+                      <div>{modalError}</div>
+                    </div>
+                  )}
+
                   <div className="mb-3">
                     <label className="form-label">Advertising Space *</label>
                     <select
@@ -340,6 +399,7 @@ const BookingsPage = () => {
                         type="date"
                         className="form-control"
                         required
+                        min={todayString}
                         value={formData.start_date}
                         onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                       />
@@ -350,6 +410,7 @@ const BookingsPage = () => {
                         type="date"
                         className="form-control"
                         required
+                        min={formData.start_date || todayString}
                         value={formData.end_date}
                         onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                       />

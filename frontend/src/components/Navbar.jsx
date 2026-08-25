@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import NotificationBell from '../features/notifications/components/NotificationBell';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -105,6 +106,9 @@ const Navbar = () => {
 
           {isAuthenticated ? (
             <div className="d-flex align-items-center gap-3">
+              {/* Real-time Notification Bell */}
+              <NotificationBell />
+
               <div className="text-end d-none d-sm-block">
                 <div className="fw-semibold small" style={{ color: 'var(--text-primary)' }}>
                   {user?.name}

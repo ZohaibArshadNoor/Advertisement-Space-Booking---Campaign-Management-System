@@ -174,17 +174,43 @@
   color: #64748b !important;
 }
 
-/* ── Universal Icon & SVG Alignment Rules (2-3 spaces / 5-6px gap) ────────── */
+/* ── Text Utility Classes ─────────────────────────────────────────────────── */
+.text-xxs {
+  font-size: 0.6875rem !important;
+  line-height: 0.95rem;
+}
+
+.text-xs {
+  font-size: 0.75rem !important;
+  line-height: 1.05rem;
+}
+
+.text-sm {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem;
+}
+
+/* ── Universal Icon, SVG & Logo Alignment Rules ───────────────────────────── */
 svg,
 svg.lucide {
   display: inline-block;
-  vertical-align: -0.125em;
+  vertical-align: middle;
   flex-shrink: 0;
 }
 
-.d-flex.align-items-center,
-.d-inline-flex.align-items-center {
-  vertical-align: middle;
+.d-flex,
+.d-inline-flex {
+  align-items: center;
+}
+
+.d-flex.align-items-start,
+.d-inline-flex.align-items-start {
+  align-items: flex-start;
+}
+
+.d-flex.align-items-end,
+.d-inline-flex.align-items-end {
+  align-items: flex-end;
 }
 
 .page-title,
@@ -194,6 +220,7 @@ svg.lucide {
 .drawer-title-ui {
   display: inline-flex;
   align-items: center;
+  gap: 0.45rem;
   vertical-align: middle;
 }
 
@@ -208,8 +235,7 @@ h3 > svg,
 h4 > svg,
 h5 > svg,
 h6 > svg {
-  margin-right: 0.38rem;
-  vertical-align: -0.125em;
+  vertical-align: middle;
   flex-shrink: 0;
 }
 
@@ -575,6 +601,87 @@ h6 > svg {
 }
 
 /* ── Status Pills & Badges ────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.15;
+  vertical-align: middle;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bg-primary-subtle {
+  background-color: var(--color-brand-50) !important;
+  color: var(--color-brand-600) !important;
+  border: 1px solid var(--color-brand-100);
+}
+
+.bg-success-subtle {
+  background-color: var(--color-success-bg) !important;
+  color: var(--color-success-text) !important;
+  border: 1px solid var(--color-success-border);
+}
+
+.bg-warning-subtle {
+  background-color: var(--color-warning-bg) !important;
+  color: var(--color-warning-text) !important;
+  border: 1px solid var(--color-warning-border);
+}
+
+.bg-danger-subtle {
+  background-color: var(--color-danger-bg) !important;
+  color: var(--color-danger-text) !important;
+  border: 1px solid var(--color-danger-border);
+}
+
+.bg-purple-subtle {
+  background-color: rgba(147, 51, 234, 0.1) !important;
+  border: 1px solid rgba(147, 51, 234, 0.22) !important;
+}
+
+.text-purple {
+  color: #9333ea !important;
+}
+
+[data-theme='dark'] .bg-primary-subtle {
+  background-color: rgba(37, 99, 235, 0.16) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.28) !important;
+}
+
+[data-theme='dark'] .bg-success-subtle {
+  background-color: rgba(22, 163, 74, 0.16) !important;
+  color: #4ade80 !important;
+  border-color: rgba(34, 197, 94, 0.28) !important;
+}
+
+[data-theme='dark'] .bg-warning-subtle {
+  background-color: rgba(217, 119, 6, 0.16) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.28) !important;
+}
+
+[data-theme='dark'] .bg-danger-subtle {
+  background-color: rgba(220, 38, 38, 0.16) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.28) !important;
+}
+
+[data-theme='dark'] .bg-purple-subtle {
+  background-color: rgba(147, 51, 234, 0.16) !important;
+  border-color: rgba(147, 51, 234, 0.3) !important;
+}
+
+[data-theme='dark'] .text-purple {
+  color: #c084fc !important;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -624,6 +731,64 @@ h6 > svg {
   height: 6px;
   border-radius: 50%;
   background-color: currentColor;
+}
+
+/* ── Quick Action Cards & Grids ───────────────────────────────────────────── */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.quick-action-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  min-width: 0;
+}
+
+.quick-action-card:hover {
+  background-color: var(--color-bg-hover);
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
+}
+
+.quick-action-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quick-action-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.quick-action-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.15rem;
+  line-height: 1.25;
+}
+
+.quick-action-desc {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 /* ── Role Tags ────────────────────────────────────────────────────────────── */

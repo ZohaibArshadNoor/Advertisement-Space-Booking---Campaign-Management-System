@@ -194,7 +194,18 @@ def get_invoices():
 
     advertiser_filter = None
     if current_user and current_user.role.name == "Advertiser":
-        advertiser_filter = current_user.advertiser_id
+        if current_user.advertiser_id:
+            advertiser_filter = current_user.advertiser_id
+        else:
+            return jsonify({
+                "invoices": [],
+                "pagination": {
+                    "page": 1,
+                    "per_page": per_page,
+                    "total": 0,
+                    "pages": 0
+                }
+            }), 200
 
     invoices_page = InvoiceService.get_all(
         page=page,

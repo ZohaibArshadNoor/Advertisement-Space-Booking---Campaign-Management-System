@@ -6,6 +6,8 @@ from app.common.decorators import roles_required
 from app.extensions import db
 from app.models.role import Role
 from app.models.user import User
+from app.models.audit import AuditAction
+from app.services.audit_service import AuditService
 from app.users import users_bp
 from app.users.schemas import (
     CreateUserSchema,
@@ -207,6 +209,28 @@ def create_user():
     db.session.add(user)
     db.session.commit()
 
+    current_user_id = get_jwt_identity()
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        pass
+
+    try:
+        AuditService.log(
+            action=AuditAction.CREATE,
+            entity_type="User",
+            entity_id=user.id,
+            user_id=current_user_id,
+            new_values={
+                "name": user.name,
+                "email": user.email,
+                "role": user.role.name if user.role else role.name,
+                "is_active": user.is_active
+            }
+        )
+    except Exception:
+        pass
+
     return jsonify({
         "success": True,
         "message": "User created successfully.",
@@ -284,6 +308,13 @@ def update_user(user_id):
             "errors": err.messages
         }), 400
 
+    old_values = {
+        "name": user.name,
+        "email": user.email,
+        "role": user.role.name if user.role else None,
+        "role_id": user.role_id
+    }
+
     if "email" in data and data["email"] != user.email:
         if User.query.filter_by(email=data["email"]).first():
             return jsonify({
@@ -305,6 +336,29 @@ def update_user(user_id):
         user.role_id = role.id
 
     db.session.commit()
+
+    current_user_id = get_jwt_identity()
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        pass
+
+    try:
+        AuditService.log(
+            action=AuditAction.UPDATE,
+            entity_type="User",
+            entity_id=user.id,
+            user_id=current_user_id,
+            old_values=old_values,
+            new_values={
+                "name": user.name,
+                "email": user.email,
+                "role": user.role.name if user.role else None,
+                "role_id": user.role_id
+            }
+        )
+    except Exception:
+        pass
 
     return jsonify({
         "success": True,
@@ -389,8 +443,21 @@ def update_user_status(user_id):
             "message": "You cannot deactivate your own account."
         }), 400
 
+    old_status = user.is_active
     user.is_active = data["is_active"]
     db.session.commit()
+
+    try:
+        AuditService.log(
+            action=AuditAction.UPDATE_STATUS,
+            entity_type="User",
+            entity_id=user.id,
+            user_id=current_user_id,
+            old_values={"is_active": old_status, "email": user.email, "name": user.name},
+            new_values={"is_active": user.is_active, "email": user.email, "name": user.name}
+        )
+    except Exception:
+        pass
 
     return jsonify({
         "success": True,
@@ -456,6 +523,12 @@ def admin_reset_password(user_id):
             "message": "User not found."
         }), 404
 
+    current_user_id = get_jwt_identity()
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        pass
+
     try:
         data = reset_password_schema.load(request.get_json() or {})
     except ValidationError as err:
@@ -466,6 +539,17 @@ def admin_reset_password(user_id):
 
     user.set_password(data["new_password"])
     db.session.commit()
+
+    try:
+        AuditService.log(
+            action=AuditAction.UPDATE,
+            entity_type="User",
+            entity_id=user.id,
+            user_id=current_user_id,
+            new_values={"event": "ADMIN_PASSWORD_RESET", "email": user.email, "name": user.name}
+        )
+    except Exception:
+        pass
 
     return jsonify({
         "success": True,
@@ -520,8 +604,26 @@ def delete_user(user_id):
             "message": "You cannot delete your own account."
         }), 400
 
+    deleted_user_info = {
+        "email": user.email,
+        "name": user.name,
+        "role": user.role.name if user.role else None
+    }
+    user_id_deleted = user.id
+
     db.session.delete(user)
     db.session.commit()
+
+    try:
+        AuditService.log(
+            action=AuditAction.DELETE,
+            entity_type="User",
+            entity_id=user_id_deleted,
+            user_id=current_user_id,
+            old_values=deleted_user_info
+        )
+    except Exception:
+        pass
 
     return jsonify({
         "success": True,
@@ -566,6 +668,15 @@ def update_role(role_id):
     if not role:
         return jsonify({"success": False, "message": "Role not found."}), 404
     
+    current_user_id = get_jwt_identity()
+    try:
+        current_user_id = int(current_user_id)
+    except (TypeError, ValueError):
+        pass
+
+    old_permissions = role.permissions.copy() if isinstance(role.permissions, dict) else role.permissions
+    old_name = role.name
+
     data = request.get_json() or {}
     if "permissions" in data:
         role.permissions = data["permissions"]
@@ -573,6 +684,19 @@ def update_role(role_id):
         role.name = data["name"]
     
     db.session.commit()
+
+    try:
+        AuditService.log(
+            action=AuditAction.UPDATE,
+            entity_type="Role",
+            entity_id=role.id,
+            user_id=current_user_id,
+            old_values={"name": old_name, "permissions": old_permissions},
+            new_values={"name": role.name, "permissions": role.permissions}
+        )
+    except Exception:
+        pass
+
     return jsonify({
         "success": True,
         "message": f"Role '{role.name}' updated successfully.",

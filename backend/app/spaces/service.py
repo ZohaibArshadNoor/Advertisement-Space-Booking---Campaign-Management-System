@@ -4,6 +4,8 @@ from app.models.space import (
     SpaceCategory,
     AdvertisingSpace
 )
+from app.models.audit import AuditAction
+from app.services.audit_service import AuditService
 
 
 
@@ -312,6 +314,22 @@ class AdvertisingSpaceService:
         db.session.add(space)
         db.session.commit()
 
+        try:
+            AuditService.log(
+                action=AuditAction.CREATE,
+                entity_type="AdvertisingSpace",
+                entity_id=space.id,
+                new_values={
+                    "name": space.name,
+                    "category_id": space.category_id,
+                    "location_id": space.location_id,
+                    "base_rate": str(space.base_rate),
+                    "is_active": space.is_active
+                }
+            )
+        except Exception:
+            pass
+
         return space
 
     @staticmethod
@@ -319,6 +337,13 @@ class AdvertisingSpaceService:
         """
         Updates only the fields provided by the client.
         """
+        old_values = {
+            "name": space.name,
+            "category_id": space.category_id,
+            "location_id": space.location_id,
+            "base_rate": str(space.base_rate),
+            "is_active": space.is_active
+        }
 
         for field, value in data.items():
 
@@ -335,6 +360,23 @@ class AdvertisingSpaceService:
 
         db.session.commit()
 
+        try:
+            AuditService.log(
+                action=AuditAction.UPDATE,
+                entity_type="AdvertisingSpace",
+                entity_id=space.id,
+                old_values=old_values,
+                new_values={
+                    "name": space.name,
+                    "category_id": space.category_id,
+                    "location_id": space.location_id,
+                    "base_rate": str(space.base_rate),
+                    "is_active": space.is_active
+                }
+            )
+        except Exception:
+            pass
+
         return space
 
     @staticmethod
@@ -346,10 +388,21 @@ class AdvertisingSpaceService:
         spaces may later be connected to bookings, campaigns,
         contracts, and financial records.
         """
-
+        old_status = space.is_active
         space.is_active = is_active
 
         db.session.commit()
+
+        try:
+            AuditService.log(
+                action=AuditAction.UPDATE_STATUS,
+                entity_type="AdvertisingSpace",
+                entity_id=space.id,
+                old_values={"is_active": old_status, "name": space.name},
+                new_values={"is_active": space.is_active, "name": space.name}
+            )
+        except Exception:
+            pass
 
         return space
 
@@ -371,8 +424,21 @@ class AdvertisingSpaceService:
         ):
             return False
 
+        space_id = space.id
+        space_name = space.name
+
         db.session.delete(space)
         db.session.commit()
+
+        try:
+            AuditService.log(
+                action=AuditAction.DELETE,
+                entity_type="AdvertisingSpace",
+                entity_id=space_id,
+                old_values={"name": space_name}
+            )
+        except Exception:
+            pass
 
         return True 
     

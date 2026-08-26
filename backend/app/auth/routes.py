@@ -28,6 +28,9 @@ from flask_jwt_extended import (
 
 from app.common.decorators import roles_required
 
+from app.models.notification import Notification, NotificationType
+from app.models.advertiser import Advertiser
+
 registration_schema = RegistrationSchema()
 
 
@@ -40,7 +43,7 @@ def register():
     tags:
       - Authentication
     summary: Register a new advertiser
-    description: Creates a new advertiser account. Public registration always assigns the Advertiser role.
+    description: Creates a new advertiser account in an unverified state. User must verify email before accessing the workspace.
     consumes:
       - application/json
     produces:
@@ -69,7 +72,7 @@ def register():
               example: TestPassword123
     responses:
       201:
-        description: Account created successfully
+        description: Account created in unverified state. Verification email dispatched.
       400:
         description: Invalid request data
       409:
@@ -81,84 +84,56 @@ def register():
     # Read JSON submitted by the client.
     data = request.get_json(silent=True)
 
-    # Reject requests that don't contain valid JSON.
     if not data:
         return jsonify({
             "success": False,
             "message": "Request body must contain JSON data."
         }), 400
 
-    # Validate and deserialize the request data.
     errors = registration_schema.validate(data)
-
     if errors:
         return jsonify({
             "success": False,
             "errors": errors
         }), 400
 
-    # Convert validated input into Python data.
     validated_data = registration_schema.load(data)
-
-    # Normalize the email address.
-    #
-    # This prevents users from accidentally creating accounts
-    # such as User@example.com and user@example.com.
     email = validated_data["email"].strip().lower()
 
-    # Check whether the email is already registered.
-    existing_user = User.query.filter_by(
-        email=email
-    ).first()
-
+    existing_user = User.query.filter_by(email=email).first()
     if existing_user:
         return jsonify({
             "success": False,
             "message": "An account with this email already exists."
         }), 409
 
-    # Check whether the requested role exists.
-    role = Role.query.filter_by(
-        name="Advertiser"
-    ).first()
-
+    role = Role.query.filter_by(name="Advertiser").first()
     if role is None:
         return jsonify({
             "success": False,
             "message": "Default Advertiser role is not configured."
         }), 500
 
-
-    # Create the user.
+    # 🔒 Strict Security: Account created in unverified/inactive state
     user = User(
         name=validated_data["name"].strip(),
         email=email,
-        role_id=role.id
+        role_id=role.id,
+        is_active=False
     )
-
-    # Hash the password before storing it.
-    user.set_password(
-        validated_data["password"]
-    )
-
-    # Add the user to the database session.
+    user.set_password(validated_data["password"])
     db.session.add(user)
 
     try:
-        # Save the user.
         db.session.commit()
-
     except Exception:
-        # Undo the transaction if something goes wrong.
         db.session.rollback()
-
         return jsonify({
             "success": False,
             "message": "Unable to create the account."
         }), 500
 
-
-    # Generate a verification token and send the verification email.
+    # Generate cryptographic token and dispatch activation email
     token = generate_verification_token(user.email)
     send_verification_email(
         user.email,
@@ -166,11 +141,9 @@ def register():
         token
     )
 
-
-    # Return only safe user information.
     return jsonify({
         "success": True,
-        "message": "Registration successful! Please check your email to verify your account.",
+        "message": "Registration successful! Please check your email and click the verification link to activate your workspace.",
         "user": {
             "id": user.id,
             "name": user.name,
@@ -198,7 +171,6 @@ def google_auth():
     google_client_id = os.getenv("GOOGLE_CLIENT_ID")
 
     try:
-        # Verify the token against Google's public certs
         id_info = id_token.verify_oauth2_token(
             token_str,
             google_requests.Request(),
@@ -211,7 +183,6 @@ def google_auth():
         if not email:
             return jsonify({"error": "Unable to retrieve email from Google token"}), 400
 
-        # Query existing user or create a new Advertiser
         user = User.query.filter_by(email=email).first()
 
         if not user:
@@ -220,14 +191,41 @@ def google_auth():
                 email=email,
                 name=name,
                 role_id=advertiser_role.id if advertiser_role else 6,
-                is_active=True,
-                is_verified=True # Google authenticated emails are pre-verified
+                is_active=True
             )
-            user.set_password(os.urandom(16).hex()) # Secure random password
+            user.set_password(os.urandom(16).hex())
             db.session.add(user)
+            db.session.flush()
+
+            # Auto-create Advertiser organization profile
+            advertiser_profile = Advertiser(
+                company_name=name,
+                contact_person=name,
+                email=email,
+                phone="Not specified",
+                is_active=True
+            )
+            db.session.add(advertiser_profile)
+            db.session.flush()
+            user.advertiser_id = advertiser_profile.id
+
+            # Notify all administrators about the new Google registration
+            admins = User.query.join(Role).filter(Role.name == "Administrator").all()
+            for admin in admins:
+                notif = Notification(
+                    user_id=admin.id,
+                    type=NotificationType.SYSTEM,
+                    title="New Google SSO Advertiser",
+                    message=f"New advertiser account '{user.name}' ({user.email}) registered via Google SSO.",
+                    link="/users"
+                )
+                db.session.add(notif)
+
             db.session.commit()
         else:
-            # Mark existing user as verified if they sign in with Google
+            if not user.is_active:
+                user.is_active = True
+                db.session.commit()
             if not getattr(user, 'is_verified', True):
                 user.is_verified = True
                 db.session.commit()
@@ -273,26 +271,51 @@ def verify_email():
     if not user:
         return jsonify({"error": "User account not found"}), 404
 
-    user.is_verified = True
     user.is_active = True
+
+    # Auto-create Advertiser organization profile for this verified user if none exists
+    if not user.advertiser:
+        advertiser_profile = Advertiser(
+            company_name=user.name,
+            contact_person=user.name,
+            email=user.email,
+            phone="Not specified",
+            is_active=True
+        )
+        db.session.add(advertiser_profile)
+        db.session.flush()
+        user.advertiser_id = advertiser_profile.id
+
+    # Notify all Administrators about the newly verified advertiser
+    admins = User.query.join(Role).filter(Role.name == "Administrator").all()
+    for admin in admins:
+        notif = Notification(
+            user_id=admin.id,
+            type=NotificationType.SYSTEM,
+            title="New Verified Advertiser",
+            message=f"New advertiser account '{user.name}' ({user.email}) has verified their email and activated their workspace.",
+            link="/users"
+        )
+        db.session.add(notif)
+
     db.session.commit()
 
     # Generate login tokens
-    identity = {
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "role": user.role.name if user.role else "Advertiser"
-    }
-    access_token = create_access_token(identity=identity)
-    refresh_token = create_refresh_token(identity=identity)
+    access_token = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
 
     return jsonify({
         "status": "success",
         "message": "Email successfully verified! Welcome to AdFlow.",
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "user": user.to_dict()
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role.name if user.role else "Advertiser",
+            "is_active": user.is_active
+        }
     }), 200
 
 @auth_bp.post("/login")
@@ -335,7 +358,7 @@ def login():
       401:
         description: Invalid credentials
       403:
-        description: Account is inactive
+        description: Account is unverified or inactive
     """
 
     # Read JSON request data.
@@ -358,8 +381,7 @@ def login():
 
     validated_data = login_schema.load(data)
 
-    # Normalize the email in exactly the same way
-    # we did during registration.
+    # Normalize the email
     email = validated_data["email"].strip().lower()
 
     # Find the user.
@@ -367,10 +389,6 @@ def login():
         email=email
     ).first()
 
-    # Don't reveal whether the email exists.
-    #
-    # This prevents attackers from using the login endpoint
-    # to discover registered email addresses.
     if user is None or not user.check_password(
         validated_data["password"]
     ):
@@ -379,11 +397,11 @@ def login():
             "message": "Invalid email or password."
         }), 401
 
-    # Prevent inactive accounts from logging in.
+    # 🔒 Prevent unverified or inactive accounts from logging in.
     if not user.is_active:
         return jsonify({
             "success": False,
-            "message": "This account is inactive."
+            "message": "Your account is not verified yet. Please check your email inbox and click the verification link before logging in."
         }), 403
 
     # Put the user's database ID inside the JWT identity.

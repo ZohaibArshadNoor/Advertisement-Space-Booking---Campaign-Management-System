@@ -1,10 +1,13 @@
 from flask import jsonify, request
+from flask_jwt_extended import get_jwt_identity
 from marshmallow import ValidationError
 
 from app.payments import payments_bp
 from app.payments.schemas import PaymentCreateSchema, PaymentStatusUpdateSchema
 from app.services.payment_service import PaymentService
 from app.common.decorators import roles_required
+from app.models.user import User
+from app.extensions import db
 
 payment_create_schema = PaymentCreateSchema()
 payment_status_schema = PaymentStatusUpdateSchema()
@@ -169,7 +172,18 @@ def get_payments():
 
     advertiser_filter = None
     if current_user and current_user.role.name == "Advertiser":
-        advertiser_filter = current_user.advertiser_id
+        if current_user.advertiser_id:
+            advertiser_filter = current_user.advertiser_id
+        else:
+            return jsonify({
+                "payments": [],
+                "pagination": {
+                    "page": 1,
+                    "per_page": per_page,
+                    "total": 0,
+                    "pages": 0
+                }
+            }), 200
 
     payments_page = PaymentService.get_all(
         page=page,

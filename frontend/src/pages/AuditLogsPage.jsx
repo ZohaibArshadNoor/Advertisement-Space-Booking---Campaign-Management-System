@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { adminApi } from '../features/admin/adminApi';
 import EmptyState from '../components/ui/EmptyState';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
@@ -13,66 +13,9 @@ import {
   Shield,
   Clock,
   User,
-  FileCode
+  FileCode,
+  ArrowRight
 } from 'lucide-react';
-
-const FALLBACK_LOGS = [
-  {
-    id: 1042,
-    actor_id: 1,
-    actor_name: 'System Administrator',
-    action: 'ROLE_UPDATE',
-    entity_type: 'Role',
-    entity_id: 2,
-    ip_address: '192.168.1.104',
-    created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    details: { changes: { permissions: { 'quotation.update': true } } },
-  },
-  {
-    id: 1041,
-    actor_id: 2,
-    actor_name: 'Space Manager',
-    action: 'SPACE_STATUS_CHANGE',
-    entity_type: 'AdvertisingSpace',
-    entity_id: 4,
-    ip_address: '192.168.1.112',
-    created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    details: { space_code: 'LHR-LED-094', previous_status: 'MAINTENANCE', new_status: 'ACTIVE' },
-  },
-  {
-    id: 1040,
-    actor_id: 4,
-    actor_name: 'Creative Reviewer',
-    action: 'CREATIVE_APPROVED',
-    entity_type: 'CreativeAsset',
-    entity_id: 18,
-    ip_address: '192.168.1.140',
-    created_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    details: { resolution: '3840x2160', file_format: 'MP4', campaign_id: 9 },
-  },
-  {
-    id: 1039,
-    actor_id: 1,
-    actor_name: 'System Administrator',
-    action: 'USER_PROVISIONED',
-    entity_type: 'User',
-    entity_id: 14,
-    ip_address: '192.168.1.104',
-    created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    details: { name: 'Farhan Zaidi', email: 'farhan@nestle.com', role: 'Advertiser' },
-  },
-  {
-    id: 1038,
-    actor_id: 5,
-    actor_name: 'Finance Officer',
-    action: 'PAYMENT_VERIFIED',
-    entity_type: 'Payment',
-    entity_id: 72,
-    ip_address: '192.168.1.118',
-    created_at: new Date(Date.now() - 1000 * 60 * 300).toISOString(),
-    details: { invoice_id: 88, amount: 24500.0, payment_method: 'WIRE_TRANSFER' },
-  },
-];
 
 export const AuditLogsPage = () => {
   const [logs, setLogs] = useState([]);
@@ -90,18 +33,11 @@ export const AuditLogsPage = () => {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://127.0.0.1:5000/api/audit-logs', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.data && res.data.logs && res.data.logs.length > 0) {
-        setLogs(res.data.logs);
-      } else {
-        setLogs(FALLBACK_LOGS);
-      }
+      const data = await adminApi.getAuditLogs({ per_page: 100 });
+      setLogs(data.logs || []);
     } catch (err) {
-      console.warn('Using fallback audit log dataset', err);
-      setLogs(FALLBACK_LOGS);
+      console.error('Failed to load audit logs', err);
+      setError(err.response?.data?.message || 'Failed to load audit trail records.');
     } finally {
       setLoading(false);
     }
@@ -115,15 +51,18 @@ export const AuditLogsPage = () => {
     const actorName = l.actor_name || l.user_name || l.actor || 'System';
     const actionName = l.action || '';
     const entityType = l.entity_type || l.entity || '';
+    const userEmail = l.user_email || '';
 
     const matchesSearch =
       actorName.toLowerCase().includes(search.toLowerCase()) ||
+      userEmail.toLowerCase().includes(search.toLowerCase()) ||
       actionName.toLowerCase().includes(search.toLowerCase()) ||
       entityType.toLowerCase().includes(search.toLowerCase()) ||
-      String(l.id).includes(search);
+      String(l.id).includes(search) ||
+      String(l.entity_id || '').includes(search);
 
     const matchesAction =
-      actionFilter === 'ALL' || actionName.includes(actionFilter);
+      actionFilter === 'ALL' || actionName === actionFilter || actionName.includes(actionFilter);
 
     return matchesSearch && matchesAction;
   });
@@ -182,12 +121,12 @@ export const AuditLogsPage = () => {
               setCurrentPage(1);
             }}
           >
-            <option value="ALL">All Event Types</option>
-            <option value="USER">User Account Events</option>
-            <option value="ROLE">Role &amp; RBAC Events</option>
-            <option value="SPACE">Space &amp; Hardware Events</option>
-            <option value="PAYMENT">Payment &amp; Billing Events</option>
-            <option value="CREATIVE">Creative Verification Events</option>
+            <option value="ALL">All Actions</option>
+            <option value="UPDATE_STATUS">Status Changes (Activate/Deactivate)</option>
+            <option value="CREATE">Creation Operations</option>
+            <option value="UPDATE">Updates &amp; Edits</option>
+            <option value="DELETE">Deletions</option>
+            <option value="LOGIN">Authentication</option>
           </select>
         </div>
       </div>
@@ -243,23 +182,41 @@ export const AuditLogsPage = () => {
                       </td>
 
                       <td>
-                        <div className="d-flex align-items-center gap-1.5">
-                          <User size={13} className="text-primary" />
-                          <span className="fw-semibold text-xs text-primary-emphasis">
-                            {l.actor_name || l.user_name || l.actor || 'System'}
-                          </span>
+                        <div className="d-flex align-items-center gap-2">
+                          <div
+                            className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 bg-primary-subtle text-primary fw-bold"
+                            style={{ width: '28px', height: '28px', fontSize: '0.72rem' }}
+                          >
+                            {(l.user_name || l.actor_name || l.actor || 'S').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="d-flex flex-column" style={{ minWidth: 0, lineHeight: 1.2 }}>
+                            <span className="fw-semibold text-xs text-primary-emphasis text-truncate">
+                              {l.user_name || l.actor_name || l.actor || 'System'}
+                            </span>
+                            <span className="text-muted font-monospace text-truncate" style={{ fontSize: '0.68rem', marginTop: '2px' }}>
+                              {l.user_email || 'system@internal'}
+                            </span>
+                          </div>
                         </div>
                       </td>
 
                       <td>
-                        <span className="badge bg-primary-subtle text-primary font-monospace text-xs">
+                        <span className={`badge ${
+                          l.action === 'UPDATE_STATUS'
+                            ? 'bg-warning-subtle text-warning'
+                            : l.action === 'CREATE'
+                            ? 'bg-success-subtle text-success'
+                            : l.action === 'DELETE'
+                            ? 'bg-danger-subtle text-danger'
+                            : 'bg-primary-subtle text-primary'
+                        } font-monospace text-xs`}>
                           {l.action}
                         </span>
                       </td>
 
                       <td>
                         <span className="text-xs text-secondary">
-                          {l.entity_type || l.entity} (ID: #{l.entity_id || l.target_id || 1})
+                          <strong className="text-primary-emphasis">{l.entity_type || l.entity}</strong> (#{l.entity_id || l.target_id || 1})
                         </span>
                       </td>
 
@@ -300,49 +257,238 @@ export const AuditLogsPage = () => {
       <Modal
         isOpen={!!selectedLog}
         onClose={() => setSelectedLog(null)}
-        title={`Audit Event Payload: #${selectedLog?.id}`}
-        subtitle={`Action: ${selectedLog?.action} by ${selectedLog?.actor_name || 'System'}`}
-        size="md"
+        title={`Audit Event Inspection: #${selectedLog?.id}`}
+        subtitle={`Action ${selectedLog?.action} performed by ${selectedLog?.user_name || selectedLog?.actor_name || 'System'}`}
+        size="lg"
         footer={
-          <button
-            type="button"
-            className="btn-ui btn-ui-secondary btn-ui-sm"
-            onClick={() => setSelectedLog(null)}
-          >
-            Close
-          </button>
+          <div className="d-flex justify-content-between align-items-center w-100">
+            <span className="text-muted text-xs font-monospace">
+              Record ID: #{selectedLog?.id}
+            </span>
+            <button
+              type="button"
+              className="btn-ui btn-ui-secondary btn-ui-sm"
+              onClick={() => setSelectedLog(null)}
+            >
+              Close
+            </button>
+          </div>
         }
       >
         {selectedLog && (
           <div className="d-flex flex-column gap-3">
-            <div className="p-2.5 rounded bg-subtle border text-xs">
-              <div className="row g-2">
-                <div className="col-6">
-                  <strong>Timestamp:</strong> {new Date(selectedLog.created_at).toLocaleString()}
+            {/* Metadata Summary Card */}
+            <div className="card-enterprise p-3 bg-subtle">
+              <div className="row g-3">
+                <div className="col-6 col-md-3">
+                  <span className="text-muted text-xs d-block mb-1">Action Type</span>
+                  <span className={`badge ${
+                    selectedLog.action === 'UPDATE_STATUS'
+                      ? 'bg-warning-subtle text-warning'
+                      : selectedLog.action === 'CREATE'
+                      ? 'bg-success-subtle text-success'
+                      : selectedLog.action === 'DELETE'
+                      ? 'bg-danger-subtle text-danger'
+                      : 'bg-primary-subtle text-primary'
+                  } font-monospace text-xs`}>
+                    {selectedLog.action}
+                  </span>
                 </div>
-                <div className="col-6">
-                  <strong>Source IP:</strong> {selectedLog.ip_address || '127.0.0.1'}
+
+                <div className="col-6 col-md-3">
+                  <span className="text-muted text-xs d-block mb-1">Target Entity</span>
+                  <span className="fw-semibold text-xs text-primary-emphasis">
+                    {selectedLog.entity_type} <span className="text-muted font-monospace">(#{selectedLog.entity_id || 'N/A'})</span>
+                  </span>
                 </div>
-                <div className="col-6">
-                  <strong>Target Entity:</strong> {selectedLog.entity_type} (#{selectedLog.entity_id})
+
+                <div className="col-6 col-md-3">
+                  <span className="text-muted text-xs d-block mb-1">Operator</span>
+                  <div className="d-flex flex-column" style={{ minWidth: 0 }}>
+                    <span className="fw-semibold text-xs text-primary-emphasis text-truncate">
+                      {selectedLog.user_name || selectedLog.actor_name || 'System Auto'}
+                    </span>
+                    <span className="text-muted text-truncate font-monospace" style={{ fontSize: '0.68rem' }}>
+                      {selectedLog.user_email || 'system@internal'}
+                    </span>
+                  </div>
                 </div>
-                <div className="col-6">
-                  <strong>Action:</strong> {selectedLog.action}
+
+                <div className="col-6 col-md-3">
+                  <span className="text-muted text-xs d-block mb-1">Timestamp &amp; IP</span>
+                  <div className="text-xs text-secondary">
+                    {new Date(selectedLog.created_at).toLocaleString([], {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                  <span className="text-muted font-monospace" style={{ fontSize: '0.68rem' }}>
+                    {selectedLog.ip_address || '127.0.0.1'}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div>
-              <label className="text-xs fw-bold text-uppercase tracking-wider text-muted mb-1 d-block">
-                Raw Event Context &amp; Diff Payload
-              </label>
+            {/* State Mutation Diff or Payload Block */}
+            {selectedLog.old_values && selectedLog.new_values && typeof selectedLog.old_values === 'object' && typeof selectedLog.new_values === 'object' ? (
+              <div>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <label className="text-xs fw-bold text-uppercase tracking-wider text-muted mb-0">
+                    State Mutation Comparison
+                  </label>
+                  <span className="text-muted text-xs font-monospace">Old vs New Values</span>
+                </div>
+
+                <div className="card-enterprise overflow-hidden">
+                  <div className="table-container border-0 m-0">
+                    <table className="enterprise-table mb-0">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '30%' }}>Attribute</th>
+                          <th style={{ width: '35%' }}>Previous State (Before)</th>
+                          <th style={{ width: '35%' }}>New State (After)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.from(new Set([...Object.keys(selectedLog.old_values), ...Object.keys(selectedLog.new_values)])).map((key) => {
+                          const oldVal = selectedLog.old_values[key];
+                          const newVal = selectedLog.new_values[key];
+                          const isChanged = JSON.stringify(oldVal) !== JSON.stringify(newVal);
+
+                          return (
+                            <tr key={key} className={isChanged ? 'bg-subtle' : ''}>
+                              <td className="fw-semibold font-monospace text-xs text-primary-emphasis">
+                                {key}
+                              </td>
+                              <td>
+                                {oldVal !== undefined ? (
+                                  <span className="badge bg-danger-subtle text-danger font-monospace text-xs">
+                                    {typeof oldVal === 'object' ? JSON.stringify(oldVal) : String(oldVal)}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted text-xs italic">—</span>
+                                )}
+                              </td>
+                              <td>
+                                {newVal !== undefined ? (
+                                  <span className="badge bg-success-subtle text-success font-monospace text-xs fw-bold">
+                                    {typeof newVal === 'object' ? JSON.stringify(newVal) : String(newVal)}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted text-xs italic">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : selectedLog.new_values && typeof selectedLog.new_values === 'object' ? (
+              <div>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <label className="text-xs fw-bold text-uppercase tracking-wider text-muted mb-0">
+                    Initialized Entity Attributes
+                  </label>
+                  <span className="badge bg-success-subtle text-success text-xs">Creation Payload</span>
+                </div>
+
+                <div className="card-enterprise overflow-hidden">
+                  <div className="table-container border-0 m-0">
+                    <table className="enterprise-table mb-0">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '35%' }}>Attribute</th>
+                          <th style={{ width: '65%' }}>Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(selectedLog.new_values).map(([k, v]) => (
+                          <tr key={k}>
+                            <td className="fw-semibold font-monospace text-xs text-primary-emphasis">
+                              {k}
+                            </td>
+                            <td>
+                              <span className="font-monospace text-xs text-secondary">
+                                {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : selectedLog.old_values && typeof selectedLog.old_values === 'object' ? (
+              <div>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <label className="text-xs fw-bold text-uppercase tracking-wider text-muted mb-0">
+                    Deleted Entity Snapshot
+                  </label>
+                  <span className="badge bg-danger-subtle text-danger text-xs">Purged Record</span>
+                </div>
+
+                <div className="card-enterprise overflow-hidden">
+                  <div className="table-container border-0 m-0">
+                    <table className="enterprise-table mb-0">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '35%' }}>Attribute</th>
+                          <th style={{ width: '65%' }}>Purged Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(selectedLog.old_values).map(([k, v]) => (
+                          <tr key={k}>
+                            <td className="fw-semibold font-monospace text-xs text-primary-emphasis">
+                              {k}
+                            </td>
+                            <td>
+                              <span className="font-monospace text-xs text-danger">
+                                {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="text-xs fw-bold text-uppercase tracking-wider text-muted mb-2 d-block">
+                  Raw Event Context
+                </label>
+                <div className="card-enterprise p-3">
+                  <pre
+                    className="m-0 p-3 rounded bg-subtle text-xs font-monospace"
+                    style={{ maxHeight: '240px', overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                  >
+                    {JSON.stringify(selectedLog.details || selectedLog, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            {/* Raw JSON Payload (Collapsible / Secondary Context) */}
+            <details className="text-xs text-muted">
+              <summary style={{ cursor: 'pointer', userSelect: 'none' }} className="fw-semibold text-primary">
+                View Raw JSON Event Object
+              </summary>
               <pre
-                className="p-3 rounded bg-dark text-light text-xs font-monospace mb-0"
-                style={{ maxHeight: '200px', overflowY: 'auto' }}
+                className="mt-2 p-2.5 rounded bg-subtle text-xs font-monospace border mb-0"
+                style={{ maxHeight: '180px', overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
               >
-                {JSON.stringify(selectedLog.details || selectedLog, null, 2)}
+                {JSON.stringify(selectedLog, null, 2)}
               </pre>
-            </div>
+            </details>
           </div>
         )}
       </Modal>

@@ -68,8 +68,11 @@ export const NotificationsPage = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
-  }, [page, filter, categoryFilter]);
+    const timer = setTimeout(() => {
+      fetchNotifications();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [page, filter, categoryFilter, search]);
 
   const handleMarkAsRead = async (id) => {
     try {
@@ -107,7 +110,7 @@ export const NotificationsPage = () => {
   return (
     <div>
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header mb-4">
         <div>
           <h1 className="page-title">Notifications &amp; System Alerts</h1>
           <p className="page-subtitle">
@@ -151,42 +154,70 @@ export const NotificationsPage = () => {
       )}
 
       {error && (
-        <div className="alert-ui alert-danger mb-4">
+        <div className="alert-ui alert-danger mb-3">
           <AlertCircle size={16} className="flex-shrink-0" />
           <div className="flex-grow-1 text-xs">{error}</div>
         </div>
       )}
 
-      {/* Filter Tabs & Search */}
-      <div className="toolbar-ui">
-        <div className="d-flex gap-1.5 flex-wrap">
+      {/* Filter Tabs & Search Toolbar */}
+      <div className="toolbar-ui mb-3.5 align-items-center">
+        {/* Segmented Filter Pills */}
+        <div className="d-inline-flex p-1 rounded bg-subtle border gap-1">
           <button
             type="button"
-            className={`btn-ui btn-ui-sm ${filter === 'ALL' ? 'btn-ui-primary' : 'btn-ui-secondary'}`}
+            className={`btn-ui btn-ui-xs ${filter === 'ALL' ? 'btn-ui-primary' : 'btn-ui-ghost'}`}
+            style={{ borderRadius: 'var(--radius-sm)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
             onClick={() => { setFilter('ALL'); setPage(1); }}
           >
             All
           </button>
           <button
             type="button"
-            className={`btn-ui btn-ui-sm ${filter === 'UNREAD' ? 'btn-ui-primary' : 'btn-ui-secondary'}`}
+            className={`btn-ui btn-ui-xs ${filter === 'UNREAD' ? 'btn-ui-primary' : 'btn-ui-ghost'}`}
+            style={{ borderRadius: 'var(--radius-sm)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
             onClick={() => { setFilter('UNREAD'); setPage(1); }}
           >
             Unread Only
+            {unreadCount > 0 && (
+              <span
+                className={`badge ms-1.5 ${filter === 'UNREAD' ? 'bg-white text-primary' : 'bg-primary-subtle text-primary'}`}
+                style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }}
+              >
+                {unreadCount}
+              </span>
+            )}
           </button>
           <button
             type="button"
-            className={`btn-ui btn-ui-sm ${filter === 'READ' ? 'btn-ui-primary' : 'btn-ui-secondary'}`}
+            className={`btn-ui btn-ui-xs ${filter === 'READ' ? 'btn-ui-primary' : 'btn-ui-ghost'}`}
+            style={{ borderRadius: 'var(--radius-sm)', padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
             onClick={() => { setFilter('READ'); setPage(1); }}
           >
             Read
           </button>
         </div>
 
-        <div className="toolbar-filters">
+        {/* Search & Category Filter */}
+        <div className="toolbar-filters ms-auto">
+          <div className="toolbar-search" style={{ minWidth: '220px', maxWidth: '280px' }}>
+            <Search size={14} className="toolbar-search-icon" />
+            <input
+              type="text"
+              className="toolbar-search-input"
+              style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem 0.4rem 2rem' }}
+              placeholder="Search notifications..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+
           <select
             className="form-select-ui"
-            style={{ width: 'auto', fontSize: '0.82rem', padding: '0.45rem 0.75rem' }}
+            style={{ width: 'auto', fontSize: '0.82rem', padding: '0.42rem 0.75rem' }}
             value={categoryFilter}
             onChange={(e) => {
               setCategoryFilter(e.target.value);

@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from app.extensions import db
 from app.models.campaign import Campaign, CampaignStatus
+from app.models.audit import AuditAction
+from app.services.audit_service import AuditService
 
 
 class CampaignService:
@@ -138,13 +140,40 @@ class CampaignService:
         db.session.add(campaign)
         db.session.commit()
 
+        try:
+            AuditService.log(
+                user_id=user_id,
+                action=AuditAction.CREATE,
+                entity_type="Campaign",
+                entity_id=campaign.id,
+                new_values={
+                    "campaign_reference": campaign.campaign_reference,
+                    "name": campaign.name,
+                    "advertiser_id": campaign.advertiser_id,
+                    "start_date": campaign.start_date.isoformat() if campaign.start_date else None,
+                    "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
+                    "budget": str(campaign.budget),
+                    "status": campaign.status
+                }
+            )
+        except Exception:
+            pass
+
         return campaign
 
     @staticmethod
-    def update(campaign: Campaign, data: dict):
+    def update(campaign: Campaign, data: dict, user_id=None):
         """
         Updates campaign attributes.
         """
+        old_values = {
+            "name": campaign.name,
+            "description": campaign.description,
+            "start_date": campaign.start_date.isoformat() if campaign.start_date else None,
+            "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
+            "budget": str(campaign.budget)
+        }
+
         if "name" in data:
             campaign.name = data["name"].strip()
 
@@ -161,22 +190,55 @@ class CampaignService:
             campaign.budget = data["budget"]
 
         db.session.commit()
+
+        try:
+            AuditService.log(
+                user_id=user_id,
+                action=AuditAction.UPDATE,
+                entity_type="Campaign",
+                entity_id=campaign.id,
+                old_values=old_values,
+                new_values={
+                    "name": campaign.name,
+                    "description": campaign.description,
+                    "start_date": campaign.start_date.isoformat() if campaign.start_date else None,
+                    "end_date": campaign.end_date.isoformat() if campaign.end_date else None,
+                    "budget": str(campaign.budget)
+                }
+            )
+        except Exception:
+            pass
+
         return campaign
 
     @staticmethod
-    def update_status(campaign: Campaign, new_status: str):
+    def update_status(campaign: Campaign, new_status: str, user_id=None):
         """
         Updates the campaign lifecycle status.
         """
         if new_status not in CampaignStatus.ALL:
             return None, f"Invalid status. Must be one of {CampaignStatus.ALL}"
 
+        old_status = campaign.status
         campaign.status = new_status
         db.session.commit()
+
+        try:
+            AuditService.log(
+                user_id=user_id,
+                action=AuditAction.UPDATE_STATUS,
+                entity_type="Campaign",
+                entity_id=campaign.id,
+                old_values={"status": old_status, "campaign_reference": campaign.campaign_reference},
+                new_values={"status": campaign.status, "campaign_reference": campaign.campaign_reference}
+            )
+        except Exception:
+            pass
+
         return campaign, None
 
     @staticmethod
-    def delete(campaign: Campaign):
+    def delete(campaign: Campaign, user_id=None):
         """
         Deletes a campaign, releases linked availability blocks,
         and ensures no active financial invoices exist.
@@ -194,6 +256,10 @@ class CampaignService:
         if active_invoices > 0:
             return False, "Cannot delete a campaign with active or paid invoices."
 
+        campaign_id = campaign.id
+        campaign_ref = campaign.campaign_reference
+        campaign_name = campaign.name
+
         try:
             # 2. Release space availability blocks for any confirmed bookings
             for booking in campaign.bookings:
@@ -208,6 +274,17 @@ class CampaignService:
             # 3. Delete campaign (cascades to bookings & creatives)
             db.session.delete(campaign)
             db.session.commit()
+
+            try:
+                AuditService.log(
+                    user_id=user_id,
+                    action=AuditAction.DELETE,
+                    entity_type="Campaign",
+                    entity_id=campaign_id,
+                    old_values={"campaign_reference": campaign_ref, "name": campaign_name}
+                )
+            except Exception:
+                pass
 
         except Exception as err:
             db.session.rollback()

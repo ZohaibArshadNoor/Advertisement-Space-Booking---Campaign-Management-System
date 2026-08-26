@@ -22,13 +22,29 @@ export const adminApi = {
     return response.data;
   },
 
+  updateUserStatus: async (id, isActive) => {
+    const response = await apiClient.patch(`/users/${id}/status`, { is_active: isActive });
+    return response.data;
+  },
+
   toggleUserStatus: async (id, isActive) => {
     const response = await apiClient.patch(`/users/${id}/status`, { is_active: isActive });
     return response.data;
   },
 
+  resetUserPassword: async (id, newPassword) => {
+    const response = await apiClient.post(`/users/${id}/reset-password`, { 
+      new_password: newPassword,
+      password: newPassword 
+    });
+    return response.data;
+  },
+
   resetPassword: async (id, newPassword) => {
-    const response = await apiClient.post(`/users/${id}/reset-password`, { password: newPassword });
+    const response = await apiClient.post(`/users/${id}/reset-password`, { 
+      new_password: newPassword,
+      password: newPassword 
+    });
     return response.data;
   },
 

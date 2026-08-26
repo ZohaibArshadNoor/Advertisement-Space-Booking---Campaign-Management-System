@@ -53,6 +53,8 @@ function App() {
                 <Route path="/bookings" element={<BookingsPage />} />
                 <Route path="/creatives" element={<CreativesPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
+                <Route path="/invoices" element={<Navigate to="/payments" replace />} />
+                <Route path="/billing" element={<Navigate to="/payments" replace />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
 

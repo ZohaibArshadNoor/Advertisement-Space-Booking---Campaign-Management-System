@@ -18,16 +18,16 @@ import {
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { role: 'Administrator', email: 'admin@adflow.com', name: 'System Administrator', desc: 'Full system & user access' },
-  { role: 'Space Manager', email: 'spacemanager@test.com', name: 'Space Manager', desc: 'Manage inventory & schedules' },
+  { role: 'Administrator', email: 'admin@test.com', name: 'System Administrator', desc: 'Full system & user access' },
+  { role: 'Space Manager', email: 'spaces@test.com', name: 'Space Manager', desc: 'Manage inventory & schedules' },
   { role: 'Sales Executive', email: 'sales@test.com', name: 'Sales Executive', desc: 'Pipeline, bookings & quotes' },
   { role: 'Creative Reviewer', email: 'reviewer@test.com', name: 'Creative Reviewer', desc: 'Approve & reject media' },
   { role: 'Finance Officer', email: 'finance@test.com', name: 'Finance Officer', desc: 'Invoices, payments & ledgers' },
-  { role: 'Advertiser', email: 'advertiser@test.com', name: 'Acme Media Advertiser', desc: 'Browse, book & launch' },
+  { role: 'Advertiser', email: 'advertiser@test.com', name: 'Ali Hassan (Jazz Marketing)', desc: 'Browse, book & launch' },
 ];
 
 export const LoginPage = () => {
-  const { loginWithToken } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -49,15 +49,14 @@ export const LoginPage = () => {
 
     setLoading(true);
     try {
-      const data = await authApi.login({ email: email.trim(), password });
-      loginWithToken(data.access_token, data.user);
+      await login({ email: email.trim(), password });
       navigate('/dashboard');
     } catch (err) {
       console.error('Login error', err);
       setError(
         err.response?.data?.message ||
         err.response?.data?.error ||
-        'Invalid email or password. Please try again.'
+        'Invalid email or password. Please verify your credentials.'
       );
     } finally {
       setLoading(false);
@@ -66,7 +65,7 @@ export const LoginPage = () => {
 
   const handleQuickFill = (demo) => {
     setEmail(demo.email);
-    setPassword('Password123!');
+    setPassword('password123');
     setError('');
   };
 

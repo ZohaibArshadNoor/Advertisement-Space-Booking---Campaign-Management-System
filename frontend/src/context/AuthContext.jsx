@@ -41,6 +41,13 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const loginWithToken = (newToken, userData) => {
+    localStorage.setItem('access_token', newToken);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setToken(newToken);
+    setUser(userData);
+  };
+
   const register = async (userData) => {
     return await authService.register(userData);
   };
@@ -55,10 +62,11 @@ export const AuthProvider = ({ children }) => {
     user,
     token,
     isAuthenticated: !!token && !!user,
-    isAdmin: user?.role === 'Admin',
+    isAdmin: user?.role === 'Administrator',
     isAdvertiser: user?.role === 'Advertiser',
     loading,
     login,
+    loginWithToken,
     register,
     logout,
   };

@@ -36,12 +36,12 @@ const ROUTE_LABELS = {
 };
 
 const DEMO_ROLES = [
-  { role: 'Administrator', email: 'admin@adflow.com', name: 'System Administrator' },
-  { role: 'Space Manager', email: 'spacemanager@test.com', name: 'Space Manager' },
-  { role: 'Sales Executive', email: 'sales@test.com', name: 'Sales Executive' },
-  { role: 'Creative Reviewer', email: 'reviewer@test.com', name: 'Creative Reviewer' },
-  { role: 'Finance Officer', email: 'finance@test.com', name: 'Finance Officer' },
-  { role: 'Advertiser', email: 'advertiser@test.com', name: 'Acme Media Advertiser' },
+  { role: 'Administrator', email: 'admin@test.com', name: 'System Administrator' },
+  { role: 'Space Manager', email: 'spaces@test.com', name: 'Tariq Mahmood' },
+  { role: 'Sales Executive', email: 'sales@test.com', name: 'Sara Khan' },
+  { role: 'Creative Reviewer', email: 'reviewer@test.com', name: 'Zainab Malik' },
+  { role: 'Finance Officer', email: 'finance@test.com', name: 'Farhan Siddiqui' },
+  { role: 'Advertiser', email: 'advertiser@test.com', name: 'Ali Hassan (Jazz Marketing)' },
 ];
 
 export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {

@@ -10,78 +10,157 @@ import {
   AlertCircle,
   Plus,
   RefreshCw,
-  Lock
+  Lock,
+  Building2,
+  Megaphone,
+  CreditCard,
+  Image as ImageIcon,
+  Check
 } from 'lucide-react';
+
+const ROLE_METADATA = {
+  Administrator: {
+    icon: ShieldCheck,
+    color: '#dc2626',
+    bgColor: 'rgba(220, 38, 38, 0.1)',
+    borderColor: 'rgba(220, 38, 38, 0.25)',
+    description: 'Full administrative authority across all operational modules, user provisioning, security audit trails, and platform configurations.',
+    isMaster: true,
+  },
+  Advertiser: {
+    icon: Megaphone,
+    color: '#2563eb',
+    bgColor: 'rgba(37, 99, 235, 0.1)',
+    borderColor: 'rgba(37, 99, 235, 0.25)',
+    description: 'External brand advertisers who discover spaces, check availability, book billboard inventory, launch flighting campaigns, and upload media.',
+    isMaster: false,
+  },
+  'Sales Executive': {
+    icon: Users,
+    color: '#16a34a',
+    bgColor: 'rgba(22, 163, 74, 0.1)',
+    borderColor: 'rgba(22, 163, 74, 0.25)',
+    description: 'Commercial sales representatives who generate client quotations, onboard advertiser accounts, and submit inventory booking orders.',
+    isMaster: false,
+  },
+  'Space Manager': {
+    icon: Building2,
+    color: '#0284c7',
+    bgColor: 'rgba(2, 132, 199, 0.1)',
+    borderColor: 'rgba(2, 132, 199, 0.25)',
+    description: 'Asset controllers who manage billboard hardware, rate cards, maintenance blackouts, and screen uptime telemetry.',
+    isMaster: false,
+  },
+  'Creative Reviewer': {
+    icon: ImageIcon,
+    color: '#d97706',
+    bgColor: 'rgba(217, 119, 6, 0.1)',
+    borderColor: 'rgba(217, 119, 6, 0.25)',
+    description: 'Content moderation officers who inspect uploaded artwork, check resolutions, and enforce regulatory compliance.',
+    isMaster: false,
+  },
+  'Finance Officer': {
+    icon: CreditCard,
+    color: '#9333ea',
+    bgColor: 'rgba(147, 51, 234, 0.1)',
+    borderColor: 'rgba(147, 51, 234, 0.25)',
+    description: 'Accounting specialists who generate commercial invoices, verify wire settlements, and manage aging debt ledgers.',
+    isMaster: false,
+  },
+};
+
+const PERMISSION_HUMAN_LABELS = {
+  'user.manage': 'Full User Management',
+  'user.view': 'View Users',
+  'user.create': 'Create Users',
+  'user.edit': 'Edit Users',
+  'role.manage': 'Role Management',
+  'system.manage': 'System Settings',
+  'audit.view': 'View Audit Logs',
+  'space.create': 'Create Spaces',
+  'space.update': 'Update Spaces',
+  'space.view': 'View Spaces',
+  'availability.manage': 'Manage Availability',
+  'campaign.create': 'Create Campaigns',
+  'campaign.view_own': 'View Own Campaigns',
+  'campaign.view': 'View All Campaigns',
+  'quotation.create': 'Create Quotations',
+  'quotation.update': 'Update Quotations',
+  'booking.create': 'Book Spaces',
+  'booking.view': 'View Bookings',
+  'booking.confirm': 'Confirm Bookings',
+  'creative.upload': 'Upload Creatives',
+  'creative.view': 'Review Creatives',
+  'creative.approve': 'Approve Creatives',
+  'creative.reject': 'Reject Creatives',
+  'invoice.view': 'View Invoices',
+  'payment.view': 'View Payments',
+  'payment.verify': 'Verify Payments',
+};
 
 const FALLBACK_ROLES = [
   {
     id: 1,
     name: 'Advertiser',
-    description: 'External clients who browse inventory, book ad spaces, launch flighting campaigns, and upload media.',
-    user_count: 14,
+    user_count: 2,
     permissions: {
+      'booking.create': true,
       'campaign.create': true,
       'campaign.view_own': true,
-      'booking.create': true,
       'creative.upload': true,
     },
   },
   {
     id: 2,
     name: 'Sales Executive',
-    description: 'Commercial team members who generate quotations, onboard client accounts, and enter booking orders.',
-    user_count: 5,
+    user_count: 2,
     permissions: {
+      'booking.view': true,
       'campaign.view': true,
       'quotation.create': true,
       'quotation.update': true,
-      'booking.view': true,
     },
   },
   {
     id: 3,
     name: 'Space Manager',
-    description: 'Inventory controllers who manage billboard hardware, rate cards, maintenance blackouts, and screen telemetry.',
-    user_count: 3,
+    user_count: 2,
     permissions: {
+      'availability.manage': true,
       'space.create': true,
       'space.update': true,
       'space.view': true,
-      'availability.manage': true,
     },
   },
   {
     id: 4,
     name: 'Creative Reviewer',
-    description: 'Content moderators who inspect uploaded artwork, check resolutions, and enforce compliance guidelines.',
-    user_count: 4,
+    user_count: 1,
     permissions: {
-      'creative.view': true,
       'creative.approve': true,
       'creative.reject': true,
+      'creative.view': true,
     },
   },
   {
     id: 5,
     name: 'Finance Officer',
-    description: 'Accounting personnel who generate commercial invoices, verify wire settlements, and manage aging debt ledgers.',
-    user_count: 2,
+    user_count: 1,
     permissions: {
       'invoice.view': true,
-      'payment.view': true,
       'payment.verify': true,
+      'payment.view': true,
     },
   },
   {
     id: 6,
     name: 'Administrator',
-    description: 'System administrators with full cross-module access, user provisioning, role authority, and audit trail inspection.',
     user_count: 2,
     permissions: {
-      'user.manage': true,
+      'audit.view': true,
       'role.manage': true,
       'system.manage': true,
-      'audit.view': true,
+      'user.manage': true,
     },
   },
 ];
@@ -133,7 +212,6 @@ export const RolesPage = () => {
       });
       fetchRoles();
     } catch (err) {
-      // Local optimistic update
       setRoles((prev) =>
         prev.map((r) =>
           r.id === roleId
@@ -153,9 +231,14 @@ export const RolesPage = () => {
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Role Management &amp; Access Control</h1>
+          <div className="d-flex align-items-center gap-2 mb-1">
+            <h1 className="page-title">Role Management &amp; Access Control</h1>
+            <span className="badge bg-primary-subtle text-primary text-xs px-2.5 py-0.5 rounded-pill fw-semibold">
+              {roles.length} System Roles
+            </span>
+          </div>
           <p className="page-subtitle">
-            Configure role-based access control (RBAC) and assign module entitlements.
+            Configure role-based access control (RBAC), enforce security boundaries, and assign module entitlements.
           </p>
         </div>
         <div className="page-actions">
@@ -172,7 +255,7 @@ export const RolesPage = () => {
       </div>
 
       {feedback.message && (
-        <div className={`alert-ui alert-${feedback.type} mb-3`}>
+        <div className={`alert-ui alert-${feedback.type} mb-4`}>
           <CheckCircle2 size={16} className="flex-shrink-0" />
           <div className="flex-grow-1 text-xs">{feedback.message}</div>
           <button
@@ -187,61 +270,108 @@ export const RolesPage = () => {
       {/* Role Cards Grid */}
       <div className="row g-4">
         {roles.map((r) => {
+          const meta = ROLE_METADATA[r.name] || {
+            icon: ShieldCheck,
+            color: '#2563eb',
+            bgColor: 'rgba(37, 99, 235, 0.1)',
+            borderColor: 'rgba(37, 99, 235, 0.25)',
+            description: r.description || 'System operational role with tailored module access permissions.',
+            isMaster: false,
+          };
+
+          const IconComponent = meta.icon;
           const permKeys = Object.keys(r.permissions || {}).filter(
             (k) => !!r.permissions[k]
           );
 
           return (
             <div key={r.id} className="col-12 col-md-6 col-xl-4">
-              <div className="card-enterprise h-100 d-flex flex-column justify-content-between">
-                <div className="p-3.5">
-                  <div className="d-flex align-items-start justify-content-between mb-2">
-                    <div className="d-flex align-items-center gap-2">
-                      <div className="p-2 rounded bg-primary-subtle text-primary">
-                        <ShieldCheck size={18} />
+              <div className="role-card">
+                <div className="p-4">
+                  {/* Role Header: Perfectly Aligned SVG Icon + Title on the exact same line, plus User Count Badge */}
+                  <div className="d-flex align-items-center justify-content-between mb-3 gap-2">
+                    <div className="d-flex align-items-center gap-3.5" style={{ minWidth: 0 }}>
+                      <div
+                        className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          backgroundColor: meta.bgColor,
+                          color: meta.color,
+                          border: `1px solid ${meta.borderColor}`,
+                        }}
+                      >
+                        <IconComponent size={19} />
                       </div>
-                      <div>
-                        <h3 className="fw-bold text-sm text-primary-emphasis mb-0">
+                      <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+                        <h3 className="role-card-title mb-0 text-truncate">
                           {r.name}
                         </h3>
-                        <small className="text-muted" style={{ fontSize: '0.7rem' }}>
-                          Role ID: #{r.id}
-                        </small>
+                        <span
+                          className="font-monospace text-xs text-muted"
+                          style={{ fontSize: '0.72rem', flexShrink: 0 }}
+                        >
+                          #{r.id}
+                        </span>
                       </div>
                     </div>
-                    <span className="badge bg-secondary-subtle text-secondary text-xs d-flex align-items-center gap-1">
-                      <Users size={11} />
-                      <span>{r.user_count || 0} Users</span>
-                    </span>
+
+                    {/* User Count Badge: Wide, padded, theme-adaptive */}
+                    <div className="role-user-badge flex-shrink-0">
+                      <Users size={14} style={{ color: meta.color, flexShrink: 0 }} />
+                      <span style={{ whiteSpace: 'nowrap' }}>
+                        {r.user_count || 0} {r.user_count === 1 ? 'User' : 'Users'}
+                      </span>
+                    </div>
                   </div>
 
-                  <p className="text-muted text-xs mb-3" style={{ minHeight: '36px', lineHeight: 1.45 }}>
-                    {r.description || 'System operational role with tailored module access permissions.'}
+                  {/* Description: Adaptive contrast for both Light & Dark themes */}
+                  <p className="role-card-desc mb-3.5" style={{ minHeight: '44px' }}>
+                    {meta.description}
                   </p>
 
-                  <div className="border-top pt-2.5">
-                    <div className="text-xs fw-semibold text-muted mb-1.5 d-flex justify-content-between">
-                      <span>Active Entitlements</span>
-                      <span className="text-primary font-monospace">{permKeys.length} enabled</span>
+                  {/* Active Entitlements Section: Ample gap, theme-aware badges */}
+                  <div className="border-top pt-3">
+                    <div className="d-flex justify-content-between align-items-center mb-2.5">
+                      <span
+                        className="fw-bold text-uppercase tracking-wider text-muted"
+                        style={{ fontSize: '0.68rem', letterSpacing: '0.06em' }}
+                      >
+                        Active Entitlements
+                      </span>
+                      <span className="badge bg-primary-subtle text-primary font-monospace text-xs">
+                        {permKeys.length} enabled
+                      </span>
                     </div>
-                    <div className="d-flex flex-wrap gap-1" style={{ maxHeight: '80px', overflowY: 'auto' }}>
+
+                    {/* Entitlement Chips: Generous gap, wrapping comfortably */}
+                    <div
+                      className="d-flex flex-wrap"
+                      style={{
+                        gap: '0.45rem',
+                        maxHeight: '120px',
+                        overflowY: 'auto',
+                      }}
+                    >
                       {permKeys.map((p) => (
-                        <span
+                        <div
                           key={p}
-                          className="badge bg-subtle text-secondary border font-monospace"
-                          style={{ fontSize: '0.68rem', fontWeight: 500 }}
+                          className="role-entitlement-chip"
+                          title={`Internal Key: ${p}`}
                         >
-                          {p}
-                        </span>
+                          <Check size={11} className="text-success flex-shrink-0" />
+                          <span>{PERMISSION_HUMAN_LABELS[p] || p}</span>
+                        </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="p-2.5 px-3 bg-subtle border-top d-flex justify-content-between align-items-center">
+                {/* Footer Action Bar */}
+                <div className="p-3 px-4 bg-subtle border-top d-flex justify-content-between align-items-center">
                   <span className="text-xs text-muted">
-                    {r.name === 'Administrator' ? (
-                      <span className="d-flex align-items-center gap-1 text-danger">
+                    {meta.isMaster ? (
+                      <span className="d-flex align-items-center gap-1.5 text-danger fw-semibold">
                         <Lock size={12} /> System Master Role
                       </span>
                     ) : (

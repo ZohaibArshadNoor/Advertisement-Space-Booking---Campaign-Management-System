@@ -222,6 +222,27 @@ export const UserFormModal = ({
             </div>
           )}
         </div>
+
+        {isEditing && (
+          <div className="form-group-ui mt-3 pt-3 border-top">
+            <label className="d-flex align-items-center gap-2.5 cursor-pointer mb-0">
+              <input
+                type="checkbox"
+                className="form-check-input mt-0"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+              />
+              <div>
+                <div className="fw-semibold text-xs text-primary-emphasis">
+                  Account Active &amp; Operational
+                </div>
+                <small className="text-muted" style={{ fontSize: '0.72rem' }}>
+                  Unchecking this deactivates the user and prevents them from logging in.
+                </small>
+              </div>
+            </label>
+          </div>
+        )}
       </form>
     </Modal>
   );

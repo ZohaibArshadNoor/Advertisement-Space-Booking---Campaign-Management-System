@@ -3,37 +3,29 @@ import { paymentsApi } from '../paymentsApi';
 import { campaignService } from '../../../services/campaignService';
 import { useAuth } from '../../../context/AuthContext';
 import { extractErrorMessage } from '../../../utils/errorHandler';
-import { 
-  CreditCard, 
-  Plus, 
-  FileText, 
-  CheckCircle2, 
-  DollarSign, 
-  AlertCircle, 
-  CalendarDays, 
-  Building2 
+import StatusBadge from '../../../components/ui/StatusBadge';
+import EmptyState from '../../../components/ui/EmptyState';
+import Pagination from '../../../components/ui/Pagination';
+import Modal from '../../../components/ui/Modal';
+import {
+  CreditCard,
+  Plus,
+  FileText,
+  CheckCircle2,
+  DollarSign,
+  AlertCircle,
+  CalendarDays,
+  Building2,
+  RefreshCw,
+  Clock,
+  Send,
+  Eye
 } from 'lucide-react';
 
-const INVOICE_STATUS_BADGES = {
-  DRAFT: 'bg-secondary',
-  ISSUED: 'bg-warning text-dark',
-  PARTIALLY_PAID: 'bg-info text-dark',
-  PAID: 'bg-success',
-  OVERDUE: 'bg-danger',
-  CANCELLED: 'bg-dark',
-};
-
-const PAYMENT_STATUS_BADGES = {
-  PENDING: 'bg-warning text-dark',
-  COMPLETED: 'bg-success',
-  FAILED: 'bg-danger',
-  REFUNDED: 'bg-secondary',
-};
-
-const PaymentsPage = () => {
+export const PaymentsPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('invoices'); // 'invoices' | 'payments'
-  
+
   // Invoices state
   const [invoices, setInvoices] = useState([]);
   const [invoicePagination, setInvoicePagination] = useState({ page: 1, pages: 1, total: 0 });
@@ -68,7 +60,6 @@ const PaymentsPage = () => {
 
   const canManageFinance = ['Administrator', 'Finance Officer', 'Sales Executive'].includes(user?.role);
 
-  // Fetch campaigns for dropdowns
   useEffect(() => {
     const loadCampaigns = async () => {
       try {
@@ -81,7 +72,6 @@ const PaymentsPage = () => {
     loadCampaigns();
   }, []);
 
-  // Fetch Invoices
   const fetchInvoices = async () => {
     setInvoicesLoading(true);
     setError('');
@@ -90,7 +80,7 @@ const PaymentsPage = () => {
       if (invoiceStatusFilter) params.status = invoiceStatusFilter;
       const data = await paymentsApi.getInvoices(params);
       setInvoices(data.invoices || data.items || []);
-      setInvoicePagination(data.pagination || { page: 1, pages: 1, total: 0 });
+      setInvoicePagination(data.pagination || { page: 1, pages: 1, total: (data.invoices || []).length });
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load invoices.'));
     } finally {
@@ -98,7 +88,6 @@ const PaymentsPage = () => {
     }
   };
 
-  // Fetch Payments
   const fetchPayments = async () => {
     setPaymentsLoading(true);
     setError('');
@@ -106,7 +95,7 @@ const PaymentsPage = () => {
       const params = { page: paymentPage, per_page: 10 };
       const data = await paymentsApi.getPayments(params);
       setPayments(data.payments || data.items || []);
-      setPaymentPagination(data.pagination || { page: 1, pages: 1, total: 0 });
+      setPaymentPagination(data.pagination || { page: 1, pages: 1, total: (data.payments || []).length });
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to load payments.'));
     } finally {
@@ -119,43 +108,49 @@ const PaymentsPage = () => {
     else fetchPayments();
   }, [activeTab, invoicePage, paymentPage, invoiceStatusFilter]);
 
-  const handleCreateInvoice = async (e) => {
+  const handleCreateInvoiceSubmit = async (e) => {
     e.preventDefault();
+    if (!invoiceFormData.campaign_id) {
+      setError('Please select a campaign.');
+      return;
+    }
     setCreatingInvoice(true);
     setError('');
     try {
       await paymentsApi.createInvoice({
         campaign_id: parseInt(invoiceFormData.campaign_id),
-        tax_rate: invoiceFormData.tax_rate,
+        tax_rate: parseFloat(invoiceFormData.tax_rate) || 0,
         due_date: invoiceFormData.due_date || undefined,
       });
       setSuccessMsg('Invoice generated successfully!');
       setShowInvoiceModal(false);
-      setInvoiceFormData({ campaign_id: '', tax_rate: '16.00', due_date: '' });
       fetchInvoices();
     } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to generate invoice.'));
+      setError(extractErrorMessage(err, 'Failed to create invoice.'));
     } finally {
       setCreatingInvoice(false);
     }
   };
 
-  const handleRecordPayment = async (e) => {
+  const handleCreatePaymentSubmit = async (e) => {
     e.preventDefault();
+    if (!paymentFormData.invoice_id || !paymentFormData.amount) {
+      setError('Please provide an invoice ID and payment amount.');
+      return;
+    }
     setSubmittingPayment(true);
     setError('');
     try {
-      await paymentsApi.recordPayment({
+      await paymentsApi.createPayment({
         invoice_id: parseInt(paymentFormData.invoice_id),
         amount: parseFloat(paymentFormData.amount),
         payment_method: paymentFormData.payment_method,
         transaction_reference: paymentFormData.transaction_reference,
       });
-      setSuccessMsg('Payment recorded and reconciled successfully!');
+      setSuccessMsg('Payment recorded successfully!');
       setShowPaymentModal(false);
-      setPaymentFormData({ invoice_id: '', amount: '', payment_method: 'BANK_TRANSFER', transaction_reference: '' });
-      if (activeTab === 'invoices') fetchInvoices();
-      else fetchPayments();
+      if (activeTab === 'payments') fetchPayments();
+      else fetchInvoices();
     } catch (err) {
       setError(extractErrorMessage(err, 'Failed to record payment.'));
     } finally {
@@ -163,397 +158,505 @@ const PaymentsPage = () => {
     }
   };
 
-  const openPaymentForInvoice = (invoice) => {
-    setPaymentFormData({
-      invoice_id: invoice.id,
-      amount: (invoice.total_amount - (invoice.paid_amount || 0)).toFixed(2),
-      payment_method: 'BANK_TRANSFER',
-      transaction_reference: `TRX-${Math.floor(100000 + Math.random() * 900000)}`,
-    });
-    setShowPaymentModal(true);
+  const handleIssueInvoice = async (invoiceId) => {
+    try {
+      await paymentsApi.issueInvoice(invoiceId);
+      setSuccessMsg('Invoice officially issued to advertiser.');
+      fetchInvoices();
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to issue invoice.'));
+    }
   };
 
   return (
-    <div className="container-fluid px-0">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      {/* Page Header */}
+      <div className="page-header">
         <div>
-          <h2 className="fw-bold mb-1">Billing & Payments</h2>
-          <p className="text-muted small mb-0">Manage campaign invoices, financial reconciliations, and payment receipts</p>
+          <h1 className="page-title">Invoices, Billing &amp; Settlements</h1>
+          <p className="page-subtitle">
+            Manage commercial invoices, track tax receivables, and reconcile client settlements.
+          </p>
         </div>
-        <div className="d-flex gap-2">
+        <div className="page-actions">
+          <button
+            type="button"
+            onClick={() => (activeTab === 'invoices' ? fetchInvoices() : fetchPayments())}
+            className="btn-ui btn-ui-secondary btn-ui-sm"
+            title="Refresh records"
+          >
+            <RefreshCw size={13} />
+            <span>Refresh</span>
+          </button>
           {canManageFinance && (
-            <button className="btn btn-outline-primary" onClick={() => setShowInvoiceModal(true)}>
-              + Generate Invoice
-            </button>
-          )}
-          {canManageFinance && (
-            <button className="btn btn-primary" onClick={() => setShowPaymentModal(true)}>
-              + Record Payment
-            </button>
+            <div className="d-flex gap-1.5">
+              <button
+                type="button"
+                className="btn-ui btn-ui-secondary btn-ui-sm"
+                onClick={() => setShowPaymentModal(true)}
+              >
+                <DollarSign size={14} />
+                <span>Record Payment</span>
+              </button>
+              <button
+                type="button"
+                className="btn-ui btn-ui-primary btn-ui-sm"
+                onClick={() => setShowInvoiceModal(true)}
+              >
+                <Plus size={14} />
+                <span>Create Invoice</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {error && <div className="alert alert-danger alert-dismissible">{error}</div>}
-      {successMsg && <div className="alert alert-success alert-dismissible">{successMsg}</div>}
-
-      {/* Tabs */}
-      <ul className="nav nav-pills mb-4">
-        <li className="nav-item">
+      {/* Alerts */}
+      {successMsg && (
+        <div className="alert-ui alert-success mb-3">
+          <CheckCircle2 size={16} className="flex-shrink-0" />
+          <div className="flex-grow-1 text-xs">{successMsg}</div>
           <button
-            className={`nav-link ${activeTab === 'invoices' ? 'active' : ''}`}
-            onClick={() => setActiveTab('invoices')}
-          >
-            📄 Invoices
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'payments' ? 'active' : ''}`}
-            onClick={() => setActiveTab('payments')}
-          >
-            💳 Transaction History
-          </button>
-        </li>
-      </ul>
-
-      {/* TAB 1: INVOICES */}
-      {activeTab === 'invoices' && (
-        <>
-          {/* Invoice Filter Bar */}
-          <div className="card shadow-sm border-0 mb-4">
-            <div className="card-body">
-              <div className="row g-2 align-items-center">
-                <div className="col-md-4">
-                  <select
-                    className="form-select"
-                    value={invoiceStatusFilter}
-                    onChange={(e) => {
-                      setInvoiceStatusFilter(e.target.value);
-                      setInvoicePage(1);
-                    }}
-                  >
-                    <option value="">All Invoice Statuses</option>
-                    <option value="DRAFT">Draft</option>
-                    <option value="ISSUED">Issued (Unpaid)</option>
-                    <option value="PARTIALLY_PAID">Partially Paid</option>
-                    <option value="PAID">Paid</option>
-                    <option value="OVERDUE">Overdue</option>
-                  </select>
-                </div>
-                <div className="col-md-2">
-                  <button className="btn btn-outline-secondary w-100" onClick={() => setInvoiceStatusFilter('')}>
-                    Reset
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card shadow-sm border-0">
-            <div className="card-body p-0">
-              {invoicesLoading ? (
-                <div className="text-center py-5">
-                  <div className="spinner-border text-primary"></div>
-                  <p className="text-muted mt-2">Loading invoices...</p>
-                </div>
-              ) : invoices.length === 0 ? (
-                <div className="text-center py-5">
-                  <h5>No invoices found</h5>
-                  <p className="text-muted small">Invoices generated for campaigns will show up here.</p>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Invoice #</th>
-                        <th>Campaign</th>
-                        <th>Subtotal</th>
-                        <th>Tax</th>
-                        <th>Total Due</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
-                        <th className="text-end">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoices.map((inv) => (
-                        <tr key={inv.id}>
-                          <td className="fw-semibold text-primary">{inv.invoice_number}</td>
-                          <td>
-                            <div className="fw-bold">{inv.campaign?.name || `Campaign #${inv.campaign_id}`}</div>
-                            <small className="text-muted">{inv.advertiser?.company_name || ''}</small>
-                          </td>
-                          <td>${parseFloat(inv.subtotal || 0).toLocaleString()}</td>
-                          <td>${parseFloat(inv.tax_amount || 0).toLocaleString()} ({inv.tax_rate}%)</td>
-                          <td className="fw-bold text-success">${parseFloat(inv.total_amount || 0).toLocaleString()}</td>
-                          <td><small>{inv.due_date || 'Upon Receipt'}</small></td>
-                          <td>
-                            <span className={`badge ${INVOICE_STATUS_BADGES[inv.status] || 'bg-secondary'}`}>
-                              {inv.status}
-                            </span>
-                          </td>
-                          <td className="text-end">
-                            {inv.status !== 'PAID' && canManageFinance && (
-                              <button
-                                className="btn btn-sm btn-outline-success"
-                                onClick={() => openPaymentForInvoice(inv)}
-                              >
-                                Pay Invoice
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {invoicePagination.pages > 1 && (
-              <div className="card-footer bg-white d-flex justify-content-between align-items-center py-3">
-                <span className="text-muted small">
-                  Page {invoicePagination.page} of {invoicePagination.pages} ({invoicePagination.total} total)
-                </span>
-                <div>
-                  <button
-                    className="btn btn-outline-secondary btn-sm me-2"
-                    disabled={invoicePagination.page <= 1}
-                    onClick={() => setInvoicePage((p) => p - 1)}
-                  >
-                    Previous
-                  </button>
-                  <button
-                    className="btn btn-outline-secondary btn-sm"
-                    disabled={invoicePagination.page >= invoicePagination.pages}
-                    onClick={() => setInvoicePage((p) => p + 1)}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
+            type="button"
+            className="btn-close ms-auto"
+            style={{ fontSize: '0.65rem' }}
+            onClick={() => setSuccessMsg('')}
+          />
+        </div>
       )}
 
-      {/* TAB 2: PAYMENTS */}
-      {activeTab === 'payments' && (
-        <div className="card shadow-sm border-0">
-          <div className="card-body p-0">
-            {paymentsLoading ? (
-              <div className="text-center py-5">
-                <div className="spinner-border text-primary"></div>
-                <p className="text-muted mt-2">Loading transactions...</p>
-              </div>
-            ) : payments.length === 0 ? (
-              <div className="text-center py-5">
-                <h5>No payment transactions recorded</h5>
-                <p className="text-muted small">Processed payments will be logged here.</p>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="table table-hover align-middle mb-0">
-                  <thead className="table-light">
+      {error && (
+        <div className="alert-ui alert-danger mb-3">
+          <AlertCircle size={16} className="flex-shrink-0" />
+          <div className="flex-grow-1 text-xs">{error}</div>
+        </div>
+      )}
+
+      {/* Tab Switcher & Filter Toolbar */}
+      <div className="toolbar-ui">
+        <div className="d-flex gap-1.5">
+          <button
+            type="button"
+            className={`btn-ui btn-ui-sm ${activeTab === 'invoices' ? 'btn-ui-primary' : 'btn-ui-secondary'}`}
+            onClick={() => setActiveTab('invoices')}
+          >
+            <FileText size={14} />
+            <span>Commercial Invoices</span>
+          </button>
+          <button
+            type="button"
+            className={`btn-ui btn-ui-sm ${activeTab === 'payments' ? 'btn-ui-primary' : 'btn-ui-secondary'}`}
+            onClick={() => setActiveTab('payments')}
+          >
+            <CreditCard size={14} />
+            <span>Settlement Transactions</span>
+          </button>
+        </div>
+
+        {activeTab === 'invoices' && (
+          <div className="toolbar-filters">
+            <select
+              className="form-select-ui"
+              style={{ width: 'auto', fontSize: '0.82rem', padding: '0.45rem 0.75rem' }}
+              value={invoiceStatusFilter}
+              onChange={(e) => {
+                setInvoiceStatusFilter(e.target.value);
+                setInvoicePage(1);
+              }}
+            >
+              <option value="">All Invoice Statuses</option>
+              <option value="DRAFT">Draft</option>
+              <option value="ISSUED">Issued</option>
+              <option value="PAID">Paid</option>
+              <option value="PARTIALLY_PAID">Partially Paid</option>
+              <option value="OVERDUE">Overdue</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Tab 1: Invoices Table */}
+      {activeTab === 'invoices' && (
+        <div className="card-enterprise">
+          {invoicesLoading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary spinner-border-sm" role="status" />
+              <p className="text-muted small mt-2">Loading commercial invoices...</p>
+            </div>
+          ) : invoices.length === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title="No invoices found"
+              description="Generate a new invoice from confirmed campaign bookings."
+              actionLabel="Create Invoice"
+              onAction={() => setShowInvoiceModal(true)}
+            />
+          ) : (
+            <>
+              <div className="table-container border-0">
+                <table className="enterprise-table">
+                  <thead>
                     <tr>
-                      <th>Payment Ref</th>
-                      <th>Invoice #</th>
-                      <th>Transaction ID</th>
-                      <th>Amount</th>
-                      <th>Method</th>
-                      <th>Payment Date</th>
+                      <th>Invoice ID</th>
+                      <th>Campaign &amp; Advertiser</th>
+                      <th>Subtotal / Tax</th>
+                      <th>Total Amount</th>
+                      <th>Due Date</th>
                       <th>Status</th>
+                      <th className="text-end">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {payments.map((p) => (
-                      <tr key={p.id}>
-                        <td className="fw-semibold text-primary">{p.payment_reference || `#${p.id}`}</td>
-                        <td>{p.invoice?.invoice_number || `Invoice #${p.invoice_id}`}</td>
-                        <td><code className="text-secondary">{p.transaction_reference || 'N/A'}</code></td>
-                        <td className="fw-bold text-success">${parseFloat(p.amount || 0).toLocaleString()}</td>
-                        <td><span className="badge bg-light text-dark border">{p.payment_method}</span></td>
-                        <td><small>{p.paid_at ? new Date(p.paid_at).toLocaleDateString() : 'N/A'}</small></td>
+                    {invoices.map((inv) => (
+                      <tr key={inv.id}>
                         <td>
-                          <span className={`badge ${PAYMENT_STATUS_BADGES[p.status] || 'bg-secondary'}`}>
-                            {p.status}
+                          <span className="font-monospace text-xs text-primary fw-semibold">
+                            {inv.invoice_number || `#INV-${inv.id}`}
                           </span>
+                        </td>
+
+                        <td>
+                          <div className="fw-semibold text-xs text-primary-emphasis">
+                            {inv.campaign?.name || `Campaign #${inv.campaign_id}`}
+                          </div>
+                          <small className="text-muted" style={{ fontSize: '0.7rem' }}>
+                            Tax Rate: {inv.tax_rate}%
+                          </small>
+                        </td>
+
+                        <td>
+                          <div className="text-xs">
+                            <span className="text-muted">Net: </span>
+                            <span className="font-monospace">${parseFloat(inv.subtotal || 0).toLocaleString()}</span>
+                          </div>
+                          <div className="text-xs text-muted" style={{ fontSize: '0.7rem' }}>
+                            Tax: +${parseFloat(inv.tax_amount || 0).toLocaleString()}
+                          </div>
+                        </td>
+
+                        <td>
+                          <span className="font-monospace text-xs text-primary-emphasis fw-bold">
+                            ${parseFloat(inv.total_amount || 0).toLocaleString()}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="text-xs text-secondary d-flex align-items-center gap-1">
+                            <CalendarDays size={12} className="text-muted" />
+                            {inv.due_date || 'Immediate'}
+                          </span>
+                        </td>
+
+                        <td>
+                          <StatusBadge
+                            status={
+                              inv.status === 'PAID'
+                                ? 'confirmed'
+                                : inv.status === 'ISSUED' || inv.status === 'PARTIALLY_PAID'
+                                ? 'pending'
+                                : inv.status === 'OVERDUE'
+                                ? 'rejected'
+                                : 'draft'
+                            }
+                            label={inv.status}
+                            size="sm"
+                          />
+                        </td>
+
+                        <td className="text-end">
+                          <div className="d-inline-flex align-items-center gap-1.5">
+                            {canManageFinance && inv.status === 'DRAFT' && (
+                              <button
+                                type="button"
+                                className="btn-ui btn-ui-primary btn-ui-sm"
+                                onClick={() => handleIssueInvoice(inv.id)}
+                                title="Issue Invoice"
+                              >
+                                <Send size={12} />
+                                <span>Issue</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="btn-ui btn-ui-secondary btn-ui-sm"
+                              onClick={() => {
+                                setPaymentFormData({ ...paymentFormData, invoice_id: inv.id, amount: inv.total_amount });
+                                setShowPaymentModal(true);
+                              }}
+                              title="Record Payment"
+                            >
+                              <DollarSign size={12} />
+                              <span>Pay</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
 
-          {paymentPagination.pages > 1 && (
-            <div className="card-footer bg-white d-flex justify-content-between align-items-center py-3">
-              <span className="text-muted small">
-                Page {paymentPagination.page} of {paymentPagination.pages} ({paymentPagination.total} total)
-              </span>
-              <div>
-                <button
-                  className="btn btn-outline-secondary btn-sm me-2"
-                  disabled={paymentPagination.page <= 1}
-                  onClick={() => setPaymentPage((p) => p - 1)}
-                >
-                  Previous
-                </button>
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  disabled={paymentPagination.page >= paymentPagination.pages}
-                  onClick={() => setPaymentPage((p) => p + 1)}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+              <Pagination
+                currentPage={invoicePage}
+                totalPages={invoicePagination.pages || 1}
+                totalRecords={invoicePagination.total || invoices.length}
+                pageSize={10}
+                onPageChange={(p) => setInvoicePage(p)}
+              />
+            </>
           )}
         </div>
       )}
 
-      {/* Generate Invoice Modal */}
-      {showInvoiceModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title fw-bold">Generate Campaign Invoice</h5>
-                <button type="button" className="btn-close" onClick={() => setShowInvoiceModal(false)}></button>
-              </div>
-              <form onSubmit={handleCreateInvoice}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Campaign *</label>
-                    <select
-                      className="form-select"
-                      required
-                      value={invoiceFormData.campaign_id}
-                      onChange={(e) => setInvoiceFormData({ ...invoiceFormData, campaign_id: e.target.value })}
-                    >
-                      <option value="">Select a campaign...</option>
-                      {campaigns.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} (Budget: ${parseFloat(c.budget || 0).toLocaleString()})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Tax Rate (%)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="form-control"
-                      value={invoiceFormData.tax_rate}
-                      onChange={(e) => setInvoiceFormData({ ...invoiceFormData, tax_rate: e.target.value })}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Due Date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={invoiceFormData.due_date}
-                      onChange={(e) => setInvoiceFormData({ ...invoiceFormData, due_date: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowInvoiceModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary" disabled={creatingInvoice}>
-                    {creatingInvoice ? 'Generating...' : 'Create Invoice'}
-                  </button>
-                </div>
-              </form>
+      {/* Tab 2: Payments Table */}
+      {activeTab === 'payments' && (
+        <div className="card-enterprise">
+          {paymentsLoading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary spinner-border-sm" role="status" />
+              <p className="text-muted small mt-2">Loading settlement transactions...</p>
             </div>
-          </div>
+          ) : payments.length === 0 ? (
+            <EmptyState
+              icon={CreditCard}
+              title="No settlement transactions recorded"
+              description="Reconcile bank wire transfers or credit card receipts against open invoices."
+              actionLabel="Record Payment"
+              onAction={() => setShowPaymentModal(true)}
+            />
+          ) : (
+            <>
+              <div className="table-container border-0">
+                <table className="enterprise-table">
+                  <thead>
+                    <tr>
+                      <th>Payment Ref</th>
+                      <th>Invoice ID</th>
+                      <th>Settlement Amount</th>
+                      <th>Method</th>
+                      <th>Processed At</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => (
+                      <tr key={p.id}>
+                        <td>
+                          <span className="font-monospace text-xs text-primary fw-semibold">
+                            {p.transaction_reference || `#PAY-${p.id}`}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="font-monospace text-xs text-secondary">
+                            #INV-{p.invoice_id}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="font-monospace text-xs text-success fw-bold">
+                            +${parseFloat(p.amount || 0).toLocaleString()}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="badge bg-subtle text-secondary border font-monospace text-xs">
+                            {p.payment_method || 'BANK_TRANSFER'}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="text-xs text-muted">
+                            {p.created_at ? new Date(p.created_at).toLocaleString() : 'Recent'}
+                          </span>
+                        </td>
+
+                        <td>
+                          <StatusBadge
+                            status={p.status === 'COMPLETED' ? 'active' : 'pending'}
+                            label={p.status || 'COMPLETED'}
+                            size="sm"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination
+                currentPage={paymentPage}
+                totalPages={paymentPagination.pages || 1}
+                totalRecords={paymentPagination.total || payments.length}
+                pageSize={10}
+                onPageChange={(p) => setPaymentPage(p)}
+              />
+            </>
+          )}
         </div>
       )}
 
-      {/* Record Payment Modal */}
-      {showPaymentModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title fw-bold">Record Payment</h5>
-                <button type="button" className="btn-close" onClick={() => setShowPaymentModal(false)}></button>
+      {/* Create Invoice Modal */}
+      <Modal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        title="Generate Commercial Invoice"
+        subtitle="Calculate billables from active campaign space reservations"
+        size="md"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn-ui btn-ui-secondary btn-ui-sm"
+              onClick={() => setShowInvoiceModal(false)}
+              disabled={creatingInvoice}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-ui btn-ui-primary btn-ui-sm"
+              onClick={handleCreateInvoiceSubmit}
+              disabled={creatingInvoice}
+            >
+              {creatingInvoice ? 'Generating...' : 'Generate Invoice'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateInvoiceSubmit}>
+          <div className="form-group-ui">
+            <label className="form-label-ui">Select Campaign <span className="form-required">*</span></label>
+            <select
+              className="form-select-ui"
+              value={invoiceFormData.campaign_id}
+              onChange={(e) => setInvoiceFormData({ ...invoiceFormData, campaign_id: e.target.value })}
+              required
+            >
+              <option value="">Select Campaign...</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.reference_code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="row g-3">
+            <div className="col-12 col-md-6">
+              <div className="form-group-ui">
+                <label className="form-label-ui">Sales Tax / GST (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="form-input-ui font-monospace"
+                  value={invoiceFormData.tax_rate}
+                  onChange={(e) => setInvoiceFormData({ ...invoiceFormData, tax_rate: e.target.value })}
+                />
               </div>
-              <form onSubmit={handleRecordPayment}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Invoice *</label>
-                    <select
-                      className="form-select"
-                      required
-                      value={paymentFormData.invoice_id}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, invoice_id: e.target.value })}
-                    >
-                      <option value="">Select invoice to pay...</option>
-                      {invoices.map((inv) => (
-                        <option key={inv.id} value={inv.id}>
-                          {inv.invoice_number} — Total: ${parseFloat(inv.total_amount).toLocaleString()} (Status: {inv.status})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Payment Amount ($) *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="form-control"
-                      required
-                      placeholder="e.g. 50000"
-                      value={paymentFormData.amount}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Payment Method *</label>
-                    <select
-                      className="form-select"
-                      value={paymentFormData.payment_method}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, payment_method: e.target.value })}
-                    >
-                      <option value="BANK_TRANSFER">Bank Transfer (Wire/IBFT)</option>
-                      <option value="CREDIT_CARD">Credit Card / Debit Card</option>
-                      <option value="ONLINE">Online Payment Gateway</option>
-                      <option value="CHEQUE">Cheque / Demand Draft</option>
-                      <option value="CASH">Cash</option>
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Transaction Reference *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      required
-                      placeholder="e.g. TRX-98234 or Check #"
-                      value={paymentFormData.transaction_reference}
-                      onChange={(e) => setPaymentFormData({ ...paymentFormData, transaction_reference: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-success" disabled={submittingPayment}>
-                    {submittingPayment ? 'Recording...' : 'Confirm Payment'}
-                  </button>
-                </div>
-              </form>
+            </div>
+
+            <div className="col-12 col-md-6">
+              <div className="form-group-ui">
+                <label className="form-label-ui">Payment Due Date</label>
+                <input
+                  type="date"
+                  className="form-input-ui"
+                  value={invoiceFormData.due_date}
+                  onChange={(e) => setInvoiceFormData({ ...invoiceFormData, due_date: e.target.value })}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
+
+      {/* Record Payment Modal */}
+      <Modal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        title="Record Settlement Payment"
+        subtitle="Log wire transfer or payment receipt against an invoice"
+        size="md"
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn-ui btn-ui-secondary btn-ui-sm"
+              onClick={() => setShowPaymentModal(false)}
+              disabled={submittingPayment}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-ui btn-ui-primary btn-ui-sm"
+              onClick={handleCreatePaymentSubmit}
+              disabled={submittingPayment}
+            >
+              {submittingPayment ? 'Saving...' : 'Record Payment'}
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreatePaymentSubmit}>
+          <div className="form-group-ui">
+            <label className="form-label-ui">Invoice Reference ID <span className="form-required">*</span></label>
+            <input
+              type="number"
+              className="form-input-ui font-monospace"
+              placeholder="e.g. 1"
+              value={paymentFormData.invoice_id}
+              onChange={(e) => setPaymentFormData({ ...paymentFormData, invoice_id: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="row g-3">
+            <div className="col-12 col-md-6">
+              <div className="form-group-ui">
+                <label className="form-label-ui">Amount Settled ($ USD) <span className="form-required">*</span></label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="form-input-ui font-monospace"
+                  placeholder="e.g. 5000"
+                  value={paymentFormData.amount}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="col-12 col-md-6">
+              <div className="form-group-ui">
+                <label className="form-label-ui">Payment Channel</label>
+                <select
+                  className="form-select-ui"
+                  value={paymentFormData.payment_method}
+                  onChange={(e) => setPaymentFormData({ ...paymentFormData, payment_method: e.target.value })}
+                >
+                  <option value="BANK_TRANSFER">Bank Wire Transfer</option>
+                  <option value="CREDIT_CARD">Corporate Credit Card</option>
+                  <option value="CHEQUE">Cheque Clearance</option>
+                  <option value="CASH">Cash Deposit</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-group-ui mb-0">
+            <label className="form-label-ui">Bank Transaction Reference / Cheque #</label>
+            <input
+              type="text"
+              className="form-input-ui font-monospace"
+              placeholder="e.g. HBL-FT-940284"
+              value={paymentFormData.transaction_reference}
+              onChange={(e) => setPaymentFormData({ ...paymentFormData, transaction_reference: e.target.value })}
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

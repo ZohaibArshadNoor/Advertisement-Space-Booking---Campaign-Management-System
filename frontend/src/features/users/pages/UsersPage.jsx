@@ -20,7 +20,10 @@ import {
   XCircle,
   RefreshCw,
   AlertCircle,
-  ShieldCheck
+  ShieldCheck,
+  UserCheck,
+  UserX,
+  Power
 } from 'lucide-react';
 
 const ROLE_FILTER_OPTIONS = [
@@ -119,14 +122,26 @@ export const UsersPage = () => {
 
   const handleEditUser = async (formData) => {
     if (!editingUser) return;
-    await adminApi.updateUser(editingUser.id, {
-      name: formData.name,
-      email: formData.email,
-      role_id: formData.role_id,
-    });
-    setFeedback({ type: 'success', message: 'User details updated successfully.' });
-    setEditingUser(null);
-    fetchUsers();
+    try {
+      await adminApi.updateUser(editingUser.id, {
+        name: formData.name,
+        email: formData.email,
+        role_id: formData.role_id,
+      });
+
+      if (formData.is_active !== undefined && formData.is_active !== editingUser.is_active) {
+        await adminApi.updateUserStatus(editingUser.id, formData.is_active);
+      }
+
+      setFeedback({ type: 'success', message: 'User details updated successfully.' });
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err) {
+      setFeedback({
+        type: 'danger',
+        message: err.response?.data?.message || 'Failed to update user details.',
+      });
+    }
   };
 
   const handleToggleStatus = async (user) => {
@@ -339,14 +354,21 @@ export const UsersPage = () => {
 
                       {/* Role */}
                       <td>
-                        <span className="badge bg-secondary-subtle text-secondary text-xs">
+                        <span className="badge bg-secondary-subtle text-primary text-xs">
                           {u.role}
                         </span>
                       </td>
 
-                      {/* Status */}
+                      {/* Status (Interactive 1-Click Toggle) */}
                       <td>
-                        <StatusBadge status={u.is_active ? 'active' : 'inactive'} size="sm" />
+                        <button
+                          type="button"
+                          className="btn p-0 border-0 bg-transparent text-start"
+                          onClick={() => handleToggleStatus(u)}
+                          title={`Click to ${u.is_active ? 'deactivate' : 'activate'} user account`}
+                        >
+                          <StatusBadge status={u.is_active ? 'active' : 'inactive'} size="sm" />
+                        </button>
                       </td>
 
                       {/* Created Date */}
@@ -359,6 +381,21 @@ export const UsersPage = () => {
                       {/* Actions Menu */}
                       <td className="text-end position-relative">
                         <div className="d-inline-flex align-items-center gap-1">
+                          {/* Dedicated 1-Click Activate / Deactivate Action */}
+                          <button
+                            type="button"
+                            className="btn-ui-icon"
+                            onClick={() => handleToggleStatus(u)}
+                            title={u.is_active ? `Deactivate account for ${u.name}` : `Activate account for ${u.name}`}
+                            style={{
+                              backgroundColor: u.is_active ? 'rgba(217, 119, 6, 0.12)' : 'rgba(22, 163, 74, 0.12)',
+                              border: `1px solid ${u.is_active ? 'rgba(217, 119, 6, 0.3)' : 'rgba(22, 163, 74, 0.3)'}`,
+                              color: u.is_active ? '#d97706' : '#16a34a',
+                            }}
+                          >
+                            {u.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
+                          </button>
+
                           <button
                             type="button"
                             className="btn-ui-icon"

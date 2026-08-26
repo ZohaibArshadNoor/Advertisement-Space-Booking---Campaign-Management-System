@@ -8,6 +8,7 @@ import AppShell from './layouts/AppShell';
 // Auth Pages
 import LoginPage from './pages/LoginPage';
 import Register from './pages/Register';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -39,6 +40,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/unauthorized" element={<ForbiddenPage />} />
 
             {/* Authenticated Application Shell */}

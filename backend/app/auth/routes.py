@@ -1,3 +1,13 @@
+import os
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from app.common.email_service import (
+    generate_verification_token,
+    verify_token,
+    send_verification_email
+)
+
 from flask import jsonify, request
 
 from app.auth import auth_bp
@@ -147,22 +157,143 @@ def register():
             "message": "Unable to create the account."
         }), 500
 
+
+    # Generate a verification token and send the verification email.
+    token = generate_verification_token(user.email)
+    send_verification_email(
+        user.email,
+        user.name,
+        token
+    )
+
+
     # Return only safe user information.
     return jsonify({
         "success": True,
-        "message": "Account created successfully.",
+        "message": "Registration successful! Please check your email to verify your account.",
         "user": {
             "id": user.id,
             "name": user.name,
             "email": user.email,
             "role": role.name,
             "is_active": user.is_active
-        }
+        },
+        "requires_verification": True
     }), 201
     
 
 login_schema = LoginSchema()
 
+@auth_bp.post("/google")
+def google_auth():
+    """
+    Verifies Google OAuth ID Token and provisions/logs in user.
+    """
+    data = request.get_json() or {}
+    token_str = data.get("credential")
+
+    if not token_str:
+        return jsonify({"error": "Google credential token is required"}), 400
+
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+
+    try:
+        # Verify the token against Google's public certs
+        id_info = id_token.verify_oauth2_token(
+            token_str,
+            google_requests.Request(),
+            google_client_id
+        )
+
+        email = id_info.get("email")
+        name = id_info.get("name", email.split("@")[0])
+
+        if not email:
+            return jsonify({"error": "Unable to retrieve email from Google token"}), 400
+
+        # Query existing user or create a new Advertiser
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            advertiser_role = Role.query.filter_by(name="Advertiser").first()
+            user = User(
+                email=email,
+                name=name,
+                role_id=advertiser_role.id if advertiser_role else 6,
+                is_active=True,
+                is_verified=True # Google authenticated emails are pre-verified
+            )
+            user.set_password(os.urandom(16).hex()) # Secure random password
+            db.session.add(user)
+            db.session.commit()
+        else:
+            # Mark existing user as verified if they sign in with Google
+            if not getattr(user, 'is_verified', True):
+                user.is_verified = True
+                db.session.commit()
+
+        # Generate JWT session
+        identity = {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role.name if user.role else "Advertiser"
+        }
+        access_token = create_access_token(identity=identity)
+        refresh_token = create_refresh_token(identity=identity)
+
+        return jsonify({
+            "status": "success",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user": user.to_dict()
+        }), 200
+
+    except ValueError as e:
+        return jsonify({"error": f"Invalid Google token: {str(e)}"}), 401
+    except Exception as e:
+        return jsonify({"error": f"Google authentication failed: {str(e)}"}), 500
+
+@auth_bp.post("/verify-email")
+def verify_email():
+    """
+    Validates email verification token and activates the user account.
+    """
+    data = request.get_json() or {}
+    token = data.get("token")
+
+    if not token:
+        return jsonify({"error": "Verification token is required"}), 400
+
+    email = verify_token(token)
+    if not email:
+        return jsonify({"error": "Verification link is invalid or has expired"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "User account not found"}), 404
+
+    user.is_verified = True
+    user.is_active = True
+    db.session.commit()
+
+    # Generate login tokens
+    identity = {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role.name if user.role else "Advertiser"
+    }
+    access_token = create_access_token(identity=identity)
+    refresh_token = create_refresh_token(identity=identity)
+
+    return jsonify({
+        "status": "success",
+        "message": "Email successfully verified! Welcome to AdFlow.",
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user": user.to_dict()
+    }), 200
 
 @auth_bp.post("/login")
 def login():

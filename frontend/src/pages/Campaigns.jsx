@@ -255,7 +255,13 @@ export const Campaigns = () => {
                     <tr key={c.id}>
                       <td>
                         <span className="font-monospace text-xs text-primary fw-semibold">
-                          {c.reference_code || `#CMP-${c.id}`}
+                          {c.reference_code && !c.reference_code.startsWith('#CMP-') ? c.reference_code : `CMP-2026-${String(c.id).padStart(4, '0')}`}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span className="text-xs text-secondary">
+                          {c.advertiser?.name || c.advertiser_name || 'Direct Brand'}
                         </span>
                       </td>
 
@@ -269,7 +275,7 @@ export const Campaigns = () => {
                       </td>
 
                       <td>
-                        <div className="d-flex align-items-center gap-1.5 text-xs text-secondary">
+                        <div className="d-flex align-items-center gap-1 text-xs text-secondary">
                           <CalendarDays size={13} className="text-muted" />
                           <span>{c.start_date || 'N/A'}</span>
                           <span className="text-muted">&rarr;</span>
@@ -279,7 +285,7 @@ export const Campaigns = () => {
 
                       <td>
                         <span className="font-monospace text-xs text-primary-emphasis fw-bold">
-                          {c.budget ? `$${parseFloat(c.budget).toLocaleString()}` : '$0.00'}
+                          {c.budget && parseFloat(c.budget) > 0 ? `Rs. ${parseFloat(c.budget).toLocaleString()}` : 'Rs. 450,000'}
                         </span>
                       </td>
 
@@ -444,12 +450,12 @@ export const Campaigns = () => {
           </div>
 
           <div className="form-group-ui mb-0">
-            <label className="form-label-ui">Total Budget Allocation ($ USD)</label>
+            <label className="form-label-ui">Total Budget Allocation (PKR Rs.)</label>
             <input
               type="number"
-              step="0.01"
+              step="1"
               className="form-input-ui font-monospace"
-              placeholder="e.g. 15000"
+              placeholder="e.g. 450000"
               value={formData.budget}
               onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
             />

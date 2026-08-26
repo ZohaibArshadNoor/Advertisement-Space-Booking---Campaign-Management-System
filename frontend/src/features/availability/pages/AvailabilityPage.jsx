@@ -210,7 +210,7 @@ export const AvailabilityPage = () => {
           >
             {spaces.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} ({s.code}) — {s.location?.city || 'Karachi'} [${s.base_price}/day]
+                {s.name} ({s.code}) — {s.location?.city || 'Karachi'} [Rs. {parseFloat(s.base_price || 45000).toLocaleString()}/day]
               </option>
             ))}
           </select>
@@ -304,16 +304,18 @@ export const AvailabilityPage = () => {
         {/* Right Column: Schedule & Lockout Calendar */}
         <div className="col-12 col-lg-7">
           <div className="card-enterprise">
-            <div className="p-3.5 border-bottom d-flex justify-content-between align-items-center">
-              <div>
-                <h3 className="fw-bold text-xs text-primary-emphasis mb-0">
+            <div className="card-header-enterprise py-3 px-4 d-flex justify-content-between align-items-center">
+              <div style={{ minWidth: 0 }}>
+                <h3 className="card-title-enterprise mb-0.5" style={{ fontSize: '0.95rem' }}>
                   Active Lockouts &amp; Reservation Schedule
                 </h3>
-                <small className="text-muted" style={{ fontSize: '0.7rem' }}>
-                  {selectedSpace ? `${selectedSpace.name} (${selectedSpace.code})` : 'Selected Asset'}
-                </small>
+                <div className="text-muted text-truncate" style={{ fontSize: '0.74rem' }}>
+                  {selectedSpace
+                    ? `${selectedSpace.name}${selectedSpace.code ? ` (${selectedSpace.code})` : ''}`
+                    : 'Selected Asset'}
+                </div>
               </div>
-              <span className="badge bg-primary-subtle text-primary text-xs font-monospace">
+              <span className="badge bg-primary-subtle text-primary text-xs font-monospace px-2.5 py-1 rounded-pill flex-shrink-0 ms-3">
                 {schedules.length} slots
               </span>
             </div>

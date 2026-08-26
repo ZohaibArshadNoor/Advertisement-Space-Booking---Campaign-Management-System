@@ -174,6 +174,45 @@
   color: #64748b !important;
 }
 
+/* ── Universal Icon & SVG Alignment Rules (2-3 spaces / 5-6px gap) ────────── */
+svg,
+svg.lucide {
+  display: inline-block;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
+.d-flex.align-items-center,
+.d-inline-flex.align-items-center {
+  vertical-align: middle;
+}
+
+.page-title,
+.card-title,
+.card-title-enterprise,
+.modal-title-ui,
+.drawer-title-ui {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.page-title > svg,
+.card-title > svg,
+.card-title-enterprise > svg,
+.modal-title-ui > svg,
+.drawer-title-ui > svg,
+h1 > svg,
+h2 > svg,
+h3 > svg,
+h4 > svg,
+h5 > svg,
+h6 > svg {
+  margin-right: 0.38rem;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
 /* ── Global Layout Wrapper ────────────────────────────────────────────────── */
 .app-shell {
   display: flex;
@@ -215,7 +254,7 @@
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.45rem;
   text-decoration: none;
   color: var(--color-text-primary);
 }
@@ -279,7 +318,7 @@
 .nav-item-link {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.45rem;
   padding: 0.55rem 0.65rem;
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
@@ -333,7 +372,7 @@
 .sidebar-user-card {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.45rem;
   padding: 0.5rem;
   border-radius: var(--radius-sm);
   text-decoration: none;
@@ -641,7 +680,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
   padding: 0.5rem 0.95rem;
   border-radius: var(--radius-sm);
   font-size: 0.85rem;

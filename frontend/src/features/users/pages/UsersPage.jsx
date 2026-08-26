@@ -332,17 +332,32 @@ export const UsersPage = () => {
                     <tr key={u.id}>
                       {/* User Column */}
                       <td>
-                        <div className="d-flex align-items-center gap-2.5">
-                          <div className="user-avatar" style={{ width: '32px', height: '32px', fontSize: '0.78rem' }}>
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem' }}>
+                          <div
+                            className="user-avatar flex-shrink-0"
+                            style={{
+                              width: '34px',
+                              height: '34px',
+                              fontSize: '0.82rem',
+                              borderRadius: '8px',
+                              backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                              color: '#3b82f6',
+                              border: '1px solid rgba(37, 99, 235, 0.25)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                            }}
+                          >
                             {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                           </div>
-                          <div>
-                            <div className="fw-semibold text-xs text-primary-emphasis">
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
                               {u.name}
                             </div>
-                            <small className="text-muted font-monospace" style={{ fontSize: '0.68rem' }}>
+                            <div className="text-muted font-monospace" style={{ fontSize: '0.7rem', lineHeight: 1 }}>
                               #{u.id}
-                            </small>
+                            </div>
                           </div>
                         </div>
                       </td>

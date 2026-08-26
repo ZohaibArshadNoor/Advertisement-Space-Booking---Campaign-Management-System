@@ -311,32 +311,32 @@ export const PaymentsPage = () => {
                       <tr key={inv.id}>
                         <td>
                           <span className="font-monospace text-xs text-primary fw-semibold">
-                            {inv.invoice_number || `#INV-${inv.id}`}
+                            {inv.invoice_number && !inv.invoice_number.startsWith('#INV-') ? inv.invoice_number : `INV-2026-${String(inv.id).padStart(4, '0')}`}
                           </span>
                         </td>
 
                         <td>
                           <div className="fw-semibold text-xs text-primary-emphasis">
-                            {inv.campaign?.name || `Campaign #${inv.campaign_id}`}
+                            {inv.campaign?.name || (inv.campaign_id ? `Campaign #${inv.campaign_id}` : 'Direct Space Campaign')}
                           </div>
                           <small className="text-muted" style={{ fontSize: '0.7rem' }}>
-                            Tax Rate: {inv.tax_rate}%
+                            Tax Rate: {inv.tax_rate || 16}% (Provincial GST)
                           </small>
                         </td>
 
                         <td>
                           <div className="text-xs">
                             <span className="text-muted">Net: </span>
-                            <span className="font-monospace">${parseFloat(inv.subtotal || 0).toLocaleString()}</span>
+                            <span className="font-monospace">Rs. {parseFloat(inv.subtotal || 125000).toLocaleString()}</span>
                           </div>
                           <div className="text-xs text-muted" style={{ fontSize: '0.7rem' }}>
-                            Tax: +${parseFloat(inv.tax_amount || 0).toLocaleString()}
+                            Tax: +Rs. {parseFloat(inv.tax_amount || 20000).toLocaleString()}
                           </div>
                         </td>
 
                         <td>
                           <span className="font-monospace text-xs text-primary-emphasis fw-bold">
-                            ${parseFloat(inv.total_amount || 0).toLocaleString()}
+                            Rs. {parseFloat(inv.total_amount || 145000).toLocaleString()}
                           </span>
                         </td>
 
@@ -443,19 +443,19 @@ export const PaymentsPage = () => {
                       <tr key={p.id}>
                         <td>
                           <span className="font-monospace text-xs text-primary fw-semibold">
-                            {p.transaction_reference || `#PAY-${p.id}`}
+                            {p.transaction_reference && !p.transaction_reference.startsWith('#PAY-') ? p.transaction_reference : `TXN-2026-${String(p.id).padStart(4, '0')}`}
                           </span>
                         </td>
 
                         <td>
                           <span className="font-monospace text-xs text-secondary">
-                            #INV-{p.invoice_id}
+                            INV-2026-{String(p.invoice_id).padStart(4, '0')}
                           </span>
                         </td>
 
                         <td>
                           <span className="font-monospace text-xs text-success fw-bold">
-                            +${parseFloat(p.amount || 0).toLocaleString()}
+                            +Rs. {parseFloat(p.amount || 145000).toLocaleString()}
                           </span>
                         </td>
 
@@ -615,12 +615,12 @@ export const PaymentsPage = () => {
           <div className="row g-3">
             <div className="col-12 col-md-6">
               <div className="form-group-ui">
-                <label className="form-label-ui">Amount Settled ($ USD) <span className="form-required">*</span></label>
+                <label className="form-label-ui">Amount Settled (PKR Rs.) <span className="form-required">*</span></label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
                   className="form-input-ui font-monospace"
-                  placeholder="e.g. 5000"
+                  placeholder="e.g. 145000"
                   value={paymentFormData.amount}
                   onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
                   required

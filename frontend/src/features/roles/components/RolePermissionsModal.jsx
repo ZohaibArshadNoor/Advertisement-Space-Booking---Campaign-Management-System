@@ -162,14 +162,14 @@ export const RolePermissionsModal = ({
         </div>
       )}
 
-      <div className="d-flex flex-column gap-4">
+      <div className="d-flex flex-column gap-4" style={{ padding: '0.25rem 0.5rem' }}>
         {PERMISSION_MODULES.map((grp) => {
           const allChecked = grp.permissions.every((p) => !!permissions[p.key]);
           const someChecked = grp.permissions.some((p) => !!permissions[p.key]);
 
           return (
             <div key={grp.module} className="card-enterprise">
-              <div className="card-header-enterprise py-2.5 px-3 bg-subtle">
+              <div className="card-header-enterprise py-2.5 px-4 bg-subtle">
                 <div>
                   <h4 className="fw-bold text-xs text-primary-emphasis mb-0.5">
                     {grp.module}
@@ -197,34 +197,53 @@ export const RolePermissionsModal = ({
                 </div>
               </div>
 
-              <div className="p-3">
-                <div className="row g-2">
+              <div className="p-4">
+                {/* CSS Grid with guaranteed 16px horizontal and vertical separation between cards */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                    gap: '16px',
+                    width: '100%',
+                  }}
+                >
                   {grp.permissions.map((p) => {
                     const isChecked = !!permissions[p.key];
                     return (
-                      <div key={p.key} className="col-12 col-md-6">
-                        <label
-                          className={`d-flex align-items-start gap-2.5 p-2 rounded border cursor-pointer transition-all ${
-                            isChecked ? 'bg-primary-subtle border-primary-subtle' : 'bg-surface'
-                          }`}
-                          style={{ minHeight: '64px' }}
-                        >
-                          <input
-                            type="checkbox"
-                            className="form-check-input mt-0.5"
-                            checked={isChecked}
-                            onChange={() => togglePermission(p.key)}
-                          />
-                          <div>
-                            <div className="fw-semibold text-xs text-primary-emphasis">
-                              {p.label}
-                            </div>
-                            <div className="text-muted" style={{ fontSize: '0.7rem' }}>
-                              {p.description}
-                            </div>
+                      <label
+                        key={p.key}
+                        className={`d-flex align-items-center rounded-2 border cursor-pointer transition-all ${
+                          isChecked ? 'bg-primary-subtle border-primary-subtle' : 'bg-surface'
+                        }`}
+                        style={{
+                          padding: '0.85rem 1.15rem',
+                          gap: '0.9rem',
+                          minHeight: '74px',
+                          margin: 0,
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          className="form-check-input flex-shrink-0"
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            margin: '0',
+                            cursor: 'pointer',
+                          }}
+                          checked={isChecked}
+                          onChange={() => togglePermission(p.key)}
+                        />
+                        <div className="flex-grow-1" style={{ minWidth: 0, paddingLeft: '4px' }}>
+                          <div className="fw-semibold text-xs text-primary-emphasis mb-0.5">
+                            {p.label}
                           </div>
-                        </label>
-                      </div>
+                          <div className="text-muted" style={{ fontSize: '0.72rem', lineHeight: 1.35 }}>
+                            {p.description}
+                          </div>
+                        </div>
+                      </label>
                     );
                   })}
                 </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../features/auth/authApi';
+import PublicNavbar from '../components/PublicNavbar';
 import {
   Lock,
   Mail,
@@ -70,8 +71,9 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-vh-100 d-flex flex-column justify-content-center py-5" style={{ backgroundColor: 'var(--color-bg-app)' }}>
-      <div className="container" style={{ maxWidth: '460px' }}>
+    <div className="min-vh-100 d-flex flex-column justify-content-center py-5 pt-5 mt-4" style={{ backgroundColor: 'var(--color-bg-app)' }}>
+      <PublicNavbar />
+      <div className="container" style={{ maxWidth: '460px', marginTop: '40px' }}>
         {/* Brand Header */}
         <div className="text-center mb-4">
           <div className="d-inline-flex align-items-center gap-2 mb-2">

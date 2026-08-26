@@ -19,7 +19,7 @@ export const SettingsPage = () => {
   const [generalSettings, setGeneralSettings] = useState({
     platformName: 'AdFlow Enterprise Advertising Network',
     supportEmail: 'ops@adflow.com',
-    defaultCurrency: 'USD ($)',
+    defaultCurrency: 'PKR (Rs.)',
     timezone: 'Asia/Karachi (UTC+5)',
     enablePublicRegistration: true,
   });

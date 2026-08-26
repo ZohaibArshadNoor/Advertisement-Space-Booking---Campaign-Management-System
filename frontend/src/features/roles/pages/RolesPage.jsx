@@ -288,23 +288,23 @@ export const RolesPage = () => {
             <div key={r.id} className="col-12 col-md-6 col-xl-4">
               <div className="role-card">
                 <div className="p-4">
-                  {/* Role Header: Perfectly Aligned SVG Icon + Title on the exact same line, plus User Count Badge */}
+                  {/* Role Header: Perfectly Aligned SVG Icon + Title with clear separation */}
                   <div className="d-flex align-items-center justify-content-between mb-3 gap-2">
-                    <div className="d-flex align-items-center gap-3.5" style={{ minWidth: 0 }}>
+                    <div className="d-flex align-items-center" style={{ minWidth: 0, gap: '0.75rem' }}>
                       <div
                         className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
                         style={{
-                          width: '36px',
-                          height: '36px',
+                          width: '38px',
+                          height: '38px',
                           backgroundColor: meta.bgColor,
                           color: meta.color,
                           border: `1px solid ${meta.borderColor}`,
                         }}
                       >
-                        <IconComponent size={19} />
+                        <IconComponent size={20} />
                       </div>
                       <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
-                        <h3 className="role-card-title mb-0 text-truncate">
+                        <h3 className="role-card-title mb-0 text-truncate" style={{ fontSize: '1.05rem' }}>
                           {r.name}
                         </h3>
                         <span
@@ -330,16 +330,29 @@ export const RolesPage = () => {
                     {meta.description}
                   </p>
 
+                  {/* Clean Separator Line */}
+                  <div
+                    style={{
+                      height: '1px',
+                      backgroundColor: 'var(--color-border)',
+                      width: '100%',
+                      margin: '1.25rem 0 1rem',
+                    }}
+                  />
+
                   {/* Active Entitlements Section: Ample gap, theme-aware badges */}
-                  <div className="border-top pt-3">
-                    <div className="d-flex justify-content-between align-items-center mb-2.5">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
                       <span
                         className="fw-bold text-uppercase tracking-wider text-muted"
                         style={{ fontSize: '0.68rem', letterSpacing: '0.06em' }}
                       >
                         Active Entitlements
                       </span>
-                      <span className="badge bg-primary-subtle text-primary font-monospace text-xs">
+                      <span
+                        className="badge bg-primary-subtle text-primary font-monospace text-xs px-2.5 py-1 rounded-pill flex-shrink-0"
+                        style={{ marginRight: '2px' }}
+                      >
                         {permKeys.length} enabled
                       </span>
                     </div>
@@ -348,15 +361,17 @@ export const RolesPage = () => {
                     <div
                       className="d-flex flex-wrap"
                       style={{
-                        gap: '0.45rem',
-                        maxHeight: '120px',
+                        gap: '0.55rem',
+                        marginTop: '0.65rem',
+                        maxHeight: '130px',
                         overflowY: 'auto',
+                        paddingRight: '4px',
                       }}
                     >
                       {permKeys.map((p) => (
                         <div
                           key={p}
-                          className="role-entitlement-chip"
+                          className="role-entitlement-chip flex-shrink-0"
                           title={`Internal Key: ${p}`}
                         >
                           <Check size={11} className="text-success flex-shrink-0" />

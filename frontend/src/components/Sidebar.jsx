@@ -46,7 +46,7 @@ export const Sidebar = ({
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
   };
 
   // Define authorized navigation items based on role

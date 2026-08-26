@@ -83,11 +83,11 @@ export const DashboardPage = () => {
     labels: ['Total Invoiced', 'Collected Revenue', 'Outstanding'],
     datasets: [
       {
-        label: 'Amount ($)',
+        label: 'Amount (PKR Rs.)',
         data: [
-          parseFloat(metrics.financials?.total_invoiced || 245000),
-          parseFloat(metrics.financials?.total_collected || 198000),
-          parseFloat(metrics.financials?.outstanding_balance || 47000),
+          parseFloat(metrics.financials?.total_invoiced || 4850000),
+          parseFloat(metrics.financials?.total_collected || 3920000),
+          parseFloat(metrics.financials?.outstanding_balance || 930000),
         ],
         backgroundColor: [
           'rgba(37, 99, 235, 0.85)',
@@ -107,7 +107,7 @@ export const DashboardPage = () => {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (ctx) => ` \$${ctx.parsed.y.toLocaleString()}`,
+          label: (ctx) => ` Rs. ${ctx.parsed.y.toLocaleString()}`,
         },
       },
     },
@@ -120,7 +120,7 @@ export const DashboardPage = () => {
         border: { dash: [4, 4] },
         ticks: {
           font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
-          callback: (v) => `$${v >= 1000 ? `${v / 1000}k` : v}`,
+          callback: (v) => `Rs. ${v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : (v >= 1000 ? `${v / 1000}k` : v)}`,
         },
       },
     },
@@ -303,11 +303,11 @@ export const DashboardPage = () => {
             </div>
             <div className="d-flex align-items-baseline gap-2">
               <span className="fs-4 fw-bold text-primary-emphasis">
-                ${parseFloat(metrics.financials?.total_invoiced || 245000).toLocaleString()}
+                Rs. {parseFloat(metrics.financials?.total_invoiced || 4850000).toLocaleString()}
               </span>
             </div>
             <div className="text-muted small mt-1" style={{ fontSize: '0.75rem' }}>
-              ${parseFloat(metrics.financials?.outstanding_balance || 47000).toLocaleString()} unsettled balance
+              Rs. {parseFloat(metrics.financials?.outstanding_balance || 930000).toLocaleString()} unsettled balance
             </div>
           </div>
         </div>
@@ -330,63 +330,87 @@ export const DashboardPage = () => {
             <div className="p-0">
               <div className="list-group list-group-flush border-0">
                 {/* Action 1 */}
-                <div className="list-group-item p-3 d-flex align-items-start justify-content-between gap-3 bg-transparent">
-                  <div className="d-flex gap-2.5">
-                    <div className="p-2 rounded bg-warning-subtle text-warning mt-0.5">
-                      <FileCheck size={16} />
+                <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                  <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                    <div
+                      className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                        color: '#eab308',
+                      }}
+                    >
+                      <FileCheck size={18} />
                     </div>
-                    <div>
-                      <div className="fw-semibold text-xs text-primary-emphasis">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
                         4 Creative Banners Awaiting Review
                       </div>
-                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                      <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
                         Uploaded by PepsiCo &amp; Standard Chartered campaigns. Pending resolution verification.
                       </div>
                     </div>
                   </div>
-                  <Link to="/creatives" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0">
+                  <Link to="/creatives" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
                     <span>Review</span>
                     <ChevronRight size={12} />
                   </Link>
                 </div>
 
                 {/* Action 2 */}
-                <div className="list-group-item p-3 d-flex align-items-start justify-content-between gap-3 bg-transparent">
-                  <div className="d-flex gap-2.5">
-                    <div className="p-2 rounded bg-primary-subtle text-primary mt-0.5">
-                      <Layers size={16} />
+                <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                  <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                    <div
+                      className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                        color: '#3b82f6',
+                      }}
+                    >
+                      <Layers size={18} />
                     </div>
-                    <div>
-                      <div className="fw-semibold text-xs text-primary-emphasis">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
                         2 Booking Requests Pending Confirmation
                       </div>
-                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                      <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
                         Mall Road Curved LED • Date collisions checked and clear.
                       </div>
                     </div>
                   </div>
-                  <Link to="/bookings" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0">
+                  <Link to="/bookings" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
                     <span>Inspect</span>
                     <ChevronRight size={12} />
                   </Link>
                 </div>
 
                 {/* Action 3 */}
-                <div className="list-group-item p-3 d-flex align-items-start justify-content-between gap-3 bg-transparent">
-                  <div className="d-flex gap-2.5">
-                    <div className="p-2 rounded bg-danger-subtle text-danger mt-0.5">
-                      <CreditCard size={16} />
+                <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                  <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                    <div
+                      className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                        color: '#ef4444',
+                      }}
+                    >
+                      <CreditCard size={18} />
                     </div>
-                    <div>
-                      <div className="fw-semibold text-xs text-primary-emphasis">
-                        Invoice #INV-2026-089 Overdue ($12,400)
+                    <div style={{ minWidth: 0 }}>
+                      <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                        Invoice #INV-2026-089 Overdue (Rs. 185,000)
                       </div>
-                      <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                      <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
                         Issued to Apex Global Digital. Past 14-day net terms.
                       </div>
                     </div>
                   </div>
-                  <Link to="/payments" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0">
+                  <Link to="/payments" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
                     <span>Ledger</span>
                     <ChevronRight size={12} />
                   </Link>
@@ -428,31 +452,29 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* ── Financial Ledger & Quick Actions ────────────────────────────── */}
+      {/* ── Financial Chart & Quick Actions ─────────────────────────────── */}
       <div className="row g-4">
-        {/* Financial Flow Chart */}
+        {/* Financial Overview Chart */}
         <div className="col-12 col-lg-8">
-          <div className="card-enterprise">
+          <div className="card-enterprise h-100">
             <div className="card-header-enterprise">
               <div>
                 <h3 className="card-title-enterprise">Financial Revenue &amp; Ledger Velocity</h3>
-                <span className="text-muted small" style={{ fontSize: '0.75rem' }}>
-                  Total billing vs actual settlement recovery
-                </span>
+                <span className="text-xs text-muted">Total billing vs actual settlement recovery</span>
               </div>
-              <Link to="/payments" className="btn-ui btn-ui-secondary btn-ui-sm">
+              <Link to="/payments" className="btn-ui btn-ui-secondary btn-ui-xs">
                 <span>View Invoices</span>
               </Link>
             </div>
             <div className="card-body-enterprise">
-              <div style={{ height: '220px', width: '100%' }}>
+              <div style={{ height: '240px' }}>
                 <Bar data={financialData} options={chartOptions} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Quick Operations Hub */}
+        {/* Quick Launchpad Actions */}
         <div className="col-12 col-lg-4">
           <div className="card-enterprise h-100">
             <div className="card-header-enterprise">
@@ -461,66 +483,96 @@ export const DashboardPage = () => {
             <div className="card-body-enterprise d-flex flex-column gap-2">
               <Link
                 to="/spaces"
-                className="btn-ui btn-ui-secondary text-start justify-content-start py-2"
+                className="btn-ui btn-ui-secondary text-start justify-content-start py-2.5 px-3 d-flex align-items-center"
+                style={{ gap: '0.75rem' }}
               >
-                <Building2 size={16} className="text-primary flex-shrink-0" />
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="fw-semibold text-xs">Browse Space Catalog</div>
+                <div
+                  className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                  style={{ width: '32px', height: '32px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: '#3b82f6' }}
+                >
+                  <Building2 size={16} />
+                </div>
+                <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
+                  <div className="fw-semibold text-xs text-primary-emphasis">Browse Space Catalog</div>
                   <div className="text-muted" style={{ fontSize: '0.7rem' }}>Search LEDs &amp; Unipoles</div>
                 </div>
-                <ChevronRight size={14} className="text-muted" />
+                <ChevronRight size={14} className="text-muted flex-shrink-0" />
               </Link>
 
               <Link
                 to="/availability"
-                className="btn-ui btn-ui-secondary text-start justify-content-start py-2"
+                className="btn-ui btn-ui-secondary text-start justify-content-start py-2.5 px-3 d-flex align-items-center"
+                style={{ gap: '0.75rem' }}
               >
-                <CalendarDays size={16} className="text-primary flex-shrink-0" />
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="fw-semibold text-xs">Check Date Availability</div>
+                <div
+                  className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                  style={{ width: '32px', height: '32px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: '#3b82f6' }}
+                >
+                  <CalendarDays size={16} />
+                </div>
+                <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
+                  <div className="fw-semibold text-xs text-primary-emphasis">Check Date Availability</div>
                   <div className="text-muted" style={{ fontSize: '0.7rem' }}>Zero collision matrix</div>
                 </div>
-                <ChevronRight size={14} className="text-muted" />
+                <ChevronRight size={14} className="text-muted flex-shrink-0" />
               </Link>
 
               {userRole === 'Administrator' && (
                 <Link
                   to="/users"
-                  className="btn-ui btn-ui-secondary text-start justify-content-start py-2"
+                  className="btn-ui btn-ui-secondary text-start justify-content-start py-2.5 px-3 d-flex align-items-center"
+                  style={{ gap: '0.75rem' }}
                 >
-                  <ShieldCheck size={16} className="text-primary flex-shrink-0" />
-                  <div className="flex-grow-1 overflow-hidden">
-                    <div className="fw-semibold text-xs">User &amp; Role Management</div>
+                  <div
+                    className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                    style={{ width: '32px', height: '32px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: '#3b82f6' }}
+                  >
+                    <ShieldCheck size={16} />
+                  </div>
+                  <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
+                    <div className="fw-semibold text-xs text-primary-emphasis">User &amp; Role Management</div>
                     <div className="text-muted" style={{ fontSize: '0.7rem' }}>Provision accounts</div>
                   </div>
-                  <ChevronRight size={14} className="text-muted" />
+                  <ChevronRight size={14} className="text-muted flex-shrink-0" />
                 </Link>
               )}
 
               {userRole === 'Administrator' && (
                 <Link
                   to="/audit"
-                  className="btn-ui btn-ui-secondary text-start justify-content-start py-2"
+                  className="btn-ui btn-ui-secondary text-start justify-content-start py-2.5 px-3 d-flex align-items-center"
+                  style={{ gap: '0.75rem' }}
                 >
-                  <Activity size={16} className="text-primary flex-shrink-0" />
-                  <div className="flex-grow-1 overflow-hidden">
-                    <div className="fw-semibold text-xs">Security Audit Logs</div>
+                  <div
+                    className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                    style={{ width: '32px', height: '32px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: '#3b82f6' }}
+                  >
+                    <Activity size={16} />
+                  </div>
+                  <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
+                    <div className="fw-semibold text-xs text-primary-emphasis">Security Audit Logs</div>
                     <div className="text-muted" style={{ fontSize: '0.7rem' }}>Inspect system trail</div>
                   </div>
-                  <ChevronRight size={14} className="text-muted" />
+                  <ChevronRight size={14} className="text-muted flex-shrink-0" />
                 </Link>
               )}
 
               <Link
                 to="/notifications"
-                className="btn-ui btn-ui-secondary text-start justify-content-start py-2"
+                className="btn-ui btn-ui-secondary text-start justify-content-start py-2.5 px-3 d-flex align-items-center"
+                style={{ gap: '0.75rem' }}
               >
-                <Clock size={16} className="text-primary flex-shrink-0" />
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="fw-semibold text-xs">Recent Broadcast Stream</div>
+                <div
+                  className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                  style={{ width: '32px', height: '32px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: '#3b82f6' }}
+                >
+                  <Clock size={16} />
+                </div>
+                <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
+                  <div className="fw-semibold text-xs text-primary-emphasis">Recent Broadcast Stream</div>
                   <div className="text-muted" style={{ fontSize: '0.7rem' }}>View operational updates</div>
                 </div>
-                <ChevronRight size={14} className="text-muted" />
+                <ChevronRight size={14} className="text-muted flex-shrink-0" />
               </Link>
             </div>
           </div>

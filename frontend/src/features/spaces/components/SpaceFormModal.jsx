@@ -216,15 +216,15 @@ export const SpaceFormModal = ({
           <div className="col-12 col-md-4">
             <div className="form-group-ui">
               <label className="form-label-ui" htmlFor="space-rate">
-                Base Daily Rate ($) <span className="form-required">*</span>
+                Base Daily Rate (PKR Rs.) <span className="form-required">*</span>
               </label>
               <div className="position-relative">
                 <input
                   id="space-rate"
                   type="number"
-                  step="0.01"
+                  step="1"
                   className={`form-input-ui ${errors.daily_rate ? 'has-error' : ''}`}
-                  placeholder="1200.00"
+                  placeholder="45000"
                   value={formData.daily_rate}
                   onChange={(e) => setFormData({ ...formData, daily_rate: e.target.value })}
                   required

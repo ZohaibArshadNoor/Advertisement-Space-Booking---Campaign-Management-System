@@ -5,11 +5,12 @@ import { Float, Stars } from '@react-three/drei';
 import gsap from 'gsap';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import PublicNavbar from '../components/PublicNavbar';
 import '../styles/landing.css';
 import {
   MapPin, CalendarCheck, ShieldCheck, Zap, ArrowRight,
   Sparkles, Monitor, BarChart3, Sliders, ChevronRight,
-  Lock, FileCheck, Radio, Users, Target
+  Lock, FileCheck, Radio, Users, Target, Sun, Moon
 } from 'lucide-react';
 
 /* =========================================================================
@@ -100,98 +101,51 @@ function ParticleRing({ radius = 3, count = 60, color = '#3b82f6', speed = 0.3, 
   );
 }
 
-/** Dynamic grid floor that adapts to light/dark themes */
-function GridFloor({ isDark }) {
-  const gridPrimary = isDark ? '#1e3a5f' : '#94a3b8';
-  const gridSecondary = isDark ? '#0d1b2a' : '#e2e8f0';
-
-  return (
-    <gridHelper
-      args={[40, 40, gridPrimary, gridSecondary]}
-      position={[0, -3.2, 0]}
-      rotation={[0, 0, 0]}
-    />
-  );
-}
-
-/** Mouse-reactive camera rig for parallax depth */
-function CameraRig() {
-  const { camera } = useThree();
-  const mouse = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const handler = (e) => {
-      mouse.current.x = (e.clientX / window.innerWidth - 0.5) * 2;
-      mouse.current.y = (e.clientY / window.innerHeight - 0.5) * 2;
-    };
-    window.addEventListener('mousemove', handler);
-    return () => window.removeEventListener('mousemove', handler);
-  }, []);
-
-  useFrame(() => {
-    camera.position.x += (mouse.current.x * 0.6 - camera.position.x) * 0.03;
-    camera.position.y += (-mouse.current.y * 0.4 + 0.5 - camera.position.y) * 0.03;
-    camera.lookAt(0, 0, 0);
-  });
-
-  return null;
-}
-
-/** Full hero 3D scene */
+/** Main 3D Canvas Scene */
 function HeroScene({ isDark }) {
-  const torusColor1 = isDark ? '#3b82f6' : '#2563eb';
-  const torusColor2 = isDark ? '#60a5fa' : '#0284c7';
-  const icoColor = isDark ? '#0ea5e9' : '#0284c7';
-  const octaColor = isDark ? '#a855f7' : '#7c3aed';
-  const ringColor1 = isDark ? '#38bdf8' : '#2563eb';
-  const ringColor2 = isDark ? '#60a5fa' : '#0ea5e9';
-  const geomOpacity = isDark ? 0.38 : 0.5;
+  const color1 = isDark ? '#3b82f6' : '#2563eb';
+  const color2 = isDark ? '#38bdf8' : '#0284c7';
+  const color3 = isDark ? '#a855f7' : '#7c3aed';
 
   return (
     <>
-      <ambientLight intensity={isDark ? 0.4 : 0.9} />
-      <pointLight position={[5, 5, 5]} intensity={isDark ? 0.8 : 1.2} color="#3b82f6" />
-      <pointLight position={[-5, -3, 3]} intensity={isDark ? 0.5 : 0.8} color="#0ea5e9" />
-      <pointLight position={[0, 4, -5]} intensity={isDark ? 0.4 : 0.6} color="#a855f7" />
-
-      <CameraRig />
+      <ambientLight intensity={isDark ? 0.6 : 0.9} />
+      <directionalLight position={[5, 8, 5]} intensity={isDark ? 1.2 : 1.6} />
+      <pointLight position={[-4, -3, -2]} color={color1} intensity={2} />
+      <pointLight position={[4, 3, 2]} color={color3} intensity={1.5} />
 
       {isDark && (
-        <Stars radius={50} depth={60} count={1500} factor={3} saturation={0} fade speed={0.6} />
+        <Stars radius={40} depth={30} count={350} factor={3} saturation={0.5} fade speed={1} />
       )}
 
-      <Float speed={1.5} rotationIntensity={0.4} floatIntensity={0.6}>
-        <FloatingTorus position={[-3, 1.2, -2]} color={torusColor1} opacity={geomOpacity} speed={0.8} />
+      <Float speed={1.5} rotationIntensity={0.6} floatIntensity={1.2}>
+        <FloatingTorus position={[-2.8, 0.8, -1.2]} color={color1} opacity={isDark ? 0.4 : 0.25} speed={0.9} />
       </Float>
 
-      <Float speed={1.2} rotationIntensity={0.3} floatIntensity={0.5}>
-        <FloatingIcosahedron position={[3.5, -0.5, -1.5]} color={icoColor} opacity={geomOpacity} speed={0.6} />
+      <Float speed={2} rotationIntensity={0.8} floatIntensity={1.5}>
+        <FloatingIcosahedron position={[3.1, -0.6, -1]} color={color2} opacity={isDark ? 0.35 : 0.22} speed={1.2} />
       </Float>
 
-      <Float speed={1.8} rotationIntensity={0.5} floatIntensity={0.7}>
-        <FloatingOctahedron position={[-1.5, -1.5, -3]} color={octaColor} opacity={geomOpacity} speed={1.2} />
+      <Float speed={1.2} rotationIntensity={0.5} floatIntensity={1}>
+        <FloatingOctahedron position={[2.2, 1.6, -2]} color={color3} opacity={isDark ? 0.3 : 0.18} speed={0.8} />
       </Float>
 
-      <Float speed={1} rotationIntensity={0.2} floatIntensity={0.3}>
-        <FloatingTorus position={[2, 2, -4]} color={torusColor2} opacity={geomOpacity} speed={0.5} />
-      </Float>
-
-      <ParticleRing radius={4} count={80} color={ringColor1} speed={0.2} emissiveIntensity={isDark ? 2 : 1} />
-      <ParticleRing radius={2.5} count={50} color={ringColor2} speed={-0.3} emissiveIntensity={isDark ? 2 : 1} />
-
-      <GridFloor isDark={isDark} />
+      <ParticleRing radius={3.2} count={50} color={color1} speed={0.2} emissiveIntensity={isDark ? 2 : 1} />
+      <ParticleRing radius={4.2} count={40} color={color2} speed={-0.15} emissiveIntensity={isDark ? 1.5 : 0.8} />
     </>
   );
 }
 
 /* =========================================================================
-   GSAP SCROLL ANIMATIONS HOOK
+   GSAP HOOKS
    ========================================================================= */
 
 function useGsapReveal(selector, options = {}) {
   useEffect(() => {
     const elements = document.querySelectorAll(selector);
     if (!elements.length) return;
+
+    gsap.set(elements, { opacity: 0, y: 30 });
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -251,10 +205,10 @@ const FEATURES = [
 ];
 
 const SPACES = [
-  { title: 'Mall Road 3D Anamorphic LED', location: 'Lahore, Pakistan', type: '3D Curved Display', impressions: '450K+', rate: '$1,200/day', tag: 'Ultra High Footfall', gradient: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
-  { title: 'Shahrah-e-Faisal Unipole Network', location: 'Karachi, Pakistan', type: 'Dynamic Gantry', impressions: '720K+', rate: '$1,850/day', tag: 'Prime Commuter Artery', gradient: 'linear-gradient(135deg, #065f46 0%, #0f172a 100%)' },
-  { title: 'Blue Area Transit Totems', location: 'Islamabad, Pakistan', type: '4K Smart Kiosks', impressions: '280K+', rate: '$850/day', tag: 'Financial Hub', gradient: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)' },
-  { title: 'Sheikh Zayed Blvd Display', location: 'Dubai, UAE', type: 'Interactive LED Canvas', impressions: '980K+', rate: '$3,400/day', tag: 'Global Luxury Corridor', gradient: 'linear-gradient(135deg, #831843 0%, #0f172a 100%)' },
+  { title: 'Mall Road 3D Anamorphic LED', location: 'Lahore, Pakistan', type: '3D Curved Display', impressions: '450K+', rate: 'Rs. 120,000/day', tag: 'Ultra High Footfall', gradient: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)' },
+  { title: 'Shahrah-e-Faisal Unipole Network', location: 'Karachi, Pakistan', type: 'Dynamic Gantry', impressions: '720K+', rate: 'Rs. 185,000/day', tag: 'Prime Commuter Artery', gradient: 'linear-gradient(135deg, #065f46 0%, #0f172a 100%)' },
+  { title: 'Blue Area Transit Totems', location: 'Islamabad, Pakistan', type: '4K Smart Kiosks', impressions: '280K+', rate: 'Rs. 85,000/day', tag: 'Financial Hub', gradient: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)' },
+  { title: 'Sheikh Zayed Blvd Display', location: 'Dubai, UAE', type: 'Interactive LED Canvas', impressions: '980K+', rate: 'Rs. 340,000/day', tag: 'Global Luxury Corridor', gradient: 'linear-gradient(135deg, #831843 0%, #0f172a 100%)' },
 ];
 
 const BRANDS = ['NOVA MEDIA', 'CYBERSPHERE', 'APEX GLOBAL', 'PULSE DIGITAL', 'HORIZON OOH', 'VORTEX BRANDS', 'METRO REACH', 'QUANTUM ADS'];
@@ -271,7 +225,7 @@ const STEPS = [
 
 const LandingPage = () => {
   const { user } = useAuth();
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const heroRef = useRef(null);
 
   // GSAP entrance for hero content
@@ -291,10 +245,10 @@ const LandingPage = () => {
   useGsapReveal('.landing-step', { stagger: 0.12, duration: 0.6 });
 
   // ROI Calculator
-  const [budget, setBudget] = useState(5000);
+  const [budget, setBudget] = useState(350000);
   const [city, setCity] = useState('Lahore');
   const [days, setDays] = useState(14);
-  const impressions = Math.round((budget * 285) * (days / 10));
+  const impressions = Math.round((budget / 100) * 85 * (days / 10));
   const footfall = Math.round(impressions * 0.42);
   const cpm = ((budget / impressions) * 1000).toFixed(2);
 
@@ -333,6 +287,9 @@ const LandingPage = () => {
 
   return (
     <div className="landing-page">
+      {/* ─── TOP NAVIGATION BAR ────────────────────────────────────────── */}
+      <PublicNavbar />
+
       {/* Ambient background glows */}
       <div className="landing-glow landing-glow--top" />
       <div className="landing-glow landing-glow--right" />
@@ -429,7 +386,7 @@ const LandingPage = () => {
       </div>
 
       {/* ─── FEATURES ─────────────────────────────────────────────────── */}
-      <section className="landing-section">
+      <section id="features" className="landing-section">
         <div className="landing-section__inner" style={{ textAlign: 'center' }}>
           <span className="landing-tag">Platform Capabilities</span>
           <h2 className="landing-headline">Everything You Need to Run World-Class Campaigns</h2>
@@ -452,7 +409,7 @@ const LandingPage = () => {
       </section>
 
       {/* ─── INVENTORY SHOWCASE ───────────────────────────────────────── */}
-      <section className="landing-section" style={{ background: 'var(--landing-grid-sec-bg)' }}>
+      <section id="inventory" className="landing-section" style={{ background: 'var(--landing-grid-sec-bg)' }}>
         <div className="landing-section__inner" style={{ textAlign: 'center' }}>
           <span className="landing-tag">High-Impact Media Real Estate</span>
           <h2 className="landing-headline">Prime Spaces Engineered for Maximum Recall</h2>
@@ -503,7 +460,7 @@ const LandingPage = () => {
       </section>
 
       {/* ─── ROI CALCULATOR ───────────────────────────────────────────── */}
-      <section className="landing-section">
+      <section id="calculator" className="landing-section">
         <div className="landing-section__inner">
           <div className="row align-items-center g-5">
             <div className="col-lg-5">
@@ -546,9 +503,9 @@ const LandingPage = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
                   <div>
                     <label style={{ fontSize: '0.78rem', color: 'var(--landing-text-sub)', fontWeight: 600, marginBottom: 6, display: 'block' }}>
-                      Budget: <span style={{ color: 'var(--landing-text)', fontWeight: 700 }}>${budget.toLocaleString()}</span>
+                      Budget: <span style={{ color: 'var(--landing-text)', fontWeight: 700 }}>Rs. {budget.toLocaleString()}</span>
                     </label>
-                    <input type="range" min="1000" max="50000" step="500" value={budget}
+                    <input type="range" min="50000" max="2500000" step="25000" value={budget}
                       onChange={(e) => setBudget(+e.target.value)} className="landing-calc__slider" />
                   </div>
                   <div>
@@ -583,7 +540,7 @@ const LandingPage = () => {
                   </div>
                   <div className="landing-calc__metric">
                     <p className="landing-calc__metric-label">Effective CPM</p>
-                    <p className="landing-calc__metric-value" style={{ color: '#16a34a' }}>${cpm}</p>
+                    <p className="landing-calc__metric-value" style={{ color: '#16a34a' }}>Rs. {cpm}</p>
                   </div>
                 </div>
 
@@ -600,7 +557,7 @@ const LandingPage = () => {
       </section>
 
       {/* ─── HOW IT WORKS ─────────────────────────────────────────────── */}
-      <section className="landing-section" style={{ background: 'var(--landing-grid-sec-bg)' }}>
+      <section id="how-it-works" className="landing-section" style={{ background: 'var(--landing-grid-sec-bg)' }}>
         <div className="landing-section__inner" style={{ textAlign: 'center' }}>
           <span className="landing-tag">Zero-Friction Workflow</span>
           <h2 className="landing-headline">How Programmatic Ad Booking Works</h2>

@@ -330,51 +330,94 @@ export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {
 
           {showUserMenu && (
             <div
-              className="card-enterprise position-absolute end-0 mt-2 p-1.5 shadow-lg"
-              style={{ width: '220px', zIndex: 100 }}
+              className="card-enterprise position-absolute end-0 mt-2 shadow-lg"
+              style={{
+                width: '260px',
+                zIndex: 100,
+                padding: '1.15rem',
+                borderRadius: '10px',
+              }}
             >
-              <div className="px-3 py-2 border-bottom mb-1">
-                <div className="fw-bold text-xs text-truncate">{user?.name}</div>
-                <div className="text-muted text-xs text-truncate">{user?.email}</div>
-                <span className="badge bg-secondary-subtle text-secondary text-xs mt-1">
-                  {user?.role}
+              {/* User Identity Info */}
+              <div className="d-flex flex-column align-items-start">
+                <div
+                  className="fw-bold text-primary-emphasis text-truncate w-100"
+                  style={{ fontSize: '0.95rem', lineHeight: 1.3 }}
+                >
+                  {user?.name || 'System Administrator'}
+                </div>
+                <div
+                  className="text-muted text-truncate w-100 mt-0.5 mb-2"
+                  style={{ fontSize: '0.78rem' }}
+                >
+                  {user?.email || 'admin@example.com'}
+                </div>
+                <span
+                  className="badge bg-primary-subtle text-primary font-monospace text-xs px-2.5 py-1 rounded-pill"
+                  style={{ fontSize: '0.72rem' }}
+                >
+                  {user?.role || 'Administrator'}
                 </span>
               </div>
 
-              <Link
-                to="/profile"
-                onClick={() => setShowUserMenu(false)}
-                className="dropdown-item px-3 py-1.5 text-xs rounded d-flex align-items-center gap-2 text-decoration-none text-secondary hover-bg"
-              >
-                <User size={14} />
-                <span>My Profile</span>
-              </Link>
-
-              {user?.role === 'Administrator' && (
-                <Link
-                  to="/settings"
-                  onClick={() => setShowUserMenu(false)}
-                  className="dropdown-item px-3 py-1.5 text-xs rounded d-flex align-items-center gap-2 text-decoration-none text-secondary hover-bg"
-                >
-                  <Sliders size={14} />
-                  <span>Platform Settings</span>
-                </Link>
-              )}
-
-              <div className="border-top my-1"></div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUserMenu(false);
-                  logout();
-                  navigate('/login');
+              {/* Separator */}
+              <div
+                style={{
+                  height: '1px',
+                  backgroundColor: 'var(--color-border)',
+                  width: '100%',
+                  margin: '0.85rem 0 0.5rem',
                 }}
-                className="w-100 text-start px-3 py-1.5 text-xs rounded d-flex align-items-center gap-2 border-0 bg-transparent text-danger hover-bg"
-              >
-                <LogOut size={14} />
-                <span>Sign Out</span>
-              </button>
+              />
+
+              {/* Navigation Items */}
+              <div className="d-flex flex-column gap-1">
+                <Link
+                  to="/profile"
+                  onClick={() => setShowUserMenu(false)}
+                  className="dropdown-item px-3 py-2 text-xs rounded-2 d-flex align-items-center gap-2.5 text-decoration-none text-secondary hover-bg transition-all"
+                  style={{ fontSize: '0.84rem' }}
+                >
+                  <User size={16} className="text-primary flex-shrink-0" />
+                  <span className="fw-medium">My Profile</span>
+                </Link>
+
+                {user?.role === 'Administrator' && (
+                  <Link
+                    to="/settings"
+                    onClick={() => setShowUserMenu(false)}
+                    className="dropdown-item px-3 py-2 text-xs rounded-2 d-flex align-items-center gap-2.5 text-decoration-none text-secondary hover-bg transition-all"
+                    style={{ fontSize: '0.84rem' }}
+                  >
+                    <Sliders size={16} className="text-primary flex-shrink-0" />
+                    <span className="fw-medium">Platform Settings</span>
+                  </Link>
+                )}
+
+                {/* Separator */}
+                <div
+                  style={{
+                    height: '1px',
+                    backgroundColor: 'var(--color-border)',
+                    width: '100%',
+                    margin: '0.5rem 0',
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    logout();
+                    navigate('/');
+                  }}
+                  className="w-100 text-start px-3 py-2 text-xs rounded-2 d-flex align-items-center gap-2.5 border-0 bg-transparent text-danger fw-semibold hover-bg transition-all"
+                  style={{ cursor: 'pointer', fontSize: '0.84rem' }}
+                >
+                  <LogOut size={16} className="flex-shrink-0" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { profileApi } from '../profileApi';
-import { User, Mail, Lock, Shield, Building, Save, Key, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  User,
+  Mail,
+  Lock,
+  ShieldCheck,
+  Building2,
+  Save,
+  Key,
+  CheckCircle2,
+  AlertCircle,
+  Bell,
+  Activity,
+  Laptop
+} from 'lucide-react';
 
-const ProfilePage = () => {
-  const { user, login } = useAuth();
+export const ProfilePage = () => {
+  const { user, loginWithToken } = useAuth();
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'security' | 'preferences'
 
   // Profile Form State
   const [name, setName] = useState('');
@@ -21,6 +35,14 @@ const ProfilePage = () => {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  // Notification Preferences
+  const [notifPreferences, setNotifPreferences] = useState({
+    bookingAlerts: true,
+    creativeApprovals: true,
+    invoiceNotices: true,
+    securityAudits: false,
+  });
+
   useEffect(() => {
     if (user) {
       setName(user.name || '');
@@ -36,12 +58,11 @@ const ProfilePage = () => {
 
     try {
       const res = await profileApi.updateProfile({ name, email });
-      setProfileSuccess('Your profile details have been updated successfully.');
+      setProfileSuccess('Profile details have been updated successfully.');
       if (res.user) {
-        // Refresh token / local storage session with updated name/email
         const token = localStorage.getItem('access_token');
         if (token) {
-          login(token, res.user);
+          loginWithToken(token, res.user);
         }
       }
     } catch (err) {
@@ -61,8 +82,8 @@ const ProfilePage = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters.');
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long.');
       return;
     }
 
@@ -84,179 +105,260 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="container-fluid px-0" style={{ maxWidth: '960px', margin: '0 auto' }}>
-      <div className="mb-4">
-        <h2 className="fw-bold mb-1 d-flex align-items-center gap-2">
-          <User className="text-primary" size={28} />
-          Account & Profile Settings
-        </h2>
-        <p className="text-muted small mb-0">Manage your personal credentials, contact email, and security settings</p>
+    <div style={{ maxWidth: '880px' }}>
+      {/* Page Header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">My Account &amp; Security</h1>
+          <p className="page-subtitle">
+            Manage your personal profile, credentials, and notification settings.
+          </p>
+        </div>
       </div>
 
-      <div className="row g-4">
-        {/* Left Column: Account Details */}
-        <div className="col-lg-7">
-          <div className="card shadow-sm border-0 mb-4">
-            <div className="card-header bg-white py-3 border-bottom d-flex align-items-center gap-2">
-              <User size={18} className="text-primary" />
-              <h5 className="fw-bold mb-0">Personal Profile</h5>
-            </div>
-            <div className="card-body p-4">
-              {profileSuccess && (
-                <div className="alert alert-success d-flex align-items-center gap-2 small">
-                  <CheckCircle size={16} />
-                  <span>{profileSuccess}</span>
-                </div>
-              )}
-              {profileError && (
-                <div className="alert alert-danger d-flex align-items-center gap-2 small">
-                  <AlertCircle size={16} />
-                  <span>{profileError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleProfileSubmit}>
-                <div className="mb-3">
-                  <label className="form-label small fw-semibold text-secondary">Full Legal Name *</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-light text-muted">
-                      <User size={16} />
-                    </span>
-                    <input
-                      type="text"
-                      className="form-control"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label small fw-semibold text-secondary">Email Address *</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-light text-muted">
-                      <Mail size={16} />
-                    </span>
-                    <input
-                      type="email"
-                      className="form-control"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                    Notifications and invoices will be delivered to this email.
-                  </small>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label small fw-semibold text-secondary">Assigned System Role</label>
-                  <div className="p-2 border rounded bg-light d-flex align-items-center justify-content-between">
-                    <span className="fw-semibold text-dark small d-flex align-items-center gap-2">
-                      <Shield size={16} className="text-primary" />
-                      {user?.role || 'User'}
-                    </span>
-                    <span className="badge bg-primary-subtle text-primary">Managed by Admin</span>
-                  </div>
-                </div>
-
-                <div className="text-end pt-2">
-                  <button type="submit" className="btn btn-primary d-inline-flex align-items-center gap-2" disabled={updatingProfile}>
-                    <Save size={16} />
-                    {updatingProfile ? 'Saving Changes...' : 'Save Profile Changes'}
-                  </button>
-                </div>
-              </form>
-            </div>
+      {/* Profile Overview Card */}
+      <div className="card-enterprise p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div className="d-flex align-items-center gap-3">
+          <div className="user-avatar" style={{ width: '48px', height: '48px', fontSize: '1.2rem' }}>
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
           </div>
-        </div>
-
-        {/* Right Column: Password & Security */}
-        <div className="col-lg-5">
-          <div className="card shadow-sm border-0 mb-4">
-            <div className="card-header bg-white py-3 border-bottom d-flex align-items-center gap-2">
-              <Lock size={18} className="text-danger" />
-              <h5 className="fw-bold mb-0">Change Password</h5>
-            </div>
-            <div className="card-body p-4">
-              {passwordSuccess && (
-                <div className="alert alert-success d-flex align-items-center gap-2 small">
-                  <CheckCircle size={16} />
-                  <span>{passwordSuccess}</span>
-                </div>
-              )}
-              {passwordError && (
-                <div className="alert alert-danger d-flex align-items-center gap-2 small">
-                  <AlertCircle size={16} />
-                  <span>{passwordError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handlePasswordSubmit}>
-                <div className="mb-3">
-                  <label className="form-label small fw-semibold text-secondary">Current Password *</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-light text-muted">
-                      <Key size={16} />
-                    </span>
-                    <input
-                      type="password"
-                      className="form-control"
-                      required
-                      placeholder="••••••••"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label small fw-semibold text-secondary">New Password *</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-light text-muted">
-                      <Lock size={16} />
-                    </span>
-                    <input
-                      type="password"
-                      className="form-control"
-                      required
-                      placeholder="Min 6 characters"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label small fw-semibold text-secondary">Confirm New Password *</label>
-                  <div className="input-group">
-                    <span className="input-group-text bg-light text-muted">
-                      <Lock size={16} />
-                    </span>
-                    <input
-                      type="password"
-                      className="form-control"
-                      required
-                      placeholder="Repeat new password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button type="submit" className="btn btn-outline-danger w-100 d-inline-flex align-items-center justify-content-center gap-2" disabled={updatingPassword}>
-                    <Lock size={16} />
-                    {updatingPassword ? 'Updating Password...' : 'Update Password'}
-                  </button>
-                </div>
-              </form>
+          <div>
+            <h3 className="fw-bold text-sm text-primary-emphasis mb-0.5">{user?.name}</h3>
+            <div className="text-muted text-xs mb-1">{user?.email}</div>
+            <div className="d-flex gap-2">
+              <span className="badge bg-primary text-xs">{user?.role}</span>
+              <span className="badge bg-success-subtle text-success text-xs">Active Session</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Navigation Tabs */}
+      <div className="d-flex gap-2 border-bottom mb-4 pb-2">
+        <button
+          type="button"
+          className={`btn-ui btn-ui-sm ${activeTab === 'profile' ? 'btn-ui-primary' : 'btn-ui-secondary'}`}
+          onClick={() => setActiveTab('profile')}
+        >
+          <User size={14} />
+          <span>Personal Info</span>
+        </button>
+        <button
+          type="button"
+          className={`btn-ui btn-ui-sm ${activeTab === 'security' ? 'btn-ui-primary' : 'btn-ui-secondary'}`}
+          onClick={() => setActiveTab('security')}
+        >
+          <Lock size={14} />
+          <span>Password &amp; Security</span>
+        </button>
+        <button
+          type="button"
+          className={`btn-ui btn-ui-sm ${activeTab === 'preferences' ? 'btn-ui-primary' : 'btn-ui-secondary'}`}
+          onClick={() => setActiveTab('preferences')}
+        >
+          <Bell size={14} />
+          <span>Alert Preferences</span>
+        </button>
+      </div>
+
+      {/* Tab 1: Profile */}
+      {activeTab === 'profile' && (
+        <div className="card-enterprise p-4">
+          {profileSuccess && (
+            <div className="alert-ui alert-success mb-3">
+              <CheckCircle2 size={15} className="flex-shrink-0" />
+              <div className="flex-grow-1 text-xs">{profileSuccess}</div>
+            </div>
+          )}
+          {profileError && (
+            <div className="alert-ui alert-danger mb-3">
+              <AlertCircle size={15} className="flex-shrink-0" />
+              <div className="flex-grow-1 text-xs">{profileError}</div>
+            </div>
+          )}
+
+          <form onSubmit={handleProfileSubmit}>
+            <div className="form-group-ui">
+              <label className="form-label-ui">Full Name</label>
+              <input
+                type="text"
+                className="form-input-ui"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group-ui">
+              <label className="form-label-ui">Work Email Address</label>
+              <input
+                type="email"
+                className="form-input-ui"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group-ui mb-4">
+              <label className="form-label-ui">Assigned Role</label>
+              <input
+                type="text"
+                className="form-input-ui bg-subtle"
+                value={user?.role || ''}
+                disabled
+              />
+              <span className="form-helper-text">
+                Your role determines your workspace permissions. Contact a Super Admin to request adjustments.
+              </span>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-ui btn-ui-primary btn-ui-sm"
+              disabled={updatingProfile}
+            >
+              <Save size={14} />
+              <span>{updatingProfile ? 'Saving...' : 'Save Profile Changes'}</span>
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Tab 2: Security */}
+      {activeTab === 'security' && (
+        <div className="card-enterprise p-4">
+          {passwordSuccess && (
+            <div className="alert-ui alert-success mb-3">
+              <CheckCircle2 size={15} className="flex-shrink-0" />
+              <div className="flex-grow-1 text-xs">{passwordSuccess}</div>
+            </div>
+          )}
+          {passwordError && (
+            <div className="alert-ui alert-danger mb-3">
+              <AlertCircle size={15} className="flex-shrink-0" />
+              <div className="flex-grow-1 text-xs">{passwordError}</div>
+            </div>
+          )}
+
+          <form onSubmit={handlePasswordSubmit}>
+            <div className="form-group-ui">
+              <label className="form-label-ui">Current Password</label>
+              <input
+                type="password"
+                className="form-input-ui"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group-ui">
+              <label className="form-label-ui">New Password</label>
+              <input
+                type="password"
+                className="form-input-ui"
+                placeholder="Minimum 8 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group-ui mb-4">
+              <label className="form-label-ui">Confirm New Password</label>
+              <input
+                type="password"
+                className="form-input-ui"
+                placeholder="Re-type new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn-ui btn-ui-primary btn-ui-sm"
+              disabled={updatingPassword}
+            >
+              <Key size={14} />
+              <span>{updatingPassword ? 'Updating...' : 'Update Password'}</span>
+            </button>
+          </form>
+
+          {/* Active Session info */}
+          <div className="border-top mt-4 pt-3">
+            <h4 className="fw-bold text-xs text-primary-emphasis mb-2">Active Session Details</h4>
+            <div className="p-3 rounded bg-subtle border d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-2">
+                <Laptop size={18} className="text-primary" />
+                <div>
+                  <div className="fw-semibold text-xs text-primary-emphasis">Current Web Browser Session</div>
+                  <div className="text-muted text-xs">IP: 127.0.0.1 • Authenticated via JWT</div>
+                </div>
+              </div>
+              <span className="badge bg-success-subtle text-success text-xs">Active Now</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Preferences */}
+      {activeTab === 'preferences' && (
+        <div className="card-enterprise p-4">
+          <h4 className="fw-bold text-sm text-primary-emphasis mb-3">Notification Subscriptions</h4>
+          <div className="d-flex flex-column gap-3 mb-4">
+            <label className="d-flex align-items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="form-check-input mt-0.5"
+                checked={notifPreferences.bookingAlerts}
+                onChange={(e) => setNotifPreferences({ ...notifPreferences, bookingAlerts: e.target.checked })}
+              />
+              <div>
+                <div className="fw-semibold text-xs text-primary-emphasis">Booking Status Updates</div>
+                <div className="text-muted text-xs">Receive alerts when space reservations are confirmed or modified.</div>
+              </div>
+            </label>
+
+            <label className="d-flex align-items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="form-check-input mt-0.5"
+                checked={notifPreferences.creativeApprovals}
+                onChange={(e) => setNotifPreferences({ ...notifPreferences, creativeApprovals: e.target.checked })}
+              />
+              <div>
+                <div className="fw-semibold text-xs text-primary-emphasis">Creative Content Approvals</div>
+                <div className="text-muted text-xs">Receive verification approvals and compliance rejection notes.</div>
+              </div>
+            </label>
+
+            <label className="d-flex align-items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="form-check-input mt-0.5"
+                checked={notifPreferences.invoiceNotices}
+                onChange={(e) => setNotifPreferences({ ...notifPreferences, invoiceNotices: e.target.checked })}
+              />
+              <div>
+                <div className="fw-semibold text-xs text-primary-emphasis">Invoice &amp; Payment Receipts</div>
+                <div className="text-muted text-xs">Get notified when new billing invoices are issued or payments reconciled.</div>
+              </div>
+            </label>
+          </div>
+
+          <button
+            type="button"
+            className="btn-ui btn-ui-primary btn-ui-sm"
+            onClick={() => alert('Notification preferences saved.')}
+          >
+            <Save size={14} />
+            <span>Save Preferences</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import NotificationBell from '../features/notifications/components/NotificationBell';
@@ -22,6 +22,8 @@ const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/';
 
   const handleLogout = () => {
     logout();
@@ -29,7 +31,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="surface border-bottom mb-4 sticky-top" style={{ borderRadius: 0 }}>
+    <header className={`surface border-bottom sticky-top ${isLandingPage ? '' : 'mb-4'}`} style={{ borderRadius: 0 }}>
       <div className="container-fluid px-4 py-2 d-flex justify-content-between align-items-center">
         {/* Brand / Logo */}
         <div className="d-flex align-items-center gap-4">

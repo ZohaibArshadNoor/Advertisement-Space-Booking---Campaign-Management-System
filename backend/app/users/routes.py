@@ -529,5 +529,56 @@ def delete_user(user_id):
     }), 200
 
 
+# 8. GET ALL ROLES (With user count and permissions)
+@users_bp.get("/roles")
+@roles_required("Administrator")
+def get_roles():
+    """
+    Get all system roles and their assigned permissions.
+    """
+    roles = Role.query.order_by(Role.id.asc()).all()
+    roles_data = []
+    for r in roles:
+        user_count = User.query.filter_by(role_id=r.id).count()
+        roles_data.append({
+            "id": r.id,
+            "name": r.name,
+            "permissions": r.permissions or {},
+            "user_count": user_count,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+    
+    return jsonify({
+        "success": True,
+        "count": len(roles_data),
+        "roles": roles_data
+    }), 200
 
 
+# 9. UPDATE ROLE PERMISSIONS
+@users_bp.put("/roles/<int:role_id>")
+@roles_required("Administrator")
+def update_role(role_id):
+    """
+    Update a role's permissions dictionary.
+    """
+    role = Role.query.get(role_id)
+    if not role:
+        return jsonify({"success": False, "message": "Role not found."}), 404
+    
+    data = request.get_json() or {}
+    if "permissions" in data:
+        role.permissions = data["permissions"]
+    if "name" in data and role.name not in ["Administrator", "Advertiser"]: # Protect core role names
+        role.name = data["name"]
+    
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "message": f"Role '{role.name}' updated successfully.",
+        "role": {
+            "id": role.id,
+            "name": role.name,
+            "permissions": role.permissions
+        }
+    }), 200

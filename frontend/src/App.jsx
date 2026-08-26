@@ -2,55 +2,72 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
-import Login from './pages/Login';
+import AppShell from './layouts/AppShell';
+
+// Auth Pages
+import LoginPage from './pages/LoginPage';
 import Register from './pages/Register';
-import Dashboard from './features/dashboard/pages/DashboardPage';
-import Campaigns from './pages/Campaigns';
+import ForbiddenPage from './pages/ForbiddenPage';
+import NotFoundPage from './pages/NotFoundPage';
+
+// Public Landing
+import LandingPage from './pages/LandingPage';
+
+// Operational & Management Pages
+import DashboardPage from './features/dashboard/pages/DashboardPage';
+import UsersPage from './features/users/pages/UsersPage';
+import RolesPage from './features/roles/pages/RolesPage';
 import SpacesPage from './features/spaces/pages/SpacePage';
+import AvailabilityPage from './features/availability/pages/AvailabilityPage';
+import Campaigns from './pages/Campaigns';
 import BookingsPage from './features/bookings/pages/BookingsPage';
 import CreativesPage from './features/creatives/pages/CreativesPage';
 import PaymentsPage from './features/payments/pages/PaymentsPage';
 import NotificationsPage from './features/notifications/pages/NotificationsPage';
-import AvailabilityPage from './features/availability/pages/AvailabilityPage';
-import AdminPage from './features/admin/pages/AdminPage';
 import ProfilePage from './features/profile/pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
+import AuditLogsPage from './pages/AuditLogsPage';
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Navbar />
-          <main className="app-container">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/unauthorized" element={<ForbiddenPage />} />
 
-              {/* Protected Routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/campaigns" element={<Campaigns />} />
+            {/* Authenticated Application Shell */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppShell />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/spaces" element={<SpacesPage />} />
                 <Route path="/availability" element={<AvailabilityPage />} />
+                <Route path="/campaigns" element={<Campaigns />} />
                 <Route path="/bookings" element={<BookingsPage />} />
                 <Route path="/creatives" element={<CreativesPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
-              </Route>
 
-              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
-                <Route path="/admin" element={<AdminPage />} />
+                {/* Administrator Dedicated Routes */}
+                <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
+                  <Route path="/users" element={<UsersPage />} />
+                  <Route path="/roles" element={<RolesPage />} />
+                  <Route path="/audit" element={<AuditLogsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/admin" element={<Navigate to="/users" replace />} />
+                </Route>
               </Route>
+            </Route>
 
-              {/* Fallback */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<div className="text-center py-5"><h3>404 - Page Not Found</h3></div>} />
-            </Routes>
-          </main>
+            {/* 404 Fallback */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

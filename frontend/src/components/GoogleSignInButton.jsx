@@ -42,12 +42,17 @@ export const GoogleSignInButton = ({ text = 'Continue with Google' }) => {
     if (!clientId) return;
 
     const setupGoogle = () => {
-      if (window.google?.accounts?.id) {
+      if (window.google?.accounts?.id && clientId) {
         try {
-          window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: handleCredentialResponse,
-          });
+          if (!window._gsiInitialized) {
+            window.google.accounts.id.initialize({
+              client_id: clientId,
+              callback: handleCredentialResponse,
+              auto_select: false,
+              cancel_on_tap_outside: true,
+            });
+            window._gsiInitialized = true;
+          }
 
           if (btnRef.current) {
             btnRef.current.innerHTML = '';
@@ -63,7 +68,8 @@ export const GoogleSignInButton = ({ text = 'Continue with Google' }) => {
           }
           setGoogleReady(true);
         } catch (e) {
-          console.warn('Google accounts init warning:', e);
+          // Gracefully fallback to custom branded button
+          setGoogleReady(false);
         }
       }
     };

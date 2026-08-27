@@ -325,19 +325,45 @@ export const PaymentsPage = () => {
                         </td>
 
                         <td>
-                          <div className="text-xs">
-                            <span className="text-muted">Net: </span>
-                            <span className="font-monospace">Rs. {parseFloat(inv.subtotal || 125000).toLocaleString()}</span>
-                          </div>
-                          <div className="text-xs text-muted" style={{ fontSize: '0.7rem' }}>
-                            Tax: +Rs. {parseFloat(inv.tax_amount || 20000).toLocaleString()}
-                          </div>
+                          {(() => {
+                            const subtotalVal = parseFloat(inv.subtotal || 0);
+                            const taxVal = (inv.tax_amount !== undefined && inv.tax_amount !== null && inv.tax_amount !== '')
+                              ? parseFloat(inv.tax_amount)
+                              : (inv.tax !== undefined && inv.tax !== null && inv.tax !== '')
+                              ? parseFloat(inv.tax)
+                              : subtotalVal * 0.16;
+                            const totalVal = parseFloat(inv.total_amount !== undefined && inv.total_amount !== null && inv.total_amount !== '' ? inv.total_amount : (subtotalVal + taxVal));
+
+                            return (
+                              <>
+                                <div className="text-xs">
+                                  <span className="text-muted">Net: </span>
+                                  <span className="font-monospace">Rs. {subtotalVal.toLocaleString()}</span>
+                                </div>
+                                <div className="text-xs text-muted" style={{ fontSize: '0.7rem' }}>
+                                  Tax: +Rs. {taxVal.toLocaleString()}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </td>
 
                         <td>
-                          <span className="font-monospace text-xs text-primary-emphasis fw-bold">
-                            Rs. {parseFloat(inv.total_amount || 145000).toLocaleString()}
-                          </span>
+                          {(() => {
+                            const subtotalVal = parseFloat(inv.subtotal || 0);
+                            const taxVal = (inv.tax_amount !== undefined && inv.tax_amount !== null && inv.tax_amount !== '')
+                              ? parseFloat(inv.tax_amount)
+                              : (inv.tax !== undefined && inv.tax !== null && inv.tax !== '')
+                              ? parseFloat(inv.tax)
+                              : subtotalVal * 0.16;
+                            const totalVal = parseFloat(inv.total_amount !== undefined && inv.total_amount !== null && inv.total_amount !== '' ? inv.total_amount : (subtotalVal + taxVal));
+
+                            return (
+                              <span className="font-monospace text-xs text-primary-emphasis fw-bold">
+                                Rs. {totalVal.toLocaleString()}
+                              </span>
+                            );
+                          })()}
                         </td>
 
                         <td>
@@ -364,11 +390,11 @@ export const PaymentsPage = () => {
                         </td>
 
                         <td className="text-end">
-                          <div className="d-inline-flex align-items-center gap-1.5">
+                          <div className="d-inline-flex align-items-center justify-content-end gap-1.5" style={{ minWidth: '140px' }}>
                             {canManageFinance && inv.status === 'DRAFT' && (
                               <button
                                 type="button"
-                                className="btn-ui btn-ui-primary btn-ui-sm"
+                                className="btn-ui btn-ui-secondary btn-ui-sm"
                                 onClick={() => handleIssueInvoice(inv.id)}
                                 title="Issue Invoice"
                               >
@@ -376,18 +402,29 @@ export const PaymentsPage = () => {
                                 <span>Issue</span>
                               </button>
                             )}
-                            <button
-                              type="button"
-                              className="btn-ui btn-ui-secondary btn-ui-sm"
-                              onClick={() => {
-                                setPaymentFormData({ ...paymentFormData, invoice_id: inv.id, amount: inv.total_amount });
-                                setShowPaymentModal(true);
-                              }}
-                              title="Record Payment"
-                            >
-                              <DollarSign size={12} />
-                              <span>Pay</span>
-                            </button>
+
+                            {inv.status === 'PAID' ? (
+                              <span className="badge bg-success-subtle text-success text-xs font-semibold py-1 px-2">
+                                ✓ Paid in Full
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn-ui btn-ui-primary btn-ui-sm d-inline-flex align-items-center gap-1"
+                                onClick={() => {
+                                  setPaymentFormData({
+                                    ...paymentFormData,
+                                    invoice_id: inv.id,
+                                    amount: inv.balance_due || inv.total_amount
+                                  });
+                                  setShowPaymentModal(true);
+                                }}
+                                title="Pay Invoice"
+                              >
+                                <CreditCard size={12} />
+                                <span>Pay Now</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -455,7 +492,7 @@ export const PaymentsPage = () => {
 
                         <td>
                           <span className="font-monospace text-xs text-success fw-bold">
-                            +Rs. {parseFloat(p.amount || 145000).toLocaleString()}
+                            +Rs. {parseFloat(p.amount || 0).toLocaleString()}
                           </span>
                         </td>
 

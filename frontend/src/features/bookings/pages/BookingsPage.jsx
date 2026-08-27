@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import { bookingsApi } from '../bookingsApi';
 import { spacesApi } from '../../spaces/spacesApi';
 import { campaignService } from '../../../services/campaignService';
@@ -19,10 +21,18 @@ import {
   RefreshCw,
   Clock,
   Building2,
-  DollarSign
+  DollarSign,
+  CreditCard,
+  Receipt
 } from 'lucide-react';
 
 export const BookingsPage = () => {
+  const { user } = useAuth();
+  const isStaffApprover =
+    user?.role === 'Administrator' ||
+    user?.role === 'Space Manager' ||
+    user?.role === 'Sales Executive';
+
   const [bookings, setBookings] = useState([]);
   const [spaces, setSpaces] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -372,31 +382,73 @@ export const BookingsPage = () => {
 
                       <td className="text-end">
                         <div className="d-inline-flex align-items-center gap-1.5">
-                          <select
-                            className="form-select-ui"
-                            style={{
-                              width: 'auto',
-                              fontSize: '0.75rem',
-                              padding: '0.25rem 0.5rem',
-                              height: '28px',
-                            }}
-                            value={b.status}
-                            onChange={(e) => handleStatusChange(b.id, e.target.value)}
-                          >
-                            <option value="PENDING">Pending</option>
-                            <option value="CONFIRMED">Confirm</option>
-                            <option value="COMPLETED">Complete</option>
-                            <option value="CANCELLED">Cancel</option>
-                          </select>
+                          {isStaffApprover ? (
+                            <>
+                              <select
+                                className="form-select-ui"
+                                style={{
+                                  width: 'auto',
+                                  fontSize: '0.75rem',
+                                  padding: '0.25rem 0.5rem',
+                                  height: '28px',
+                                }}
+                                value={b.status}
+                                onChange={(e) => handleStatusChange(b.id, e.target.value)}
+                                title="Update booking status"
+                              >
+                                <option value="PENDING">Pending</option>
+                                <option value="CONFIRMED">Confirm (Lock Slot)</option>
+                                <option value="COMPLETED">Complete (Settled)</option>
+                                <option value="CANCELLED">Cancel (Release Slot)</option>
+                              </select>
 
-                          <button
-                            type="button"
-                            className="btn-ui-icon text-danger"
-                            onClick={() => handleDelete(b.id)}
-                            title="Cancel Booking"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                              <button
+                                type="button"
+                                className="btn-ui-icon text-danger"
+                                onClick={() => handleDelete(b.id)}
+                                title="Delete Booking Record"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {b.status === 'CONFIRMED' && (
+                                <Link
+                                  to="/payments"
+                                  className="btn-ui btn-ui-primary btn-ui-sm"
+                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
+                                  title="Pay for this confirmed reservation"
+                                >
+                                  <CreditCard size={12} />
+                                  <span>Pay Now</span>
+                                </Link>
+                              )}
+
+                              {b.status === 'COMPLETED' && (
+                                <Link
+                                  to="/payments"
+                                  className="btn-ui btn-ui-secondary btn-ui-sm"
+                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
+                                  title="View invoice and payment receipt"
+                                >
+                                  <Receipt size={12} />
+                                  <span>Invoice</span>
+                                </Link>
+                              )}
+
+                              {b.status === 'PENDING' && (
+                                <button
+                                  type="button"
+                                  className="btn-ui-icon text-danger"
+                                  onClick={() => handleDelete(b.id)}
+                                  title="Cancel Booking Request"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

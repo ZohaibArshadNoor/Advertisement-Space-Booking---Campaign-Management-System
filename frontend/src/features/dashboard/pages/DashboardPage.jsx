@@ -235,30 +235,56 @@ export const DashboardPage = () => {
           <div className="card-enterprise p-3 h-100">
             <div className="d-flex align-items-center justify-content-between text-muted mb-2">
               <span className="text-xs fw-semibold text-uppercase tracking-wider">
-                {userRole === 'Advertiser' ? 'My Bookings' : 'Inventory Spaces'}
+                {userRole === 'Finance Officer'
+                  ? 'Total Invoiced'
+                  : userRole === 'Advertiser'
+                  ? 'My Bookings'
+                  : userRole === 'Sales Executive'
+                  ? 'Active Campaigns'
+                  : 'Inventory Spaces'}
               </span>
-              <Building2 size={16} className="text-primary" />
+              {userRole === 'Finance Officer' ? (
+                <CreditCard size={16} className="text-primary" />
+              ) : userRole === 'Advertiser' ? (
+                <Building2 size={16} className="text-primary" />
+              ) : userRole === 'Sales Executive' ? (
+                <Megaphone size={16} className="text-primary" />
+              ) : (
+                <Building2 size={16} className="text-primary" />
+              )}
             </div>
             <div className="d-flex align-items-center gap-2 flex-wrap">
               <span className="fs-4 fw-bold text-primary-emphasis">
-                {userRole === 'Advertiser'
+                {userRole === 'Finance Officer'
+                  ? `Rs. ${parseFloat(metrics.financials?.total_invoiced || 0).toLocaleString()}`
+                  : userRole === 'Advertiser'
                   ? metrics.bookings?.total || 0
-                  : metrics.inventory?.total_spaces || 48}
+                  : userRole === 'Sales Executive'
+                  ? metrics.campaigns?.active_campaigns || metrics.campaigns?.active || 0
+                  : metrics.inventory?.total_spaces || 0}
               </span>
               {userRole === 'Advertiser' ? (
                 <span className="badge bg-primary-subtle text-primary text-xs">
                   {metrics.bookings?.active || 0} active
                 </span>
+              ) : userRole === 'Finance Officer' ? (
+                <span className="badge bg-primary-subtle text-primary text-xs">
+                  Billed
+                </span>
               ) : (
                 <span className="badge bg-success-subtle text-success text-xs">
-                  <TrendingUp size={12} className="me-1" /> +8.4%
+                  <TrendingUp size={12} className="me-1" /> Active
                 </span>
               )}
             </div>
             <div className="text-muted small mt-1.5" style={{ fontSize: '0.75rem' }}>
-              {userRole === 'Advertiser'
+              {userRole === 'Finance Officer'
+                ? 'Total commercial receivables billed'
+                : userRole === 'Advertiser'
                 ? `${metrics.bookings?.pending || 0} pending confirmation`
-                : `${metrics.inventory?.available_spaces || 18} spaces ready for booking`}
+                : userRole === 'Sales Executive'
+                ? 'Strategic client campaigns running'
+                : `${metrics.inventory?.available_spaces || 0} spaces ready for booking`}
             </div>
           </div>
         </div>
@@ -268,9 +294,17 @@ export const DashboardPage = () => {
           <div className="card-enterprise p-3 h-100">
             <div className="d-flex align-items-center justify-content-between text-muted mb-2">
               <span className="text-xs fw-semibold text-uppercase tracking-wider">
-                {userRole === 'Advertiser' ? 'My Campaigns' : 'Total Bookings'}
+                {userRole === 'Finance Officer'
+                  ? 'Revenue Collected'
+                  : userRole === 'Advertiser'
+                  ? 'My Campaigns'
+                  : userRole === 'Sales Executive'
+                  ? 'Pending Bookings'
+                  : 'Total Bookings'}
               </span>
-              {userRole === 'Advertiser' ? (
+              {userRole === 'Finance Officer' ? (
+                <CheckCircle2 size={16} className="text-success" />
+              ) : userRole === 'Advertiser' ? (
                 <Megaphone size={16} className="text-primary" />
               ) : (
                 <Layers size={16} className="text-primary" />
@@ -278,18 +312,26 @@ export const DashboardPage = () => {
             </div>
             <div className="d-flex align-items-center gap-2 flex-wrap">
               <span className="fs-4 fw-bold text-primary-emphasis">
-                {userRole === 'Advertiser'
+                {userRole === 'Finance Officer'
+                  ? `Rs. ${parseFloat(metrics.financials?.total_collected || 0).toLocaleString()}`
+                  : userRole === 'Advertiser'
                   ? metrics.campaigns?.total || 0
+                  : userRole === 'Sales Executive'
+                  ? metrics.bookings?.pending_bookings || metrics.bookings?.pending || 0
                   : metrics.bookings?.total_bookings || metrics.bookings?.total || 0}
               </span>
-              <span className="badge bg-primary-subtle text-primary text-xs">
-                {userRole === 'Advertiser'
+              <span className={`badge ${userRole === 'Finance Officer' ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary'} text-xs`}>
+                {userRole === 'Finance Officer'
+                  ? 'Settled'
+                  : userRole === 'Advertiser'
                   ? `${metrics.campaigns?.active || 0} active`
                   : `${metrics.bookings?.pending_bookings || 0} pending`}
               </span>
             </div>
             <div className="text-muted small mt-1.5" style={{ fontSize: '0.75rem' }}>
-              {userRole === 'Advertiser'
+              {userRole === 'Finance Officer'
+                ? 'Verified bank & card settlements'
+                : userRole === 'Advertiser'
                 ? 'Targeted physical & digital campaigns'
                 : 'Across all client accounts'}
             </div>
@@ -301,23 +343,31 @@ export const DashboardPage = () => {
           <div className="card-enterprise p-3 h-100">
             <div className="d-flex align-items-center justify-content-between text-muted mb-2">
               <span className="text-xs fw-semibold text-uppercase tracking-wider">
-                {userRole === 'Advertiser' ? 'Total Invoiced' : 'Live Campaigns'}
+                {userRole === 'Finance Officer'
+                  ? 'Outstanding Balance'
+                  : userRole === 'Advertiser'
+                  ? 'Total Invoiced'
+                  : 'Live Campaigns'}
               </span>
-              {userRole === 'Advertiser' ? (
-                <CreditCard size={16} className="text-primary" />
+              {userRole === 'Finance Officer' || userRole === 'Advertiser' ? (
+                <CreditCard size={16} className="text-warning" />
               ) : (
                 <Megaphone size={16} className="text-primary" />
               )}
             </div>
             <div className="d-flex align-items-center gap-2 flex-wrap">
               <span className="fs-4 fw-bold text-primary-emphasis">
-                {userRole === 'Advertiser'
+                {userRole === 'Finance Officer'
+                  ? `Rs. ${parseFloat(metrics.financials?.outstanding_balance || 0).toLocaleString()}`
+                  : userRole === 'Advertiser'
                   ? `Rs. ${parseFloat(metrics.financials?.total_invoiced || 0).toLocaleString()}`
                   : metrics.campaigns?.active_campaigns || metrics.campaigns?.active || 0}
               </span>
             </div>
             <div className="text-muted small mt-1.5" style={{ fontSize: '0.75rem' }}>
-              {userRole === 'Advertiser'
+              {userRole === 'Finance Officer'
+                ? 'Pending client payment receipts'
+                : userRole === 'Advertiser'
                 ? `Rs. ${parseFloat(metrics.financials?.total_paid || 0).toLocaleString()} settled`
                 : 'Across 5 target metropolitan zones'}
             </div>
@@ -329,17 +379,27 @@ export const DashboardPage = () => {
           <div className="card-enterprise p-3 h-100">
             <div className="d-flex align-items-center justify-content-between text-muted mb-2">
               <span className="text-xs fw-semibold text-uppercase tracking-wider">
-                {userRole === 'Advertiser' ? 'Outstanding Balance' : 'Platform Revenue'}
+                {userRole === 'Finance Officer'
+                  ? 'Unsettled Invoices'
+                  : userRole === 'Advertiser'
+                  ? 'Outstanding Balance'
+                  : 'Platform Revenue'}
               </span>
               <CreditCard size={16} className="text-primary" />
             </div>
             <div className="d-flex align-items-center gap-2 flex-wrap">
               <span className="fs-4 fw-bold text-primary-emphasis">
-                Rs. {parseFloat(metrics.financials?.outstanding_balance || 0).toLocaleString()}
+                {userRole === 'Finance Officer'
+                  ? `${metrics.financials?.unsettled_invoices_count || 0} Invoices`
+                  : userRole === 'Advertiser'
+                  ? `Rs. ${parseFloat(metrics.financials?.outstanding_balance || 0).toLocaleString()}`
+                  : `Rs. ${parseFloat(metrics.financials?.total_collected || 0).toLocaleString()}`}
               </span>
             </div>
             <div className="text-muted small mt-1.5" style={{ fontSize: '0.75rem' }}>
-              {userRole === 'Advertiser'
+              {userRole === 'Finance Officer'
+                ? 'Awaiting reconciliation or clearance'
+                : userRole === 'Advertiser'
                 ? 'Due on active campaign invoices'
                 : 'Collected platform revenue ledger'}
             </div>
@@ -491,51 +551,248 @@ export const DashboardPage = () => {
               </div>
               <div className="p-0">
                 <div className="list-group list-group-flush border-0">
-                  <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
-                    <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
-                      <div
-                        className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
-                        style={{ width: '36px', height: '36px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#eab308' }}
-                      >
-                        <FileCheck size={18} />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
-                          Creative Assets Awaiting Review
+                  {userRole === 'Finance Officer' ? (
+                    <>
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#eab308' }}
+                          >
+                            <CreditCard size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Commercial Invoices Awaiting Settlement
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Review issued, overdue, and pending client invoices.
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
-                          Pending resolution &amp; content compliance verification.
-                        </div>
+                        <Link to="/payments" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Reconcile</span>
+                          <ChevronRight size={12} />
+                        </Link>
                       </div>
-                    </div>
-                    <Link to="/creatives" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
-                      <span>Review</span>
-                      <ChevronRight size={12} />
-                    </Link>
-                  </div>
 
-                  <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
-                    <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
-                      <div
-                        className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
-                        style={{ width: '36px', height: '36px', backgroundColor: 'rgba(37, 99, 235, 0.15)', color: '#3b82f6' }}
-                      >
-                        <Layers size={18} />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
-                          Booking Requests Pending Confirmation
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(22, 163, 74, 0.15)', color: '#16a34a' }}
+                          >
+                            <FileText size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Payment Settlements &amp; Ledger Logs
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Verify client wire transfers, cheques, and credit receipts.
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
-                          Verify schedule overlaps and approve booking slots.
-                        </div>
+                        <Link to="/payments" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>View Ledger</span>
+                          <ChevronRight size={12} />
+                        </Link>
                       </div>
-                    </div>
-                    <Link to="/bookings" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
-                      <span>Inspect</span>
-                      <ChevronRight size={12} />
-                    </Link>
-                  </div>
+                    </>
+                  ) : userRole === 'Creative Reviewer' ? (
+                    <>
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#eab308' }}
+                          >
+                            <FileCheck size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Creative Assets Awaiting Review
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Pending resolution &amp; content compliance verification.
+                            </div>
+                          </div>
+                        </div>
+                        <Link to="/creatives" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Review</span>
+                          <ChevronRight size={12} />
+                        </Link>
+                      </div>
+
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(37, 99, 235, 0.15)', color: '#3b82f6' }}
+                          >
+                            <Layers size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Approved Campaign Media Library
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Inspect live active artwork attached to flighted campaigns.
+                            </div>
+                          </div>
+                        </div>
+                        <Link to="/creatives" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Inspect</span>
+                          <ChevronRight size={12} />
+                        </Link>
+                      </div>
+                    </>
+                  ) : userRole === 'Space Manager' ? (
+                    <>
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(37, 99, 235, 0.15)', color: '#3b82f6' }}
+                          >
+                            <Layers size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Space Reservations Pending Approval
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Inspect requested billboard dates and confirm space holds.
+                            </div>
+                          </div>
+                        </div>
+                        <Link to="/bookings" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Inspect</span>
+                          <ChevronRight size={12} />
+                        </Link>
+                      </div>
+
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#eab308' }}
+                          >
+                            <Building2 size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Block Maintenance &amp; Availability Schedule
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Manage structural repairs, maintenance, and rate cards.
+                            </div>
+                          </div>
+                        </div>
+                        <Link to="/availability" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Manage</span>
+                          <ChevronRight size={12} />
+                        </Link>
+                      </div>
+                    </>
+                  ) : userRole === 'Sales Executive' ? (
+                    <>
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(37, 99, 235, 0.15)', color: '#3b82f6' }}
+                          >
+                            <Megaphone size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Campaign Pipeline &amp; Client Proposals
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Review draft campaigns and activate approved flights.
+                            </div>
+                          </div>
+                        </div>
+                        <Link to="/campaigns" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Campaigns</span>
+                          <ChevronRight size={12} />
+                        </Link>
+                      </div>
+
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#eab308' }}
+                          >
+                            <Layers size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Pending Client Reservation Requests
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Negotiate placements and confirm client booking slots.
+                            </div>
+                          </div>
+                        </div>
+                        <Link to="/bookings" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Bookings</span>
+                          <ChevronRight size={12} />
+                        </Link>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Administrator panoramic view */}
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#eab308' }}
+                          >
+                            <FileCheck size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Creative Assets Awaiting Review
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Pending resolution &amp; content compliance verification.
+                            </div>
+                          </div>
+                        </div>
+                        <Link to="/creatives" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Review</span>
+                          <ChevronRight size={12} />
+                        </Link>
+                      </div>
+
+                      <div className="list-group-item p-3 d-flex align-items-center justify-content-between gap-3 bg-transparent">
+                        <div className="d-flex align-items-center" style={{ gap: '0.85rem', minWidth: 0 }}>
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-2 flex-shrink-0"
+                            style={{ width: '36px', height: '36px', backgroundColor: 'rgba(37, 99, 235, 0.15)', color: '#3b82f6' }}
+                          >
+                            <Layers size={18} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="fw-semibold text-xs text-primary-emphasis mb-0.5 text-truncate">
+                              Booking Requests Pending Confirmation
+                            </div>
+                            <div className="text-muted text-truncate" style={{ fontSize: '0.75rem' }}>
+                              Verify schedule overlaps and approve booking slots.
+                            </div>
+                          </div>
+                        </div>
+                        <Link to="/bookings" className="btn-ui btn-ui-secondary btn-ui-sm flex-shrink-0 ms-2">
+                          <span>Inspect</span>
+                          <ChevronRight size={12} />
+                        </Link>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

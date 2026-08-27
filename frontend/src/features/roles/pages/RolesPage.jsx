@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../../../services/apiClient';
 import RolePermissionsModal from '../components/RolePermissionsModal';
 import {
   ShieldCheck,
@@ -177,10 +177,7 @@ export const RolesPage = () => {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
-      const res = await axios.get('http://127.0.0.1:5000/api/users/roles', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiClient.get('/users/roles');
       if (res.data && res.data.roles && res.data.roles.length > 0) {
         setRoles(res.data.roles);
       } else {
@@ -200,12 +197,7 @@ export const RolesPage = () => {
 
   const handleSavePermissions = async (roleId, updatedData) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.put(
-        `http://127.0.0.1:5000/api/users/roles/${roleId}`,
-        updatedData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await apiClient.put(`/users/roles/${roleId}`, updatedData);
       setFeedback({
         type: 'success',
         message: `Permissions updated successfully for role '${updatedData.name}'.`,

@@ -41,6 +41,15 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const demoSwitch = async (demoPayload) => {
+    const data = await authService.demoSwitch(demoPayload);
+    if (data.success) {
+      setUser(data.user);
+      setToken(data.access_token);
+    }
+    return data;
+  };
+
   const loginWithToken = (newToken, userData) => {
     localStorage.setItem('access_token', newToken);
     localStorage.setItem('user', JSON.stringify(userData));
@@ -66,6 +75,7 @@ export const AuthProvider = ({ children }) => {
     isAdvertiser: user?.role === 'Advertiser',
     loading,
     login,
+    demoSwitch,
     loginWithToken,
     register,
     logout,

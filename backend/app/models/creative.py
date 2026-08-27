@@ -19,6 +19,9 @@ class MediaStatus:
     ]
 
 
+CreativeStatus = MediaStatus
+
+
 class Creative(db.Model):
     """
     Represents an advertising creative/media asset uploaded for a campaign.

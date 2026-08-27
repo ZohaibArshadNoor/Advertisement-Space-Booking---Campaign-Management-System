@@ -127,7 +127,7 @@ export const LoginPage = () => {
                 <label className="form-label-ui mb-0" htmlFor="login-password">
                   Password
                 </label>
-                <Link to="#" className="text-xs text-primary text-decoration-none">
+                <Link to="/forgot-password" className="text-xs text-primary text-decoration-none">
                   Forgot password?
                 </Link>
               </div>

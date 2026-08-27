@@ -140,21 +140,6 @@ export const Sidebar = ({
               </NavLink>
             )}
 
-            {/* Roles & Permissions (Admin Only) */}
-            {isAuthorized(['Administrator']) && (
-              <NavLink
-                to="/roles"
-                className={({ isActive }) =>
-                  `nav-item-link ${isActive ? 'active' : ''}`
-                }
-                onClick={() => setMobileOpen(false)}
-                title="Role Permissions"
-              >
-                <ShieldCheck size={18} />
-                {!collapsed && <span>Roles & Permissions</span>}
-              </NavLink>
-            )}
-
             {/* Advertising Spaces (All Users) */}
             <NavLink
               to="/spaces"

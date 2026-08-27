@@ -34,16 +34,14 @@ export const adminApi = {
 
   resetUserPassword: async (id, newPassword) => {
     const response = await apiClient.post(`/users/${id}/reset-password`, { 
-      new_password: newPassword,
-      password: newPassword 
+      new_password: newPassword 
     });
     return response.data;
   },
 
   resetPassword: async (id, newPassword) => {
     const response = await apiClient.post(`/users/${id}/reset-password`, { 
-      new_password: newPassword,
-      password: newPassword 
+      new_password: newPassword 
     });
     return response.data;
   },

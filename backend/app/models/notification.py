@@ -9,6 +9,7 @@ class NotificationType:
     """
     BOOKING = "BOOKING"
     CAMPAIGN = "CAMPAIGN"
+    CREATIVE = "CREATIVE"
     INVOICE = "INVOICE"
     PAYMENT = "PAYMENT"
     SYSTEM = "SYSTEM"
@@ -16,6 +17,7 @@ class NotificationType:
     ALL = [
         BOOKING,
         CAMPAIGN,
+        CREATIVE,
         INVOICE,
         PAYMENT,
         SYSTEM

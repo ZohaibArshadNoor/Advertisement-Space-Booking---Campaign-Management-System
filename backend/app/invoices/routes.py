@@ -23,6 +23,8 @@ def invoice_to_dict(invoice, include_payments=False):
         "advertiser_name": invoice.advertiser.company_name if invoice.advertiser else None,
         "subtotal": str(invoice.subtotal),
         "tax": str(invoice.tax),
+        "tax_amount": str(invoice.tax),
+        "tax_rate": 16,
         "total_amount": str(invoice.total_amount),
         "amount_paid": str(invoice.amount_paid),
         "balance_due": str(invoice.balance_due),
@@ -192,24 +194,16 @@ def get_invoices():
     current_user_id = int(get_jwt_identity())
     current_user = db.session.get(User, current_user_id)
 
+    user_filter = None
     advertiser_filter = None
     if current_user and current_user.role.name == "Advertiser":
-        if current_user.advertiser_id:
-            advertiser_filter = current_user.advertiser_id
-        else:
-            return jsonify({
-                "invoices": [],
-                "pagination": {
-                    "page": 1,
-                    "per_page": per_page,
-                    "total": 0,
-                    "pages": 0
-                }
-            }), 200
+        user_filter = current_user.id
+        advertiser_filter = current_user.advertiser_id
 
     invoices_page = InvoiceService.get_all(
         page=page,
         per_page=per_page,
+        user_id=user_filter,
         campaign_id=campaign_id,
         advertiser_id=advertiser_filter,
         status=status,

@@ -26,6 +26,7 @@ class InvoiceService:
     def get_all(
         page=1,
         per_page=10,
+        user_id=None,
         campaign_id=None,
         advertiser_id=None,
         status=None,
@@ -48,11 +49,18 @@ class InvoiceService:
             joinedload(Invoice.advertiser)
         )
 
+        if user_id is not None:
+            query = query.join(Invoice.campaign).filter(
+                db.or_(
+                    Invoice.advertiser_id == advertiser_id,
+                    Campaign.user_id == user_id
+                )
+            )
+        elif advertiser_id is not None:
+            query = query.filter(Invoice.advertiser_id == advertiser_id)
+
         if campaign_id is not None:
             query = query.filter(Invoice.campaign_id == campaign_id)
-
-        if advertiser_id is not None:
-            query = query.filter(Invoice.advertiser_id == advertiser_id)
 
         if status:
             query = query.filter(Invoice.status == status)

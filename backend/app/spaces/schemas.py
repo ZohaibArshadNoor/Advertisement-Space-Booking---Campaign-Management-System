@@ -6,16 +6,16 @@ from marshmallow import (
     validate,
     validates,
     ValidationError,
-    validates_schema
+    validates_schema,
+    EXCLUDE
 )
 
 class LocationCreateSchema(Schema):
     """
     Validates data when creating a new advertising location.
-
-    A location represents a physical or geographic place where
-    one or more advertising spaces can exist.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     name = fields.String(
         required=True,
@@ -57,12 +57,6 @@ class LocationCreateSchema(Schema):
 
     @validates("latitude")
     def validate_latitude(self, value, **kwargs):
-        """
-        Ensures latitude is geographically valid.
-
-        Latitude must be between -90 and 90.
-        """
-
         if value is not None and not (
             Decimal("-90") <= value <= Decimal("90")
         ):
@@ -72,12 +66,6 @@ class LocationCreateSchema(Schema):
 
     @validates("longitude")
     def validate_longitude(self, value, **kwargs):
-        """
-        Ensures longitude is geographically valid.
-
-        Longitude must be between -180 and 180.
-        """
-
         if value is not None and not (
             Decimal("-180") <= value <= Decimal("180")
         ):
@@ -89,10 +77,9 @@ class LocationCreateSchema(Schema):
 class LocationUpdateSchema(Schema):
     """
     Validates data when updating a location.
-
-    All fields are optional because an update may modify
-    only one or more specific fields.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     name = fields.String(
         required=False,
@@ -134,10 +121,6 @@ class LocationUpdateSchema(Schema):
 
     @validates("latitude")
     def validate_latitude(self, value, **kwargs):
-        """
-        Ensures latitude is geographically valid.
-        """
-
         if value is not None and not (
             Decimal("-90") <= value <= Decimal("90")
         ):
@@ -147,28 +130,20 @@ class LocationUpdateSchema(Schema):
 
     @validates("longitude")
     def validate_longitude(self, value, **kwargs):
-        """
-        Ensures longitude is geographically valid.
-        """
-
         if value is not None and not (
             Decimal("-180") <= value <= Decimal("180")
         ):
             raise ValidationError(
                 "Longitude must be between -180 and 180."
             )
-            
+
 
 class SpaceCategoryCreateSchema(Schema):
     """
     Validates data when creating a new advertising space category.
-
-    Examples:
-    - Billboard
-    - Digital Screen
-    - Transit Advertisement
-    - Website Advertisement
     """
+    class Meta:
+        unknown = EXCLUDE
 
     name = fields.String(
         required=True,
@@ -182,9 +157,9 @@ class SpaceCategoryCreateSchema(Schema):
 class SpaceCategoryUpdateSchema(Schema):
     """
     Validates data when updating an advertising space category.
-
-    The name is optional because this schema is used for updates.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     name = fields.String(
         required=False,
@@ -192,26 +167,44 @@ class SpaceCategoryUpdateSchema(Schema):
             min=2,
             max=100
         )
-    )            
-            
-            
+    )
+
+
 class AdvertisingSpaceCreateSchema(Schema):
     """
     Validates data when creating an advertising space.
-
-    Every advertising space must belong to:
-    1. A space category.
-    2. A location.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     category_id = fields.Integer(
-        required=True,
-        strict=True
+        required=False,
+        allow_none=True
     )
 
     location_id = fields.Integer(
-        required=True,
-        strict=True
+        required=False,
+        allow_none=True
+    )
+
+    category_name = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    location_name = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    city = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    address = fields.String(
+        required=False,
+        allow_none=True
     )
 
     name = fields.String(
@@ -220,6 +213,11 @@ class AdvertisingSpaceCreateSchema(Schema):
             min=2,
             max=150
         )
+    )
+
+    code = fields.String(
+        required=False,
+        allow_none=True
     )
 
     description = fields.String(
@@ -233,40 +231,58 @@ class AdvertisingSpaceCreateSchema(Schema):
         validate=validate.Length(max=100)
     )
 
+    resolution = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    traffic_count = fields.String(
+        required=False,
+        allow_none=True
+    )
+
     base_rate = fields.Decimal(
-        required=True,
+        required=False,
         as_string=True,
         places=2
     )
 
-    @validates("base_rate")
-    def validate_base_rate(self, value, **kwargs):
-        """
-        Ensures that the base rate is greater than zero.
-        """
+    daily_rate = fields.Decimal(
+        required=False,
+        as_string=True,
+        places=2
+    )
 
-        if value <= 0:
-            raise ValidationError(
-                "Base rate must be greater than zero."
-            )
+    is_active = fields.Boolean(
+        required=False,
+        load_default=True,
+        dump_default=True
+    )
+
+    @validates_schema
+    def validate_rates(self, data, **kwargs):
+        rate = data.get("base_rate") or data.get("daily_rate")
+        if rate is None:
+            raise ValidationError("Base rate (or daily rate) is required.", field_name="base_rate")
+        if Decimal(str(rate)) <= 0:
+            raise ValidationError("Base rate must be greater than zero.", field_name="base_rate")
 
 
 class AdvertisingSpaceUpdateSchema(Schema):
     """
     Validates data when updating an advertising space.
-
-    All fields are optional because an update may change
-    only one or more fields.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     category_id = fields.Integer(
         required=False,
-        strict=True
+        allow_none=True
     )
 
     location_id = fields.Integer(
         required=False,
-        strict=True
+        allow_none=True
     )
 
     name = fields.String(
@@ -275,6 +291,11 @@ class AdvertisingSpaceUpdateSchema(Schema):
             min=2,
             max=150
         )
+    )
+
+    code = fields.String(
+        required=False,
+        allow_none=True
     )
 
     description = fields.String(
@@ -294,35 +315,42 @@ class AdvertisingSpaceUpdateSchema(Schema):
         places=2
     )
 
+    daily_rate = fields.Decimal(
+        required=False,
+        as_string=True,
+        places=2
+    )
+
+    is_active = fields.Boolean(
+        required=False
+    )
+
     @validates("base_rate")
     def validate_base_rate(self, value, **kwargs):
-        """
-        Ensures that the base rate is greater than zero.
-        """
-
         if value is not None and value <= 0:
-            raise ValidationError(
-                "Base rate must be greater than zero."
-            )
+            raise ValidationError("Base rate must be greater than zero.")
+
+    @validates("daily_rate")
+    def validate_daily_rate(self, value, **kwargs):
+        if value is not None and value <= 0:
+            raise ValidationError("Daily rate must be greater than zero.")
 
 
 class AdvertisingSpaceStatusSchema(Schema):
-    """
-    Validates data when changing the active status of an advertising space.
-    """
+    class Meta:
+        unknown = EXCLUDE
 
     is_active = fields.Boolean(
         required=True
     )
-    
+
 
 class RateCardCreateSchema(Schema):
     """
     Validates data when creating a new rate card.
-
-    A rate card defines the price of an advertising space
-    for a specific period of time.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     rate_type = fields.String(
         required=True,
@@ -352,11 +380,6 @@ class RateCardCreateSchema(Schema):
 
     @validates_schema
     def validate_dates(self, data, **kwargs):
-        """
-        Ensures that the end date is not earlier than
-        the start date.
-        """
-
         effective_from = data.get("effective_from")
         effective_to = data.get("effective_to")
 
@@ -377,10 +400,9 @@ class RateCardCreateSchema(Schema):
 class RateCardUpdateSchema(Schema):
     """
     Validates data when updating an existing rate card.
-
-    All fields are optional because an update may modify
-    only one or several fields.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     rate_type = fields.String(
         required=False,
@@ -410,13 +432,6 @@ class RateCardUpdateSchema(Schema):
 
     @validates_schema
     def validate_dates(self, data, **kwargs):
-        """
-        Validates dates when both dates are supplied.
-
-        More complete validation against the existing
-        database record will also happen in the route.
-        """
-
         effective_from = data.get("effective_from")
         effective_to = data.get("effective_to")
 

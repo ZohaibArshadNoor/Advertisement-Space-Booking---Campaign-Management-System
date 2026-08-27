@@ -25,6 +25,8 @@ check_availability_query_schema = CheckAvailabilityQuerySchema()
     "Administrator",
     "Sales Executive",
     "Space Manager",
+    "Creative Reviewer",
+    "Finance Officer",
     "Advertiser"
 )
 def check_space_availability(space_id):
@@ -111,6 +113,8 @@ def check_space_availability(space_id):
     "Administrator",
     "Sales Executive",
     "Space Manager",
+    "Creative Reviewer",
+    "Finance Officer",
     "Advertiser"
 )
 def get_space_availability(space_id):

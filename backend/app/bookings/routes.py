@@ -385,7 +385,8 @@ def get_booking(booking_id):
 @bookings_bp.patch("/<int:booking_id>/status")
 @roles_required(
     "Administrator",
-    "Space Manager"
+    "Space Manager",
+    "Sales Executive"
 )
 def update_booking_status(booking_id):
     """
@@ -487,6 +488,7 @@ def update_booking_status(booking_id):
 @roles_required(
     "Administrator",
     "Space Manager",
+    "Sales Executive",
     "Advertiser"
 )
 def delete_booking(booking_id):

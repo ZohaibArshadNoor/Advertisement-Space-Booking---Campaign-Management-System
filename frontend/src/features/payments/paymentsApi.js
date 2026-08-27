@@ -17,9 +17,19 @@ export const paymentsApi = {
     return response.data;
   },
 
+  issueInvoice: async (invoiceId) => {
+    const response = await apiClient.patch(`/invoices/${invoiceId}/status`, { status: 'ISSUED' });
+    return response.data;
+  },
+
   // Payments Endpoints
   getPayments: async (params = {}) => {
     const response = await apiClient.get('/payments', { params });
+    return response.data;
+  },
+
+  createPayment: async (paymentData) => {
+    const response = await apiClient.post('/payments', paymentData);
     return response.data;
   },
 

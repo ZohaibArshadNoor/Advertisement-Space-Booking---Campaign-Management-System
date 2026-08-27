@@ -30,7 +30,7 @@ def payment_to_dict(payment):
 
 # 1. RECORD PAYMENT
 @payments_bp.post("")
-@roles_required("Administrator", "Finance Officer")
+@roles_required("Administrator", "Finance Officer", "Advertiser")
 def record_payment():
     """
     Record a payment transaction against an invoice.
@@ -170,24 +170,16 @@ def get_payments():
     current_user_id = int(get_jwt_identity())
     current_user = db.session.get(User, current_user_id)
 
+    user_filter = None
     advertiser_filter = None
     if current_user and current_user.role.name == "Advertiser":
-        if current_user.advertiser_id:
-            advertiser_filter = current_user.advertiser_id
-        else:
-            return jsonify({
-                "payments": [],
-                "pagination": {
-                    "page": 1,
-                    "per_page": per_page,
-                    "total": 0,
-                    "pages": 0
-                }
-            }), 200
+        user_filter = current_user.id
+        advertiser_filter = current_user.advertiser_id
 
     payments_page = PaymentService.get_all(
         page=page,
         per_page=per_page,
+        user_id=user_filter,
         invoice_id=invoice_id,
         advertiser_id=advertiser_filter,
         status=status,

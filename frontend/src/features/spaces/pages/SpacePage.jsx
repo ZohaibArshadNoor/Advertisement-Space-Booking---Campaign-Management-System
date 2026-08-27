@@ -341,7 +341,7 @@ export const SpacesPage = () => {
 
                     <td>
                       <span className="fw-semibold text-xs text-primary-emphasis">
-                        Rs. {parseFloat(s.base_price_per_day || s.daily_rate || s.base_price || 45000).toLocaleString()}
+                        Rs. {parseFloat(s.base_rate || s.daily_rate || s.base_price_per_day || s.base_price || 0).toLocaleString()}
                         <span className="text-muted font-normal"> /d</span>
                       </span>
                     </td>
@@ -412,7 +412,7 @@ export const SpacesPage = () => {
                       <StatusBadge status={s.status || (s.is_active ? 'active' : 'maintenance')} size="sm" />
                     </div>
                     <div className="text-white fw-bold fs-6 mt-2 text-truncate">
-                      Rs. {parseFloat(s.base_price_per_day || s.daily_rate || s.base_price || 45000).toLocaleString()}<span className="text-white-50 text-xs font-normal"> /day</span>
+                      Rs. {parseFloat(s.base_rate || s.daily_rate || s.base_price_per_day || s.base_price || 0).toLocaleString()}<span className="text-white-50 text-xs font-normal"> /day</span>
                     </div>
                   </div>
 

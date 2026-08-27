@@ -20,6 +20,7 @@ class PaymentService:
     def get_all(
         page=1,
         per_page=10,
+        user_id=None,
         invoice_id=None,
         advertiser_id=None,
         status=None,
@@ -35,16 +36,24 @@ class PaymentService:
         reference search, amount range, and whitelisted sorting.
         """
         from sqlalchemy.orm import joinedload
+        from app.models.campaign import Campaign
 
         query = Payment.query.options(
             joinedload(Payment.invoice)
         )
 
+        if user_id is not None:
+            query = query.join(Payment.invoice).join(Invoice.campaign).filter(
+                db.or_(
+                    Invoice.advertiser_id == advertiser_id,
+                    Campaign.user_id == user_id
+                )
+            )
+        elif advertiser_id is not None:
+            query = query.join(Invoice).filter(Invoice.advertiser_id == advertiser_id)
+
         if invoice_id is not None:
             query = query.filter(Payment.invoice_id == invoice_id)
-
-        if advertiser_id is not None:
-            query = query.join(Invoice).filter(Invoice.advertiser_id == advertiser_id)
 
         if status:
             query = query.filter(Payment.status == status)
@@ -133,11 +142,55 @@ class PaymentService:
             # Step 3: Reconcile parent invoice status in same transaction
             InvoiceService.reconcile_status(invoice)
 
+            # If invoice is now PAID, update linked campaign bookings to COMPLETED
+            if invoice.status == InvoiceStatus.PAID and invoice.campaign:
+                from app.models.booking import Booking, BookingStatus
+                for b in invoice.campaign.bookings:
+                    if b.status == BookingStatus.CONFIRMED:
+                        b.status = BookingStatus.COMPLETED
+
             db.session.commit()
 
         except Exception as err:
             db.session.rollback()
             return None, f"Payment transaction failed: {str(err)}"
+
+        # Step 4: Non-blocking notification dispatch
+        try:
+            from app.models.user import User
+            from app.models.notification import NotificationType
+            from app.services.notification_service import NotificationService
+
+            # Notify Advertiser user(s)
+            adv_users_to_notify = set()
+            if invoice.advertiser_id:
+                for u in User.query.filter_by(advertiser_id=invoice.advertiser_id).all():
+                    adv_users_to_notify.add(u.id)
+            if invoice.campaign and invoice.campaign.user_id:
+                adv_users_to_notify.add(invoice.campaign.user_id)
+
+            for uid in adv_users_to_notify:
+                NotificationService.send_notification(
+                    user_id=uid,
+                    title=f"Payment Confirmed: {invoice.invoice_number}",
+                    message=f"Your payment of Rs. {payment.amount:,.2f} has been received. Invoice {invoice.invoice_number} is now marked as {invoice.status}.",
+                    notification_type=NotificationType.PAYMENT,
+                    link="/payments"
+                )
+
+            # Notify Finance Officers & Admins
+            from app.models.role import Role
+            staff_users = User.query.join(Role).filter(Role.name.in_(["Administrator", "Finance Officer"])).all()
+            for staff in staff_users:
+                NotificationService.send_notification(
+                    user_id=staff.id,
+                    title=f"Payment Received: {invoice.invoice_number}",
+                    message=f"Received Rs. {payment.amount:,.2f} from {invoice.advertiser.company_name if invoice.advertiser else (invoice.campaign.name if invoice.campaign else 'Advertiser')} for {invoice.invoice_number}.",
+                    notification_type=NotificationType.PAYMENT,
+                    link="/payments"
+                )
+        except Exception:
+            pass
 
         return payment, None
 

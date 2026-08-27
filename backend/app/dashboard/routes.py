@@ -18,6 +18,7 @@ from app.extensions import db
     "Space Manager",
     "Sales Executive",
     "Finance Officer",
+    "Creative Reviewer",
     "Advertiser"
 )
 def get_dashboard_summary():

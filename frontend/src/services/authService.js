@@ -18,6 +18,29 @@ export const authService = {
     return response.data;
   },
 
+  // POST /api/auth/demo-switch
+  demoSwitch: async (demoPayload) => {
+    const response = await apiClient.post('/auth/demo-switch', demoPayload);
+    if (response.data.success && response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token);
+      localStorage.setItem('refresh_token', response.data.refresh_token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  },
+
+  // POST /api/auth/forgot-password
+  forgotPassword: async (email) => {
+    const response = await apiClient.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  // POST /api/auth/reset-password
+  resetPassword: async (token, password) => {
+    const response = await apiClient.post('/auth/reset-password', { token, password });
+    return response.data;
+  },
+
   // GET /api/auth/me
   getCurrentUser: async () => {
     const response = await apiClient.get('/auth/me');
@@ -36,4 +59,4 @@ export const authService = {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
   },
-};  
+};

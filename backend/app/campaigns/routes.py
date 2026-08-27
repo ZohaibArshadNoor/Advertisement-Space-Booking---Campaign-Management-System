@@ -199,6 +199,7 @@ def create_campaign():
     "Administrator",
     "Sales Executive",
     "Space Manager",
+    "Creative Reviewer",
     "Finance Officer",
     "Advertiser"
 )
@@ -326,6 +327,7 @@ def get_campaigns():
     "Administrator",
     "Sales Executive",
     "Space Manager",
+    "Creative Reviewer",
     "Finance Officer",
     "Advertiser"
 )
@@ -462,6 +464,7 @@ def update_campaign(campaign_id):
 @campaigns_bp.patch("/<int:campaign_id>/status")
 @roles_required(
     "Administrator",
+    "Sales Executive",
     "Space Manager"
 )
 def update_campaign_status(campaign_id):
@@ -514,9 +517,11 @@ def update_campaign_status(campaign_id):
     except ValidationError as error:
         return jsonify({"errors": error.messages}), 400
 
+    current_user_id = int(get_jwt_identity())
     updated, error = CampaignService.update_status(
         campaign=campaign,
-        new_status=validated_data["status"]
+        new_status=validated_data["status"],
+        user_id=current_user_id
     )
 
     if error:
@@ -533,6 +538,7 @@ def update_campaign_status(campaign_id):
 @roles_required(
     "Administrator",
     "Space Manager",
+    "Sales Executive",
     "Advertiser"
 )
 def delete_campaign(campaign_id):

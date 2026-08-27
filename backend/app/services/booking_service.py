@@ -196,10 +196,30 @@ class BookingService:
                 end_date=end_date
             )
 
+            # Ensure parent campaign exists for unified invoicing & tracking
+            if not campaign_id:
+                from app.models.campaign import Campaign
+                direct_camp = Campaign.query.filter_by(user_id=user_id, name="Direct Inventory Bookings").first()
+                if not direct_camp:
+                    direct_camp = Campaign(
+                        user_id=user_id,
+                        advertiser_id=advertiser_id,
+                        name="Direct Inventory Bookings",
+                        description="Umbrella campaign for direct space reservations.",
+                        start_date=start_date,
+                        end_date=end_date,
+                        budget=Decimal(str(total_price)),
+                        status="ACTIVE"
+                    )
+                    db.session.add(direct_camp)
+                    db.session.flush()
+                campaign_id = direct_camp.id
+
             # Step 4: Instantiate and save the booking record
             booking = Booking(
                 user_id=user_id,
                 advertiser_id=advertiser_id,
+                campaign_id=campaign_id,
                 space_id=space.id,
                 start_date=start_date,
                 end_date=end_date,
@@ -267,7 +287,7 @@ class BookingService:
 
             booking.status = new_status
 
-            # If confirming, officially lock the availability dates.
+            # If confirming, officially lock the availability dates and generate an Invoice.
             if new_status == BookingStatus.CONFIRMED and old_status != BookingStatus.CONFIRMED:
                 # Double-check availability before locking
                 is_available, conflict = AvailabilityService.check_availability(
@@ -285,6 +305,49 @@ class BookingService:
                     end_date=booking.end_date,
                     is_booked=True
                 )
+
+                # Auto-generate or link Invoice for this confirmed booking
+                from app.models.payment import Invoice, InvoiceStatus
+                from app.models.campaign import Campaign
+                from decimal import Decimal
+
+                # If booking has no campaign, find or create direct umbrella campaign
+                if not booking.campaign_id:
+                    direct_camp = Campaign.query.filter_by(user_id=booking.user_id, name="Direct Inventory Bookings").first()
+                    if not direct_camp:
+                        direct_camp = Campaign(
+                            user_id=booking.user_id,
+                            advertiser_id=booking.advertiser_id,
+                            name="Direct Inventory Bookings",
+                            description="Umbrella campaign for direct advertising space reservations.",
+                            start_date=booking.start_date,
+                            end_date=booking.end_date,
+                            budget=Decimal(str(booking.total_price)),
+                            status="ACTIVE"
+                        )
+                        db.session.add(direct_camp)
+                        db.session.flush()
+                    booking.campaign_id = direct_camp.id
+
+                existing_invoice = Invoice.query.filter_by(campaign_id=booking.campaign_id, status=InvoiceStatus.ISSUED).first()
+                if not existing_invoice:
+                    subtotal = Decimal(str(booking.total_price))
+                    tax = (subtotal * Decimal("0.16")).quantize(Decimal("0.01"))
+                    total_amount = subtotal + tax
+                    inv = Invoice(
+                        campaign_id=booking.campaign_id,
+                        advertiser_id=booking.advertiser_id,
+                        subtotal=subtotal,
+                        tax=tax,
+                        total_amount=total_amount,
+                        status=InvoiceStatus.ISSUED,
+                        due_date=booking.start_date
+                    )
+                    db.session.add(inv)
+                else:
+                    existing_invoice.subtotal = Decimal(str(existing_invoice.subtotal)) + Decimal(str(booking.total_price))
+                    existing_invoice.tax = (existing_invoice.subtotal * Decimal("0.16")).quantize(Decimal("0.01"))
+                    existing_invoice.total_amount = existing_invoice.subtotal + existing_invoice.tax
 
             # If cancelling a previously confirmed booking, release the availability block.
             elif new_status == BookingStatus.CANCELLED and old_status == BookingStatus.CONFIRMED:

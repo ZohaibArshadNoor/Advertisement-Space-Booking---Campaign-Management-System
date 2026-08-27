@@ -98,43 +98,38 @@ def category_to_dict(category):
 
 def space_to_dict(space):
     """
-    Converts an AdvertisingSpace model object into
-    JSON-safe data.
-
-    Related category and location information is included
-    because the frontend will normally need these details
-    when displaying inventory.
+    Converts an AdvertisingSpace model object into JSON-safe data.
     """
+    city_code = (space.location.city[:3] if space.location and space.location.city else "PAK").upper()
+    cat_name = space.category.name if space.category else ""
+    cat_code = "LED" if "LED" in cat_name else ("UNI" if "Unipole" in cat_name else ("TOT" if "Totem" in cat_name else "OOH"))
+    code = f"{city_code}-{cat_code}-{space.id:03d}"
+
+    rate_str = str(space.base_rate) if space.base_rate is not None else "0.00"
 
     return {
         "id": space.id,
-
         "name": space.name,
-
+        "code": code,
         "description": space.description,
-
-        "dimensions": space.dimensions,
-
-        # Decimal values are converted to strings to avoid
-        # JSON precision problems.
-        "base_rate": str(space.base_rate),
-
+        "dimensions": space.dimensions or "40x20 ft",
+        "base_rate": rate_str,
+        "daily_rate": rate_str,
+        "base_price": rate_str,
+        "base_price_per_day": rate_str,
         "is_active": space.is_active,
-
-        "created_at": space.created_at.isoformat(),
-
-        "updated_at": space.updated_at.isoformat(),
-
+        "status": "ACTIVE" if space.is_active else "MAINTENANCE",
+        "created_at": space.created_at.isoformat() if space.created_at else None,
+        "updated_at": space.updated_at.isoformat() if space.updated_at else None,
         "category": {
-            "id": space.category.id,
-            "name": space.category.name
+            "id": space.category.id if space.category else None,
+            "name": space.category.name if space.category else "Digital Screen"
         },
-
         "location": {
-            "id": space.location.id,
-            "name": space.location.name,
-            "city": space.location.city,
-            "address": space.location.address
+            "id": space.location.id if space.location else None,
+            "name": space.location.name if space.location else "Main Arterial",
+            "city": space.location.city if space.location else "Lahore",
+            "address": space.location.address if space.location else "Commercial Corridor"
         }
     }
 
@@ -151,6 +146,8 @@ def space_to_dict(space):
     "Administrator",
     "Sales Executive",
     "Space Manager",
+    "Creative Reviewer",
+    "Finance Officer",
     "Advertiser"
 )
 def get_locations():
@@ -621,6 +618,8 @@ def delete_location(location_id):
     "Administrator",
     "Sales Executive",
     "Space Manager",
+    "Creative Reviewer",
+    "Finance Officer",
     "Advertiser"
 )
 def get_space_categories():
@@ -1079,6 +1078,8 @@ def delete_space_category(category_id):
     "Administrator",
     "Sales Executive",
     "Space Manager",
+    "Creative Reviewer",
+    "Finance Officer",
     "Advertiser"
 )
 def get_advertising_spaces():
@@ -1253,6 +1254,8 @@ def get_advertising_spaces():
     "Administrator",
     "Sales Executive",
     "Space Manager",
+    "Creative Reviewer",
+    "Finance Officer",
     "Advertiser"
 )
 def get_advertising_space(space_id):
@@ -1361,6 +1364,54 @@ def create_advertising_space():
             "message": "Request body is required."
         }), 400
 
+    # 1. Resolve or dynamically create category if needed
+    category_id = data.get("category_id")
+    if not category_id and data.get("category_name"):
+        cat_name = data["category_name"].strip()
+        existing_cat = SpaceCategoryService.get_by_name(cat_name)
+        if not existing_cat:
+            existing_cat = SpaceCategoryService.create({"name": cat_name})
+        category_id = existing_cat.id
+        data["category_id"] = category_id
+
+    # 2. Resolve or dynamically create location if needed
+    location_id = data.get("location_id")
+    if not location_id and (data.get("location_name") or data.get("city")):
+        loc_name = data.get("location_name") or f"{data.get('city', 'Metropolitan')} Prime Corridor"
+        loc_city = data.get("city") or "Lahore"
+        loc_address = data.get("address") or f"Main Arterial Junction, {loc_city}"
+        existing_loc = Location.query.filter(
+            db.func.lower(Location.name) == loc_name.strip().lower(),
+            db.func.lower(Location.city) == loc_city.strip().lower()
+        ).first()
+        if not existing_loc:
+            existing_loc = LocationService.create({
+                "name": loc_name.strip(),
+                "city": loc_city.strip(),
+                "address": loc_address.strip()
+            })
+        location_id = existing_loc.id
+        data["location_id"] = location_id
+
+    # Fallback to first available category/location if still None
+    if not category_id:
+        first_cat = SpaceCategory.query.first()
+        if not first_cat:
+            first_cat = SpaceCategoryService.create({"name": "Digital LED Screen"})
+        category_id = first_cat.id
+        data["category_id"] = category_id
+
+    if not location_id:
+        first_loc = Location.query.first()
+        if not first_loc:
+            first_loc = LocationService.create({
+                "name": "Mall Road Arterial Junction",
+                "city": "Lahore",
+                "address": "Mall Road Junction, Lahore"
+            })
+        location_id = first_loc.id
+        data["location_id"] = location_id
+
     errors = AdvertisingSpaceCreateSchema().validate(data)
     if errors:
         return jsonify({
@@ -1368,17 +1419,17 @@ def create_advertising_space():
         }), 400
 
     # Ensure referenced category exists
-    category = SpaceCategoryService.get_by_id(data["category_id"])
+    category = SpaceCategoryService.get_by_id(category_id)
     if not category:
         return jsonify({
-            "message": f"SpaceCategory with ID {data['category_id']} does not exist."
+            "message": f"SpaceCategory with ID {category_id} does not exist."
         }), 400
 
     # Ensure referenced location exists
-    location = LocationService.get_by_id(data["location_id"])
+    location = LocationService.get_by_id(location_id)
     if not location:
         return jsonify({
-            "message": f"Location with ID {data['location_id']} does not exist."
+            "message": f"Location with ID {location_id} does not exist."
         }), 400
 
     space = AdvertisingSpaceService.create(data)

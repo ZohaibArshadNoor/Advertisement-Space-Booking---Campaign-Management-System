@@ -24,9 +24,9 @@ def audit_to_dict(log):
     }
 
 
-# 1. LIST AUDIT LOGS (Admin Only)
+# 1. LIST AUDIT LOGS (Admin or audit.view permission)
 @audit_logs_bp.get("")
-@roles_required("Administrator")
+@roles_required("Administrator", permissions="audit.view")
 def get_audit_logs():
     """
     List system audit logs with pagination and filters.
@@ -94,9 +94,9 @@ def get_audit_logs():
     }), 200
 
 
-# 2. GET SINGLE AUDIT LOG (Admin Only)
+# 2. GET SINGLE AUDIT LOG (Admin or audit.view permission)
 @audit_logs_bp.get("/<int:log_id>")
-@roles_required("Administrator")
+@roles_required("Administrator", permissions="audit.view")
 def get_audit_log(log_id):
     """
     Get detailed information about a single audit record.

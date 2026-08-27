@@ -302,13 +302,14 @@ class AdvertisingSpaceService:
         Creates a new advertising space.
         """
 
+        rate = data.get("base_rate") or data.get("daily_rate")
         space = AdvertisingSpace(
             category_id=data["category_id"],
             location_id=data["location_id"],
             name=data["name"].strip(),
             description=data.get("description"),
             dimensions=data.get("dimensions"),
-            base_rate=data["base_rate"]
+            base_rate=rate
         )
 
         db.session.add(space)
@@ -345,18 +346,18 @@ class AdvertisingSpaceService:
             "is_active": space.is_active
         }
 
+        if "base_rate" in data:
+            space.base_rate = data["base_rate"]
+        elif "daily_rate" in data:
+            space.base_rate = data["daily_rate"]
+
         for field, value in data.items():
-
-            # Prevent accidental leading or trailing spaces
-            # in the advertising space name.
-            if field == "name":
+            if field in ["base_rate", "daily_rate", "code", "traffic_count", "resolution", "status", "category_name", "location_name", "city", "address"]:
+                continue
+            if field == "name" and isinstance(value, str):
                 value = value.strip()
-
-            setattr(
-                space,
-                field,
-                value
-            )
+            if hasattr(space, field):
+                setattr(space, field, value)
 
         db.session.commit()
 

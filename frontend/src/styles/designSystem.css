@@ -1323,3 +1323,36 @@ h6 > svg {
   }
 }
 
+/* ── Notification Items Theme Styling ─────────────────────────────────────── */
+.notification-item {
+  background-color: var(--color-bg-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.notification-item.notification-read {
+  background-color: var(--color-bg-surface) !important;
+}
+
+.notification-item.notification-unread {
+  background-color: var(--color-brand-50, rgba(37, 99, 235, 0.08)) !important;
+  border-left: 3px solid var(--color-brand-500) !important;
+}
+
+[data-theme='dark'] .notification-item.notification-read {
+  background-color: #111726 !important;
+  border-color: #1e293b !important;
+}
+
+[data-theme='dark'] .notification-item.notification-unread {
+  background-color: rgba(37, 99, 235, 0.16) !important;
+  border-color: #1e293b !important;
+}
+
+[data-theme='dark'] .list-group-item {
+  background-color: #111726 !important;
+  border-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+

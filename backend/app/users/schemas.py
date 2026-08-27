@@ -1,12 +1,11 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, EXCLUDE, post_load
 
 
 # Schema used when an Administrator creates a new user.
 # All fields defined here are required unless specified otherwise.
 class CreateUserSchema(Schema):
-    """
-    Validates user creation payload by Administrator.
-    """
+    class Meta:
+        unknown = EXCLUDE
 
     # User's display/full name.
     # Must contain between 2 and 120 characters.
@@ -35,9 +34,8 @@ class CreateUserSchema(Schema):
 # Schema used when an Administrator updates an existing user.
 # All fields are optional because the Administrator may update only specific fields.
 class UpdateUserSchema(Schema):
-    """
-    Validates user update payload.
-    """
+    class Meta:
+        unknown = EXCLUDE
 
     # Updated user name.
     name = fields.Str(validate=validate.Length(min=2, max=120))
@@ -51,9 +49,8 @@ class UpdateUserSchema(Schema):
 
 # Schema used to activate or deactivate a user account.
 class UpdateUserStatusSchema(Schema):
-    """
-    Validates account activation/deactivation payload.
-    """
+    class Meta:
+        unknown = EXCLUDE
 
     # True = account active, False = account deactivated.
     is_active = fields.Boolean(required=True)
@@ -64,9 +61,15 @@ class AdminResetPasswordSchema(Schema):
     """
     Validates admin password reset payload.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     # New password must contain between 8 and 128 characters.
     new_password = fields.Str(
-        required=True,
+        required=False,
+        validate=validate.Length(min=8, max=128)
+    )
+    password = fields.Str(
+        required=False,
         validate=validate.Length(min=8, max=128)
     )

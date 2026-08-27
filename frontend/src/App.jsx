@@ -9,6 +9,8 @@ import AppShell from './layouts/AppShell';
 import LoginPage from './pages/LoginPage';
 import Register from './pages/Register';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -18,7 +20,6 @@ import LandingPage from './pages/LandingPage';
 // Operational & Management Pages
 import DashboardPage from './features/dashboard/pages/DashboardPage';
 import UsersPage from './features/users/pages/UsersPage';
-import RolesPage from './features/roles/pages/RolesPage';
 import SpacesPage from './features/spaces/pages/SpacePage';
 import AvailabilityPage from './features/availability/pages/AvailabilityPage';
 import Campaigns from './pages/Campaigns';
@@ -41,6 +42,8 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/unauthorized" element={<ForbiddenPage />} />
 
             {/* Authenticated Application Shell */}
@@ -61,7 +64,6 @@ function App() {
                 {/* Administrator Dedicated Routes */}
                 <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
                   <Route path="/users" element={<UsersPage />} />
-                  <Route path="/roles" element={<RolesPage />} />
                   <Route path="/audit" element={<AuditLogsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/admin" element={<Navigate to="/users" replace />} />

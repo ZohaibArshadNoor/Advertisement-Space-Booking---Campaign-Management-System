@@ -68,7 +68,7 @@ export const SpaceDetailsDrawer = ({
           </div>
           <div>
             <div className="text-white-50 text-xs">Standard Commercial Daily Rate</div>
-            <h3 className="fw-bold mb-0 text-white">Rs. {parseFloat(space.base_price_per_day || space.daily_rate || space.base_price || 45000).toLocaleString()}<span className="fs-6 fw-normal text-white-50"> / day</span></h3>
+            <h3 className="fw-bold mb-0 text-white">Rs. {parseFloat(space.base_rate || space.daily_rate || space.base_price_per_day || space.base_price || 0).toLocaleString()}<span className="fs-6 fw-normal text-white-50"> / day</span></h3>
           </div>
         </div>
 

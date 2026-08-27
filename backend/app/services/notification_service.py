@@ -37,6 +37,7 @@ class NotificationService:
         page: int = 1,
         per_page: int = 20,
         unread_only: bool = False,
+        is_read: bool = None,
         notification_type: str = None,
         search: str = None,
         start_date = None,
@@ -49,7 +50,9 @@ class NotificationService:
         """
         query = Notification.query.filter_by(user_id=user_id)
 
-        if unread_only:
+        if is_read is not None:
+            query = query.filter_by(is_read=is_read)
+        elif unread_only:
             query = query.filter_by(is_read=False)
 
         if notification_type:

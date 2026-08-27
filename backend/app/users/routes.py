@@ -7,7 +7,9 @@ from app.extensions import db
 from app.models.role import Role
 from app.models.user import User
 from app.models.audit import AuditAction
+from app.models.notification import NotificationType
 from app.services.audit_service import AuditService
+from app.services.notification_service import NotificationService
 from app.users import users_bp
 from app.users.schemas import (
     CreateUserSchema,
@@ -227,6 +229,17 @@ def create_user():
                 "role": user.role.name if user.role else role.name,
                 "is_active": user.is_active
             }
+        )
+    except Exception:
+        pass
+
+    try:
+        NotificationService.send_notification(
+            user_id=user.id,
+            title="Welcome to AdFlow Enterprise OOH",
+            message=f"Welcome {user.name}! Your account has been provisioned with the {user.role.name} role.",
+            notification_type=NotificationType.SYSTEM,
+            link="/dashboard"
         )
     except Exception:
         pass
@@ -459,6 +472,18 @@ def update_user_status(user_id):
     except Exception:
         pass
 
+    try:
+        status_word = "activated" if user.is_active else "deactivated"
+        NotificationService.send_notification(
+            user_id=user.id,
+            title=f"Account Status Changed: {status_word.capitalize()}",
+            message=f"Your account status was {status_word} by an Administrator.",
+            notification_type=NotificationType.SYSTEM,
+            link="/profile"
+        )
+    except Exception:
+        pass
+
     return jsonify({
         "success": True,
         "message": (
@@ -537,7 +562,14 @@ def admin_reset_password(user_id):
             "errors": err.messages
         }), 400
 
-    user.set_password(data["new_password"])
+    new_pwd = data.get("new_password") or data.get("password")
+    if not new_pwd:
+        return jsonify({
+            "success": False,
+            "message": "Password is required (minimum 8 characters)."
+        }), 400
+
+    user.set_password(new_pwd)
     db.session.commit()
 
     try:
@@ -547,6 +579,17 @@ def admin_reset_password(user_id):
             entity_id=user.id,
             user_id=current_user_id,
             new_values={"event": "ADMIN_PASSWORD_RESET", "email": user.email, "name": user.name}
+        )
+    except Exception:
+        pass
+
+    try:
+        NotificationService.send_notification(
+            user_id=user.id,
+            title="Security Alert: Password Reset",
+            message="Your account password has been updated by an Administrator. If you did not request this change, contact system support immediately.",
+            notification_type=NotificationType.SYSTEM,
+            link="/profile"
         )
     except Exception:
         pass
@@ -679,7 +722,10 @@ def update_role(role_id):
 
     data = request.get_json() or {}
     if "permissions" in data:
-        role.permissions = data["permissions"]
+        role.permissions = dict(data["permissions"])
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(role, "permissions")
+
     if "name" in data and role.name not in ["Administrator", "Advertiser"]: # Protect core role names
         role.name = data["name"]
     

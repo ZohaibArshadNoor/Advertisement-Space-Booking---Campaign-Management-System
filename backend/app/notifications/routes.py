@@ -92,6 +92,13 @@ def get_notifications():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 20, type=int)
     unread_only = request.args.get("unread_only", "false").lower() == "true"
+    is_read_param = request.args.get("is_read")
+    is_read = None
+    if is_read_param is not None:
+        is_read = is_read_param.lower() in ["true", "1"]
+    elif unread_only:
+        is_read = False
+
     notification_type = request.args.get("type")
     search = request.args.get("search")
     start_date = request.args.get("start_date")
@@ -110,6 +117,7 @@ def get_notifications():
         page=page,
         per_page=per_page,
         unread_only=unread_only,
+        is_read=is_read,
         notification_type=notification_type,
         search=search,
         start_date=start_date,
@@ -157,6 +165,8 @@ def get_unread_count():
     count = NotificationService.get_unread_count(current_user_id)
 
     return jsonify({
+        "success": True,
+        "count": count,
         "unread_count": count
     }), 200
 

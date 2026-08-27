@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { campaignService } from '../services/campaignService';
 import { extractErrorMessage } from '../utils/errorHandler';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -17,10 +19,19 @@ import {
   Filter,
   RefreshCw,
   Clock,
-  Edit
+  Edit,
+  Layers,
+  UploadCloud,
+  ChevronRight
 } from 'lucide-react';
 
 export const Campaigns = () => {
+  const { user } = useAuth();
+  const isStaffApprover =
+    user?.role === 'Administrator' ||
+    user?.role === 'Sales Executive' ||
+    user?.role === 'Space Manager';
+
   const [campaigns, setCampaigns] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(false);
@@ -308,33 +319,75 @@ export const Campaigns = () => {
                       </td>
 
                       <td className="text-end">
-                        <div className="d-inline-flex align-items-center gap-1.5">
-                          <select
-                            className="form-select-ui"
-                            style={{
-                              width: 'auto',
-                              fontSize: '0.75rem',
-                              padding: '0.25rem 0.5rem',
-                              height: '28px',
-                            }}
-                            value={c.status}
-                            onChange={(e) => handleStatusChange(c.id, e.target.value)}
-                          >
-                            <option value="DRAFT">Draft</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="PAUSED">Pause</option>
-                            <option value="COMPLETED">Complete</option>
-                            <option value="CANCELLED">Cancel</option>
-                          </select>
+                        <div className="d-inline-flex align-items-center justify-content-end gap-1.5" style={{ minWidth: '185px' }}>
+                          {isStaffApprover ? (
+                            <>
+                              <select
+                                className="form-select-ui"
+                                style={{
+                                  width: 'auto',
+                                  fontSize: '0.75rem',
+                                  padding: '0.25rem 0.5rem',
+                                  height: '28px',
+                                }}
+                                value={c.status}
+                                onChange={(e) => handleStatusChange(c.id, e.target.value)}
+                                title="Change campaign status"
+                              >
+                                <option value="DRAFT">Draft</option>
+                                <option value="ACTIVE">Active (Approved)</option>
+                                <option value="PAUSED">Pause</option>
+                                <option value="COMPLETED">Complete</option>
+                                <option value="CANCELLED">Cancel</option>
+                              </select>
 
-                          <button
-                            type="button"
-                            className="btn-ui-icon text-danger"
-                            onClick={() => handleDelete(c.id)}
-                            title="Delete Campaign"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                              <button
+                                type="button"
+                                className="btn-ui-icon text-danger"
+                                onClick={() => handleDelete(c.id)}
+                                title="Delete Campaign"
+                                style={{ width: '28px', height: '28px' }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <Link
+                                to={`/creatives?campaign_id=${c.id}`}
+                                className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center justify-content-center gap-1"
+                                style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem', minWidth: '68px' }}
+                                title="Upload media artwork for this campaign"
+                              >
+                                <UploadCloud size={12} />
+                                <span>Media</span>
+                              </Link>
+
+                              <Link
+                                to={`/spaces?campaign_id=${c.id}`}
+                                className="btn-ui btn-ui-primary btn-ui-sm d-inline-flex align-items-center justify-content-center gap-1"
+                                style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem', minWidth: '64px' }}
+                                title="Book advertising inventory for this campaign"
+                              >
+                                <Layers size={12} />
+                                <span>Book</span>
+                              </Link>
+
+                              {c.status === 'DRAFT' ? (
+                                <button
+                                  type="button"
+                                  className="btn-ui-icon text-danger"
+                                  onClick={() => handleDelete(c.id)}
+                                  title="Delete Draft Campaign"
+                                  style={{ width: '28px', height: '28px' }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              ) : (
+                                <div style={{ width: '28px', height: '28px' }} />
+                              )}
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { notificationsApi } from '../notificationsApi';
 import EmptyState from '../../../components/ui/EmptyState';
 import Pagination from '../../../components/ui/Pagination';
@@ -17,7 +18,9 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
-  Clock
+  Clock,
+  ExternalLink,
+  ShieldAlert
 } from 'lucide-react';
 
 const renderTypeIcon = (type) => {
@@ -37,8 +40,10 @@ const renderTypeIcon = (type) => {
 };
 
 export const NotificationsPage = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('ALL'); // 'ALL' | 'UNREAD' | 'READ'
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -59,6 +64,9 @@ export const NotificationsPage = () => {
 
       const data = await notificationsApi.getNotifications(params);
       setNotifications(data.notifications || data.items || []);
+      if (data.unread_count !== undefined) {
+        setUnreadCount(data.unread_count);
+      }
       setPagination(data.pagination || { page: 1, pages: 1, total: (data.notifications || []).length });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load notifications.');
@@ -70,16 +78,22 @@ export const NotificationsPage = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchNotifications();
-    }, 250);
+    }, 200);
     return () => clearTimeout(timer);
   }, [page, filter, categoryFilter, search]);
 
-  const handleMarkAsRead = async (id) => {
+  const handleMarkAsRead = async (id, e) => {
+    if (e) e.stopPropagation();
     try {
       await notificationsApi.markAsRead(id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      if (filter === 'UNREAD') {
+        // If viewing unread only, re-fetch or filter out
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+      }
     } catch (err) {
       setError('Failed to mark notification as read.');
     }
@@ -89,15 +103,21 @@ export const NotificationsPage = () => {
     try {
       await notificationsApi.markAllAsRead();
       setSuccessMsg('All notifications marked as read.');
+      setUnreadCount(0);
       fetchNotifications();
     } catch (err) {
       setError('Failed to update notifications.');
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, e) => {
+    if (e) e.stopPropagation();
     try {
       await notificationsApi.deleteNotification(id);
+      const deleted = notifications.find((n) => n.id === id);
+      if (deleted && !deleted.is_read) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       setSuccessMsg('Notification deleted.');
     } catch (err) {
@@ -105,7 +125,14 @@ export const NotificationsPage = () => {
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const handleNotificationClick = (n) => {
+    if (!n.is_read) {
+      handleMarkAsRead(n.id);
+    }
+    if (n.link) {
+      navigate(n.link);
+    }
+  };
 
   return (
     <div>
@@ -229,6 +256,7 @@ export const NotificationsPage = () => {
             <option value="CAMPAIGN">Campaigns</option>
             <option value="CREATIVE">Creatives</option>
             <option value="INVOICE">Invoices &amp; Billing</option>
+            <option value="PAYMENT">Payments</option>
             <option value="SYSTEM">System Alerts</option>
           </select>
         </div>
@@ -243,9 +271,21 @@ export const NotificationsPage = () => {
           </div>
         ) : notifications.length === 0 ? (
           <EmptyState
-            icon={Bell}
-            title="You are all caught up!"
-            description="There are no unread notifications or system alerts for your account."
+            icon={filter === 'UNREAD' ? CheckCheck : filter === 'READ' ? Inbox : Bell}
+            title={
+              filter === 'UNREAD'
+                ? 'No unread notifications'
+                : filter === 'READ'
+                ? 'No read notifications'
+                : 'No notifications found'
+            }
+            description={
+              filter === 'UNREAD'
+                ? 'You are all caught up with your latest operational alerts.'
+                : filter === 'READ'
+                ? 'You have not archived or read any notifications yet.'
+                : 'There are currently no alerts matching your active filter criteria.'
+            }
           />
         ) : (
           <div>
@@ -253,72 +293,88 @@ export const NotificationsPage = () => {
               {notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`list-group-item p-3 d-flex align-items-start justify-content-between gap-3 border-bottom ${
-                    !n.is_read ? 'bg-primary-subtle bg-opacity-15' : 'bg-surface'
+                  onClick={() => handleNotificationClick(n)}
+                  className={`notification-item p-3 d-flex align-items-start justify-content-between gap-3 border-bottom ${
+                    !n.is_read ? 'notification-unread' : 'notification-read'
                   }`}
+                  style={{
+                    cursor: n.link ? 'pointer' : 'default',
+                  }}
                 >
                   <div className="d-flex gap-3 align-items-start flex-grow-1">
                     <div className="p-2 rounded bg-subtle border flex-shrink-0 mt-0.5">
                       {renderTypeIcon(n.type)}
                     </div>
                     <div>
-                      <div className="d-flex align-items-center gap-2 mb-0.5">
+                      <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
                         <h4 className="fw-bold text-xs text-primary-emphasis mb-0">
                           {n.title}
                         </h4>
                         {!n.is_read && (
-                          <span className="badge bg-primary text-xs" style={{ fontSize: '0.65rem' }}>
+                          <span className="badge bg-primary text-xs px-1.5 py-0.5" style={{ fontSize: '0.65rem' }}>
                             New
                           </span>
                         )}
-                        <span className="badge bg-subtle text-muted border text-xs" style={{ fontSize: '0.65rem' }}>
+                        <span className="badge bg-subtle text-muted border text-xs px-1.5 py-0.5 font-monospace" style={{ fontSize: '0.65rem' }}>
                           {n.type || 'SYSTEM'}
                         </span>
                       </div>
-                      <p className="text-xs text-secondary mb-1">
+                      <p className="text-xs text-secondary mb-1.5" style={{ lineHeight: 1.45 }}>
                         {n.message}
                       </p>
-                      <div className="d-flex align-items-center gap-1 text-muted" style={{ fontSize: '0.7rem' }}>
-                        <Clock size={11} />
-                        <span>
-                          {n.created_at ? new Date(n.created_at).toLocaleString() : 'Just now'}
-                        </span>
+                      <div className="d-flex align-items-center gap-3 text-muted" style={{ fontSize: '0.72rem' }}>
+                        <div className="d-flex align-items-center gap-1">
+                          <Clock size={11} />
+                          <span>
+                            {n.created_at ? new Date(n.created_at).toLocaleString() : 'Just now'}
+                          </span>
+                        </div>
+                        {n.link && (
+                          <span className="text-primary d-inline-flex align-items-center gap-1 fw-medium">
+                            <span>Open details</span>
+                            <ExternalLink size={10} />
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="d-flex align-items-center gap-1 flex-shrink-0">
+                  <div className="d-flex align-items-center gap-1.5 flex-shrink-0 ms-2">
                     {!n.is_read && (
                       <button
                         type="button"
-                        onClick={() => handleMarkAsRead(n.id)}
-                        className="btn-ui btn-ui-ghost btn-ui-sm"
+                        onClick={(e) => handleMarkAsRead(n.id, e)}
+                        className="btn-ui btn-ui-ghost btn-ui-sm d-inline-flex align-items-center gap-1"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
                         title="Mark as read"
                       >
-                        <CheckCheck size={14} className="text-primary" />
-                        <span className="d-none d-md-inline text-xs">Read</span>
+                        <CheckCheck size={13} className="text-primary" />
+                        <span className="d-none d-sm-inline">Read</span>
                       </button>
                     )}
                     <button
                       type="button"
-                      onClick={() => handleDelete(n.id)}
+                      onClick={(e) => handleDelete(n.id, e)}
                       className="btn-ui-icon text-danger"
-                      title="Delete alert"
+                      title="Delete notification"
+                      style={{ width: '28px', height: '28px' }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
 
-            <Pagination
-              currentPage={page}
-              totalPages={pagination.pages || 1}
-              totalRecords={pagination.total || notifications.length}
-              pageSize={15}
-              onPageChange={(p) => setPage(p)}
-            />
+            <div className="p-3 border-top bg-subtle">
+              <Pagination
+                currentPage={page}
+                totalPages={pagination.pages || 1}
+                totalRecords={pagination.total || notifications.length}
+                pageSize={15}
+                onPageChange={(p) => setPage(p)}
+              />
+            </div>
           </div>
         )}
       </div>

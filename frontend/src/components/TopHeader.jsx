@@ -22,7 +22,6 @@ import {
 const ROUTE_LABELS = {
   dashboard: 'Dashboard',
   users: 'User Management',
-  roles: 'Role Permissions',
   spaces: 'Advertising Spaces',
   availability: 'Availability Calendar',
   campaigns: 'Campaigns',
@@ -45,7 +44,7 @@ const DEMO_ROLES = [
 ];
 
 export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {
-  const { user, loginWithToken, logout } = useAuth();
+  const { user, login, demoSwitch, loginWithToken, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -78,41 +77,38 @@ export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch unread count & recent notifications
-  const fetchUnread = async () => {
-    try {
-      const res = await notificationsApi.getUnreadCount();
-      if (res && res.count !== undefined) {
-        setUnreadCount(res.count);
-      }
-    } catch (err) {
-      // quiet fallback
-    }
-  };
-
-  const fetchRecent = async () => {
-    setLoadingNotifications(true);
-    try {
-      const res = await notificationsApi.getNotifications({ page: 1, per_page: 5, unread_only: false });
-      setRecentNotifications(res.notifications || []);
-    } catch (err) {
-      // quiet fallback
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
-
+  // Fetch unread notifications count for bell badge
   useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const data = await notificationsApi.getUnreadCount();
+        if (data.unread_count !== undefined && setUnreadCount) {
+          setUnreadCount(data.unread_count);
+        }
+      } catch (err) {
+        // Silently ignore background polling errors
+      }
+    };
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [setUnreadCount]);
 
-  const handleToggleNotifications = () => {
-    if (!showNotifications) {
-      fetchRecent();
+  // Load preview stream when opening notification drawer
+  const handleToggleNotifications = async () => {
+    const nextState = !showNotifications;
+    setShowNotifications(nextState);
+    if (nextState) {
+      setLoadingNotifications(true);
+      try {
+        const data = await notificationsApi.getNotifications({ per_page: 5 });
+        setRecentNotifications(data.notifications || data.items || []);
+      } catch (err) {
+        console.error('Failed to load top notification drawer', err);
+      } finally {
+        setLoadingNotifications(false);
+      }
     }
-    setShowNotifications(!showNotifications);
   };
 
   const handleMarkAllRead = async () => {
@@ -127,21 +123,21 @@ export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {
     }
   };
 
-  // Quick Demo Persona Switcher
-  const handleQuickSwitchRole = (demoUser) => {
-    // Re-login / simulate user persona switch
-    loginWithToken(
-      localStorage.getItem('access_token') || 'demo-token',
-      {
-        id: user?.id || 1,
-        name: demoUser.name,
-        email: demoUser.email,
-        role: demoUser.role,
-        is_active: true,
-      }
-    );
+  // Quick Demo Persona Switcher (obtains real role-scoped JWT token)
+  const handleQuickSwitchRole = async (demoUser) => {
     setShowRoleSwitcher(false);
-    navigate('/dashboard');
+    try {
+      if (demoSwitch) {
+        await demoSwitch({ role: demoUser.role, email: demoUser.email });
+      } else {
+        await login({ email: demoUser.email, password: 'password123' });
+      }
+      navigate('/dashboard');
+      // Reload page to refresh all active queries and permissions
+      window.location.href = '/dashboard';
+    } catch (err) {
+      console.error('Demo persona switch failed:', err);
+    }
   };
 
   // Build breadcrumbs from path
@@ -238,20 +234,39 @@ export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {
             <Bell size={18} />
             {unreadCount > 0 && (
               <span
-                className="position-absolute top-1 end-1 p-1 bg-danger border border-light rounded-circle"
-                style={{ width: '8px', height: '8px' }}
-              />
+                className="position-absolute badge rounded-pill bg-danger d-flex align-items-center justify-content-center text-white font-monospace"
+                style={{
+                  top: '2px',
+                  right: '2px',
+                  fontSize: '0.62rem',
+                  fontWeight: 700,
+                  minWidth: '16px',
+                  height: '16px',
+                  padding: '0 3px',
+                  lineHeight: 1,
+                  boxShadow: '0 0 0 2px var(--color-bg-surface, #1e293b)',
+                  zIndex: 2,
+                }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
             )}
           </button>
 
           {showNotifications && (
             <div
-              className="card-enterprise position-absolute end-0 mt-2 shadow-lg"
-              style={{ width: '340px', zIndex: 100 }}
+              className="card-enterprise position-absolute end-0 mt-2 shadow-lg border"
+              style={{
+                width: '380px',
+                zIndex: 1050,
+                borderRadius: '8px',
+                overflow: 'hidden',
+                backgroundColor: 'var(--color-bg-surface, #ffffff)',
+              }}
             >
-              <div className="card-header-enterprise py-2 px-3">
+              <div className="card-header-enterprise py-2.5 px-3 d-flex align-items-center justify-content-between border-bottom">
                 <div className="d-flex align-items-center gap-2">
-                  <span className="fw-bold text-sm">Notifications</span>
+                  <span className="fw-bold text-sm text-primary-emphasis">Notifications</span>
                   {unreadCount > 0 && (
                     <span className="badge bg-primary text-xs rounded-pill">
                       {unreadCount} unread
@@ -262,37 +277,39 @@ export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {
                   <button
                     type="button"
                     onClick={handleMarkAllRead}
-                    className="btn btn-link p-0 text-xs text-decoration-none"
+                    className="btn btn-link p-0 text-xs text-decoration-none text-primary fw-medium"
                   >
-                    Mark all read
+                    Mark all as read
                   </button>
                 )}
               </div>
 
-              <div className="p-0 overflow-y-auto" style={{ maxHeight: '300px' }}>
+              <div className="p-0 overflow-y-auto" style={{ maxHeight: '340px' }}>
                 {loadingNotifications ? (
-                  <div className="text-center py-4 text-muted small">Loading...</div>
+                  <div className="text-center py-4 text-muted text-xs">Loading notifications...</div>
                 ) : recentNotifications.length === 0 ? (
-                  <div className="text-center py-4 text-muted small">
+                  <div className="text-center py-4 text-muted text-xs">
                     No recent notifications
                   </div>
                 ) : (
                   recentNotifications.map((n) => (
                     <div
                       key={n.id}
-                      className={`p-2.5 border-bottom text-start ${
-                        !n.is_read ? 'bg-primary-subtle bg-opacity-25' : ''
-                      }`}
+                      className="p-3 border-bottom text-start position-relative transition-all"
+                      style={{
+                        backgroundColor: !n.is_read ? 'var(--color-bg-subtle, rgba(37, 99, 235, 0.06))' : 'transparent',
+                        borderLeft: !n.is_read ? '3px solid var(--color-primary, #2563eb)' : '3px solid transparent',
+                      }}
                     >
-                      <div className="d-flex justify-content-between align-items-start">
-                        <span className="fw-semibold text-xs text-primary-emphasis">
+                      <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
+                        <span className="fw-semibold text-xs text-primary-emphasis" style={{ lineHeight: 1.3 }}>
                           {n.title}
                         </span>
-                        <span className="text-muted" style={{ fontSize: '0.65rem' }}>
+                        <span className="text-muted flex-shrink-0" style={{ fontSize: '0.7rem' }}>
                           {n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
-                      <p className="text-xs text-secondary mb-0 mt-0.5 line-clamp-2">
+                      <p className="text-xs text-secondary mb-0 line-clamp-2" style={{ lineHeight: 1.4, fontSize: '0.78rem' }}>
                         {n.message}
                       </p>
                     </div>
@@ -300,13 +317,13 @@ export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {
                 )}
               </div>
 
-              <div className="p-2 border-top text-center bg-subtle">
+              <div className="p-2.5 border-top text-center bg-subtle">
                 <Link
                   to="/notifications"
                   onClick={() => setShowNotifications(false)}
-                  className="text-xs fw-semibold text-primary text-decoration-none d-flex align-items-center justify-content-center gap-1"
+                  className="text-xs fw-semibold text-primary text-decoration-none d-flex align-items-center justify-content-center gap-1.5"
                 >
-                  <span>View all notifications</span>
+                  <span>View all system notifications</span>
                   <ExternalLink size={12} />
                 </Link>
               </div>

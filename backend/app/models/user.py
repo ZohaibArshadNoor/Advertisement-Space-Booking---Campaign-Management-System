@@ -109,6 +109,18 @@ class User(UserMixin, db.Model):
             password
         )
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "role": self.role.name if self.role else "Advertiser",
+            "permissions": self.role.permissions if self.role and self.role.permissions else {},
+            "advertiser_id": self.advertiser_id,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
     def __repr__(self):
         """
         Useful representation when debugging.

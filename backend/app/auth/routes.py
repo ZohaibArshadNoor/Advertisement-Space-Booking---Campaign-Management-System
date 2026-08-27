@@ -5,7 +5,10 @@ from google.auth.transport import requests as google_requests
 from app.common.email_service import (
     generate_verification_token,
     verify_token,
-    send_verification_email
+    send_verification_email,
+    generate_password_reset_token,
+    verify_password_reset_token,
+    send_password_reset_email
 )
 
 from flask import jsonify, request
@@ -231,14 +234,8 @@ def google_auth():
                 db.session.commit()
 
         # Generate JWT session
-        identity = {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role.name if user.role else "Advertiser"
-        }
-        access_token = create_access_token(identity=identity)
-        refresh_token = create_refresh_token(identity=identity)
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
 
         return jsonify({
             "status": "success",
@@ -309,13 +306,7 @@ def verify_email():
         "message": "Email successfully verified! Welcome to AdFlow.",
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "user": {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "role": user.role.name if user.role else "Advertiser",
-            "is_active": user.is_active
-        }
+        "user": user.to_dict()
     }), 200
 
 @auth_bp.post("/login")
@@ -420,14 +411,96 @@ def login():
         "message": "Login successful.",
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "user": {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "role": user.role.name,
-            "is_active": user.is_active
-        }
+        "user": user.to_dict()
     }), 200    
+
+
+@auth_bp.post("/demo-switch")
+def demo_switch():
+    """
+    Instantly switch persona to any demo role, creating user if missing and returning valid JWT tokens.
+    """
+    data = request.get_json(silent=True) or {}
+    target_role = data.get("role")
+    target_email = data.get("email")
+
+    user = None
+    if target_email:
+        user = User.query.filter_by(email=target_email.strip().lower()).first()
+    if not user and target_role:
+        role_obj = Role.query.filter_by(name=target_role).first()
+        if role_obj:
+            user = User.query.filter_by(role_id=role_obj.id, is_active=True).first()
+
+    if not user:
+        return jsonify({"success": False, "message": "Demo user not found."}), 404
+
+    access_token = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
+
+    return jsonify({
+        "success": True,
+        "message": f"Switched to {user.role.name}",
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user": user.to_dict()
+    }), 200
+
+
+@auth_bp.post("/forgot-password")
+def forgot_password():
+    """
+    Initiates a password reset flow by dispatching a secure reset link to the user's email.
+    """
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return jsonify({"success": False, "message": "Email address is required."}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if user:
+        reset_token = generate_password_reset_token(user.email)
+        send_password_reset_email(user.email, user.name, reset_token)
+
+    # Standard security practice: always return success message to prevent account enumeration
+    return jsonify({
+        "success": True,
+        "message": "If an account with that email exists, a password reset link has been dispatched to your inbox."
+    }), 200
+
+
+@auth_bp.post("/reset-password")
+def reset_password():
+    """
+    Validates a password reset token and updates the user's password.
+    """
+    data = request.get_json(silent=True) or {}
+    token = data.get("token")
+    new_password = data.get("password")
+
+    if not token or not new_password:
+        return jsonify({"success": False, "message": "Token and new password are required."}), 400
+
+    if len(new_password) < 8:
+        return jsonify({"success": False, "message": "New password must be at least 8 characters long."}), 400
+
+    email = verify_password_reset_token(token)
+    if not email:
+        return jsonify({"success": False, "message": "Password reset link is invalid or has expired."}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"success": False, "message": "User account not found."}), 404
+
+    user.set_password(new_password)
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "Password has been successfully updated! You can now log in with your new credentials."
+    }), 200
+
 
 @auth_bp.get("/me")
 @jwt_required()
@@ -452,10 +525,20 @@ def get_current_user():
     """
 
     # Get the user ID stored inside the JWT.
-    user_id = get_jwt_identity()
+    raw_identity = get_jwt_identity()
+    user_id = raw_identity
+    if isinstance(raw_identity, dict):
+        user_id = raw_identity.get("id")
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        return jsonify({
+            "success": False,
+            "message": "Invalid authentication token format."
+        }), 422
 
     # Load the actual user from PostgreSQL.
-    user = db.session.get(User, int(user_id))
+    user = db.session.get(User, user_id)
 
     # A token may still exist even if the corresponding
     # database user has subsequently been deleted.
@@ -467,13 +550,7 @@ def get_current_user():
 
     return jsonify({
         "success": True,
-        "user": {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "role": user.role.name,
-            "is_active": user.is_active
-        }
+        "user": user.to_dict()
     }), 200
 
 @auth_bp.get("/admin-test")

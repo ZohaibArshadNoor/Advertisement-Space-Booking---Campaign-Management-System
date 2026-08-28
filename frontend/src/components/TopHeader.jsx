@@ -167,51 +167,8 @@ export const TopHeader = ({ onMobileToggle, unreadCount, setUnreadCount }) => {
         </nav>
       </div>
 
-      {/* Right: Actions, Role Switcher, Theme, Notifications, User */}
+      {/* Right: Actions, Theme, Notifications, User */}
       <div className="header-right">
-        {/* Quick Persona / Role Switcher for Testing */}
-        <div className="position-relative" ref={roleMenuRef}>
-          <button
-            type="button"
-            className="btn-ui btn-ui-secondary btn-ui-sm d-none d-md-inline-flex align-items-center gap-1.5"
-            onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
-            title="Switch Testing Persona"
-          >
-            <ShieldCheck size={14} className="text-primary" />
-            <span className="text-xs">{user?.role || 'Switch Role'}</span>
-            <ChevronDown size={12} className="text-muted" />
-          </button>
-
-          {showRoleSwitcher && (
-            <div
-              className="card-enterprise position-absolute end-0 mt-2 p-2 shadow-lg"
-              style={{ width: '250px', zIndex: 100 }}
-            >
-              <div className="px-2 py-1 border-bottom mb-1">
-                <span className="text-xs fw-bold text-muted text-uppercase tracking-wider">
-                  Test Personas
-                </span>
-              </div>
-              {DEMO_ROLES.map((demo) => (
-                <button
-                  key={demo.role}
-                  type="button"
-                  onClick={() => handleQuickSwitchRole(demo)}
-                  className={`w-100 text-start px-2 py-1.5 rounded text-xs d-flex align-items-center justify-content-between border-0 bg-transparent hover-bg ${
-                    user?.role === demo.role ? 'fw-bold text-primary bg-light' : 'text-secondary'
-                  }`}
-                >
-                  <div>
-                    <div>{demo.role}</div>
-                    <small className="text-muted" style={{ fontSize: '0.68rem' }}>{demo.name}</small>
-                  </div>
-                  {user?.role === demo.role && <Check size={14} className="text-primary" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Theme Toggle (Light / Dark) */}
         <button
           type="button"

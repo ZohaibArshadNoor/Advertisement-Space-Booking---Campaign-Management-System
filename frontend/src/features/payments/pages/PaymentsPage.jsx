@@ -195,7 +195,7 @@ export const PaymentsPage = () => {
                 className="btn-ui btn-ui-secondary btn-ui-sm"
                 onClick={() => setShowPaymentModal(true)}
               >
-                <DollarSign size={14} />
+                <span className="fw-bold font-monospace" style={{ fontSize: '0.78rem' }}>Rs.</span>
                 <span>Record Payment</span>
               </button>
               <button

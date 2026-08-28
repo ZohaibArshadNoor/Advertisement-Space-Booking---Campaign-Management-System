@@ -199,36 +199,6 @@ export const LoginPage = () => {
 
           {/* Google One-Tap & Button Sign In */}
           <GoogleSignInButton text="Continue with Google" />
-
-          {/* Quick Demo Impersonation Switcher */}
-          <div className="border-top mt-4 pt-3.5">
-            <div className="d-flex align-items-center justify-content-between mb-2.5">
-              <span className="text-xs fw-bold text-muted text-uppercase tracking-wider">
-                Demo Accounts Quick-Fill
-              </span>
-              <span className="badge bg-primary-subtle text-primary text-xs flex-shrink-0">
-                1-Click Select
-              </span>
-            </div>
-
-            <div className="d-grid gap-2" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-              {DEMO_ACCOUNTS.map((demo) => (
-                <button
-                  key={demo.role}
-                  type="button"
-                  onClick={() => handleQuickFill(demo)}
-                  className="btn-ui btn-ui-secondary btn-ui-sm text-start justify-content-start py-2 px-2.5 d-flex align-items-center gap-2"
-                  title={`Fill credentials for ${demo.name}`}
-                  style={{ minWidth: 0 }}
-                >
-                  <ShieldCheck size={14} className="text-primary flex-shrink-0" />
-                  <span className="text-truncate" style={{ fontSize: '0.72rem', minWidth: 0 }}>
-                    {demo.role}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Footer info */}

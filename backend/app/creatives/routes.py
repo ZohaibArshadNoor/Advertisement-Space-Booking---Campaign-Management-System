@@ -34,6 +34,31 @@ def media_to_dict(media):
     }
 
 
+# 0. LIST ALL MEDIA ASSETS (For Creative Reviewers / Admins / Managers)
+@creatives_bp.get("", strict_slashes=False)
+@creatives_bp.get("/", strict_slashes=False)
+@roles_required("Administrator", "Sales Executive", "Space Manager", "Creative Reviewer", "Advertiser")
+def get_all_media():
+    """
+    List all creative media assets across campaigns.
+    """
+    current_user_id = get_jwt_identity()
+    user = db.session.get(User, int(current_user_id)) if current_user_id else None
+    from app.models.creative import Creative
+    
+    if user and user.role and user.role.name == "Advertiser":
+        from app.models.campaign import Campaign
+        assets = Creative.query.join(Campaign).filter(Campaign.advertiser_id == user.advertiser_id).order_by(Creative.created_at.desc()).all()
+    else:
+        assets = Creative.query.order_by(Creative.created_at.desc()).all()
+        
+    return jsonify({
+        "success": True,
+        "media": [media_to_dict(a) for a in assets],
+        "count": len(assets)
+    }), 200
+
+
 # 1. UPLOAD MEDIA ASSET TO CAMPAIGN
 @creatives_bp.post("/campaigns/<int:campaign_id>")
 @roles_required("Administrator", "Sales Executive", "Space Manager", "Advertiser")

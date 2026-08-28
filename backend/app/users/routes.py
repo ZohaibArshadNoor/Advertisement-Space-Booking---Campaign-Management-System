@@ -25,7 +25,7 @@ reset_password_schema = AdminResetPasswordSchema()
 
 
 # 1. LIST ALL USERS
-@users_bp.get("/")
+@users_bp.get("/", strict_slashes=False)
 @roles_required("Administrator")
 def get_users():
     """

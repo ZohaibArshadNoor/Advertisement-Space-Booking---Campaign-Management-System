@@ -1073,7 +1073,7 @@ def delete_space_category(category_id):
 # ==========================================    
     
     
-@spaces_bp.get("/")
+@spaces_bp.get("/", strict_slashes=False)
 @roles_required(
     "Administrator",
     "Sales Executive",

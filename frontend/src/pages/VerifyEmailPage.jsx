@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import PublicNavbar from '../components/PublicNavbar';
 import { CheckCircle2, AlertCircle, ArrowRight, MailCheck } from 'lucide-react';
@@ -24,7 +24,7 @@ export const VerifyEmailPage = () => {
 
     const verify = async () => {
       try {
-        const res = await axios.post('/api/auth/verify-email', { token });
+        const res = await apiClient.post('/auth/verify-email', { token });
         if (isMounted) {
           if (res.data?.access_token && res.data?.user) {
             loginWithToken(res.data.access_token, res.data.user);

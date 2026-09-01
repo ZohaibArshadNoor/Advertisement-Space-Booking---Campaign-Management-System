@@ -67,7 +67,7 @@ def send_verification_email(to_email, user_name, verification_token):
     # If no SMTP credentials, log to console (Development Mode)
     if not smtp_user or not smtp_pass:
         print("\n" + "="*70)
-        print("📨 [EMAIL DISPATCHER (DEV CONSOLE FALLBACK)]")
+        print("[EMAIL DISPATCHER (DEV CONSOLE FALLBACK)]")
         print(f"To: {to_email}")
         print(f"Subject: Verify your AdFlow Account")
         print(f"Activation Link: {verify_url}")
@@ -87,7 +87,7 @@ def send_verification_email(to_email, user_name, verification_token):
             server.sendmail(sender, to_email, msg.as_string())
         return True
     except Exception as e:
-        print(f"❌ Failed to dispatch verification email via SMTP: {e}")
+        print(f"Failed to dispatch verification email via SMTP: {e}")
         return False
 
 
@@ -151,7 +151,7 @@ def send_password_reset_email(to_email, user_name, reset_token):
     # If no SMTP credentials, log to console (Development Mode)
     if not smtp_user or not smtp_pass:
         print("\n" + "="*70)
-        print("🔐 [PASSWORD RESET DISPATCHER (DEV CONSOLE FALLBACK)]")
+        print("[PASSWORD RESET DISPATCHER (DEV CONSOLE FALLBACK)]")
         print(f"To: {to_email}")
         print(f"Subject: Reset your AdFlow Password")
         print(f"Reset Link: {reset_url}")
@@ -171,5 +171,5 @@ def send_password_reset_email(to_email, user_name, reset_token):
             server.sendmail(sender, to_email, msg.as_string())
         return True
     except Exception as e:
-        print(f"❌ Failed to dispatch reset email via SMTP: {e}")
+        print(f"Failed to dispatch reset email via SMTP: {e}")
         return False

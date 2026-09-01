@@ -86,7 +86,7 @@ const AssetThumbnail = ({ assetId, fileType, alt, onPreview }) => {
           className="badge bg-dark bg-opacity-75 position-absolute bottom-0 end-0 m-2 text-xs"
           style={{ fontSize: '0.68rem' }}
         >
-          🔍 Inspect
+          Inspect
         </span>
       </div>
     );

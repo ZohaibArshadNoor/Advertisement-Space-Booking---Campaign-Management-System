@@ -14,10 +14,13 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-secret-key-change-me")
 
     # PostgreSQL database connection URL.
-    SQLALCHEMY_DATABASE_URI = os.getenv(
+    _raw_db_url = os.getenv(
         "DATABASE_URL",
         "postgresql://postgres:postgre123@localhost:5432/adbooking"
     )
+    if _raw_db_url and _raw_db_url.startswith("postgres://"):
+        _raw_db_url = _raw_db_url.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URI = _raw_db_url
 
     # Disable SQLAlchemy event system to save memory.
     SQLALCHEMY_TRACK_MODIFICATIONS = False

@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Clock,
   Send,
-  Eye
+  Eye,
+  User
 } from 'lucide-react';
 
 export const PaymentsPage = () => {
@@ -57,6 +58,9 @@ export const PaymentsPage = () => {
     transaction_reference: '',
   });
   const [submittingPayment, setSubmittingPayment] = useState(false);
+
+  // Selected Invoice for Details Modal
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   const canManageFinance = ['Administrator', 'Finance Officer', 'Sales Executive'].includes(user?.role);
 
@@ -298,7 +302,7 @@ export const PaymentsPage = () => {
                   <thead>
                     <tr>
                       <th>Invoice ID</th>
-                      <th>Campaign &amp; Advertiser</th>
+                      <th>Space, Campaign &amp; Customer</th>
                       <th>Subtotal / Tax</th>
                       <th>Total Amount</th>
                       <th>Due Date</th>
@@ -316,12 +320,31 @@ export const PaymentsPage = () => {
                         </td>
 
                         <td>
-                          <div className="fw-semibold text-xs text-primary-emphasis">
-                            {inv.campaign?.name || (inv.campaign_id ? `Campaign #${inv.campaign_id}` : 'Direct Space Campaign')}
+                          {/* Space Name */}
+                          <div className="d-flex align-items-center gap-1.5 fw-bold text-xs text-primary-emphasis">
+                            <Building2 size={13} className="text-primary flex-shrink-0" />
+                            <span className="text-truncate" style={{ maxWidth: '280px' }} title={inv.space_name}>
+                              {inv.space_name || 'Billboard Inventory Space'}
+                            </span>
                           </div>
-                          <small className="text-muted" style={{ fontSize: '0.7rem' }}>
-                            Tax Rate: {inv.tax_rate || 16}% (Provincial GST)
-                          </small>
+
+                          {/* Campaign & Billed Customer */}
+                          <div className="text-xs text-muted mt-0.5 d-flex align-items-center gap-1 flex-wrap" style={{ fontSize: '0.72rem' }}>
+                            <span className="fw-medium text-secondary">
+                              {inv.campaign?.name || inv.campaign_name || (inv.campaign_id ? `Campaign #${inv.campaign_id}` : 'Direct Campaign')}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              Client: <strong className="text-dark-emphasis">{inv.customer_name || inv.advertiser_name || 'Advertiser'}</strong>
+                            </span>
+                          </div>
+
+                          {/* Purpose / Flighting info */}
+                          {inv.purpose && inv.purpose !== inv.space_name && (
+                            <div className="text-muted text-truncate mt-0.5" style={{ fontSize: '0.68rem', maxWidth: '280px' }}>
+                              {inv.purpose}
+                            </div>
+                          )}
                         </td>
 
                         <td>
@@ -391,6 +414,17 @@ export const PaymentsPage = () => {
 
                         <td className="text-end">
                           <div className="d-inline-flex align-items-center justify-content-end gap-1.5" style={{ minWidth: '140px' }}>
+                            {/* View Invoice Details Button */}
+                            <button
+                              type="button"
+                              className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1"
+                              onClick={() => setSelectedInvoice(inv)}
+                              title="View full invoice line items and payment breakdown"
+                            >
+                              <Eye size={12} />
+                              <span>Details</span>
+                            </button>
+
                             {canManageFinance && inv.status === 'DRAFT' && (
                               <button
                                 type="button"
@@ -405,7 +439,7 @@ export const PaymentsPage = () => {
 
                             {inv.status === 'PAID' ? (
                               <span className="badge bg-success-subtle text-success text-xs font-semibold py-1 px-2">
-                                ✓ Paid in Full
+                                Paid in Full
                               </span>
                             ) : (
                               <button
@@ -573,11 +607,60 @@ export const PaymentsPage = () => {
               <option value="">Select Campaign...</option>
               {campaigns.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.reference_code})
+                  {c.name} {c.campaign_reference ? `(${c.campaign_reference})` : ''}
                 </option>
               ))}
             </select>
           </div>
+
+          {(() => {
+            const selectedCampaign = campaigns.find((c) => String(c.id) === String(invoiceFormData.campaign_id));
+            if (!selectedCampaign) return null;
+
+            return (
+              <div className="p-3 mb-3 rounded-2 border bg-light-subtle">
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <span className="badge bg-primary-subtle text-primary text-xs font-semibold">
+                    Invoice Customer &amp; Inventory Scope
+                  </span>
+                  <span className="text-xs text-muted font-monospace">
+                    {selectedCampaign.campaign_reference || selectedCampaign.reference_code}
+                  </span>
+                </div>
+
+                <div className="row g-2 text-xs">
+                  <div className="col-12 col-sm-6">
+                    <span className="text-muted d-block">Client / Requestor:</span>
+                    <strong className="text-primary-emphasis d-flex align-items-center gap-1">
+                      <User size={12} className="text-primary flex-shrink-0" />
+                      <span>{selectedCampaign.user_name || selectedCampaign.advertiser_name || 'Commercial Advertiser'}</span>
+                    </strong>
+                  </div>
+                  <div className="col-12 col-sm-6">
+                    <span className="text-muted d-block">Advertising Space(s):</span>
+                    <strong className="text-dark-emphasis d-flex align-items-center gap-1">
+                      <Building2 size={13} className="text-primary flex-shrink-0" />
+                      {selectedCampaign.spaces_text || selectedCampaign.name || 'Billboard Inventory'}
+                    </strong>
+                  </div>
+                  <div className="col-12 mt-1">
+                    <span className="text-muted d-block">Billing Purpose:</span>
+                    <span className="text-secondary">
+                      Commercial advertising inventory reservation &amp; placement flighting for "{selectedCampaign.name}"
+                    </span>
+                  </div>
+                  {selectedCampaign.budget && parseFloat(selectedCampaign.budget) > 0 && (
+                    <div className="col-12 mt-0.5">
+                      <span className="text-muted">Estimated Base Amount: </span>
+                      <strong className="text-success font-monospace">
+                        Rs. {parseFloat(selectedCampaign.budget).toLocaleString()}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="row g-3">
             <div className="col-12 col-md-6">
@@ -637,6 +720,46 @@ export const PaymentsPage = () => {
         }
       >
         <form onSubmit={handleCreatePaymentSubmit}>
+          {(() => {
+            const selectedInvoice = invoices.find((inv) => String(inv.id) === String(paymentFormData.invoice_id));
+            if (!selectedInvoice) return null;
+
+            return (
+              <div className="p-3 mb-3 rounded-2 border bg-light-subtle">
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <span className="badge bg-success-subtle text-success text-xs font-semibold">
+                    Payment Target Inventory &amp; Bill
+                  </span>
+                  <span className="text-xs font-monospace fw-bold text-primary">
+                    {selectedInvoice.invoice_number}
+                  </span>
+                </div>
+
+                <div className="row g-2 text-xs">
+                  <div className="col-12">
+                    <span className="text-muted d-block">Advertising Space Paid For:</span>
+                    <strong className="text-primary-emphasis d-flex align-items-center gap-1">
+                      <Building2 size={13} className="text-primary flex-shrink-0" />
+                      {selectedInvoice.space_name || 'Billboard Inventory Space'}
+                    </strong>
+                  </div>
+                  <div className="col-12 col-sm-6 mt-1">
+                    <span className="text-muted d-block">Campaign / Scope:</span>
+                    <span className="text-secondary fw-medium">
+                      {selectedInvoice.campaign_name || selectedInvoice.purpose}
+                    </span>
+                  </div>
+                  <div className="col-12 col-sm-6 mt-1">
+                    <span className="text-muted d-block">Outstanding Balance Due:</span>
+                    <strong className="text-danger font-monospace">
+                      Rs. {parseFloat(selectedInvoice.balance_due || selectedInvoice.total_amount || 0).toLocaleString()}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="form-group-ui">
             <label className="form-label-ui">Invoice Reference ID <span className="form-required">*</span></label>
             <input
@@ -693,6 +816,200 @@ export const PaymentsPage = () => {
             />
           </div>
         </form>
+      </Modal>
+
+      {/* Commercial Invoice Details Modal */}
+      <Modal
+        isOpen={Boolean(selectedInvoice)}
+        onClose={() => setSelectedInvoice(null)}
+        title="Commercial Tax Invoice Breakdown"
+        subtitle={`Invoice Identifier: ${selectedInvoice?.invoice_number || ''}`}
+        size="lg"
+        footer={
+          <div className="d-flex align-items-center justify-content-between w-100">
+            <div>
+              {selectedInvoice && selectedInvoice.status !== 'PAID' && (
+                <button
+                  type="button"
+                  className="btn-ui btn-ui-primary btn-ui-sm d-inline-flex align-items-center gap-1"
+                  onClick={() => {
+                    const inv = selectedInvoice;
+                    setSelectedInvoice(null);
+                    setPaymentFormData({
+                      ...paymentFormData,
+                      invoice_id: inv.id,
+                      amount: inv.balance_due || inv.total_amount
+                    });
+                    setShowPaymentModal(true);
+                  }}
+                >
+                  <CreditCard size={12} />
+                  <span>Settle / Pay Invoice</span>
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn-ui btn-ui-secondary btn-ui-sm"
+              onClick={() => setSelectedInvoice(null)}
+            >
+              Close
+            </button>
+          </div>
+        }
+      >
+        {selectedInvoice && (
+          <div className="invoice-details-view">
+            {/* Top Banner Card */}
+            <div className="p-3 mb-3 rounded-2 border bg-light-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <div>
+                <span className="text-xs text-muted d-block font-monospace">
+                  COMMERCIAL TAX INVOICE
+                </span>
+                <h6 className="fw-bold mb-0 text-primary font-monospace">
+                  {selectedInvoice.invoice_number}
+                </h6>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <StatusBadge
+                  status={
+                    selectedInvoice.status === 'PAID'
+                      ? 'confirmed'
+                      : selectedInvoice.status === 'ISSUED' || selectedInvoice.status === 'PARTIALLY_PAID'
+                      ? 'pending'
+                      : selectedInvoice.status === 'OVERDUE'
+                      ? 'rejected'
+                      : 'draft'
+                  }
+                  label={selectedInvoice.status}
+                  size="md"
+                />
+                {selectedInvoice.status === 'PAID' ? (
+                  <span className="badge bg-success-subtle text-success text-xs font-semibold py-1.5 px-2.5">
+                    Paid in Full
+                  </span>
+                ) : (
+                  <span className="badge bg-warning-subtle text-warning text-xs font-semibold py-1.5 px-2.5">
+                    Unpaid Balance: Rs. {parseFloat(selectedInvoice.balance_due || selectedInvoice.total_amount || 0).toLocaleString()}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="row g-3">
+              {/* Customer & Company Details */}
+              <div className="col-12 col-md-6">
+                <div className="p-3 border rounded-2 h-100 bg-light-subtle">
+                  <span className="badge bg-primary-subtle text-primary text-xs font-semibold mb-2">
+                    Billed Customer / Entity
+                  </span>
+                  <div className="text-xs mb-2">
+                    <span className="text-muted d-block">Client Name:</span>
+                    <strong className="text-primary-emphasis d-flex align-items-center gap-1">
+                      <User size={12} className="text-primary flex-shrink-0" />
+                      <span>{selectedInvoice.customer_name || 'Commercial Advertiser'}</span>
+                    </strong>
+                  </div>
+                  <div className="text-xs mb-2">
+                    <span className="text-muted d-block">Company / Organization:</span>
+                    <strong className="text-dark-emphasis d-flex align-items-center gap-1">
+                      <Building2 size={12} className="text-primary flex-shrink-0" />
+                      <span>{selectedInvoice.advertiser_name || selectedInvoice.customer_name || 'Direct Advertiser'}</span>
+                    </strong>
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-muted d-block">Invoice Due Date:</span>
+                    <span className="text-secondary fw-medium d-flex align-items-center gap-1">
+                      <CalendarDays size={13} className="text-muted" />
+                      {selectedInvoice.due_date || 'Payable Upon Receipt'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Space & Flighting Scope */}
+              <div className="col-12 col-md-6">
+                <div className="p-3 border rounded-2 h-100 bg-light-subtle">
+                  <span className="badge bg-info-subtle text-info text-xs font-semibold mb-2">
+                    Advertising Inventory Space
+                  </span>
+                  <div className="text-xs mb-2">
+                    <span className="text-muted d-block">Billboard Space Paid For:</span>
+                    <strong className="text-primary-emphasis d-flex align-items-center gap-1">
+                      <Building2 size={13} className="text-primary flex-shrink-0" />
+                      {selectedInvoice.space_name || 'Billboard Inventory Placement'}
+                    </strong>
+                  </div>
+                  <div className="text-xs mb-2">
+                    <span className="text-muted d-block">Marketing Campaign:</span>
+                    <span className="text-dark-emphasis fw-medium">
+                      {selectedInvoice.campaign_name || `Campaign #${selectedInvoice.campaign_id}`}
+                    </span>
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-muted d-block">Scope &amp; Purpose:</span>
+                    <span className="text-secondary">
+                      {selectedInvoice.purpose || 'Commercial Advertising Placement'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comprehensive Line-Item Financial Breakdown */}
+              <div className="col-12">
+                <div className="p-3 border rounded-2 bg-light-subtle">
+                  <span className="badge bg-secondary-subtle text-secondary text-xs font-semibold mb-2">
+                    Commercial Statement &amp; Tax Calculation
+                  </span>
+                  <div className="table-responsive">
+                    <table className="table table-sm table-borderless mb-0 text-xs">
+                      <tbody>
+                        <tr className="border-bottom">
+                          <td className="text-muted py-1.5">Net Inventory Subtotal</td>
+                          <td className="text-end font-monospace py-1.5 fw-medium">
+                            Rs. {parseFloat(selectedInvoice.subtotal || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                        <tr className="border-bottom">
+                          <td className="text-muted py-1.5">
+                            Provincial Sales Tax / GST ({selectedInvoice.tax_rate || 16}%)
+                          </td>
+                          <td className="text-end font-monospace py-1.5 text-secondary">
+                            +Rs. {parseFloat(selectedInvoice.tax_amount || selectedInvoice.tax || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                        <tr className="border-bottom fw-bold">
+                          <td className="text-primary-emphasis py-2" style={{ fontSize: '0.85rem' }}>
+                            Gross Total Amount
+                          </td>
+                          <td className="text-end font-monospace text-primary-emphasis py-2" style={{ fontSize: '0.85rem' }}>
+                            Rs. {parseFloat(selectedInvoice.total_amount || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                        <tr className="border-bottom">
+                          <td className="text-success py-1.5">
+                            Total Settled / Amount Paid
+                          </td>
+                          <td className="text-end font-monospace text-success py-1.5 fw-semibold">
+                            -Rs. {parseFloat(selectedInvoice.amount_paid || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                        <tr className="fw-bold">
+                          <td className="text-danger py-2" style={{ fontSize: '0.9rem' }}>
+                            Remaining Balance Due
+                          </td>
+                          <td className="text-end font-monospace text-danger py-2" style={{ fontSize: '0.9rem' }}>
+                            Rs. {parseFloat(selectedInvoice.balance_due || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

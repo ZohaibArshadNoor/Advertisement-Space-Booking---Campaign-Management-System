@@ -123,7 +123,11 @@ class InvoiceService:
             Decimal("0.00")
         )
 
-        tax_amount = subtotal * (Decimal(tax_rate) / Decimal("100.00"))
+        # Fallback to campaign budget if no bookings are yet attached
+        if subtotal == Decimal("0.00") and campaign.budget and Decimal(str(campaign.budget)) > Decimal("0.00"):
+            subtotal = Decimal(str(campaign.budget))
+
+        tax_amount = (subtotal * (Decimal(str(tax_rate)) / Decimal("100.00"))).quantize(Decimal("0.01"))
         total_amount = subtotal + tax_amount
 
         invoice = Invoice(

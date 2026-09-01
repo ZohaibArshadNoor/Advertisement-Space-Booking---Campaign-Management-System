@@ -23,7 +23,9 @@ import {
   Building2,
   DollarSign,
   CreditCard,
-  Receipt
+  Receipt,
+  Eye,
+  User
 } from 'lucide-react';
 
 export const BookingsPage = () => {
@@ -41,6 +43,9 @@ export const BookingsPage = () => {
   const [error, setError] = useState('');
   const [modalError, setModalError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Selected Booking for details modal
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -311,7 +316,7 @@ export const BookingsPage = () => {
                   <tr>
                     <th>Reference</th>
                     <th>Advertising Space</th>
-                    <th>Linked Campaign</th>
+                    <th>Customer &amp; Campaign</th>
                     <th>Schedule Window</th>
                     <th>Total Price</th>
                     <th>Status</th>
@@ -332,19 +337,23 @@ export const BookingsPage = () => {
                           <Building2 size={14} className="text-primary flex-shrink-0" />
                           <div>
                             <div className="fw-semibold text-xs text-primary-emphasis">
-                              {b.space?.name || `Space #${b.space_id}`}
+                              {b.space?.name || b.space_name || `Space #${b.space_id}`}
                             </div>
                             <small className="text-muted font-monospace" style={{ fontSize: '0.7rem' }}>
-                              {b.space?.code || `ID: ${b.space_id}`} • {b.space?.location?.city || 'Karachi'}
+                              {b.space?.code || b.space_code || `ID: ${b.space_id}`} • {b.space?.location?.city || b.space_location || 'Karachi'}
                             </small>
                           </div>
                         </div>
                       </td>
 
                       <td>
-                        <span className="text-xs text-secondary">
-                          {b.campaign?.name || (b.campaign_id ? `Campaign #${b.campaign_id}` : 'Direct Booking')}
-                        </span>
+                        <div className="fw-semibold text-xs text-primary-emphasis d-flex align-items-center gap-1">
+                          <User size={12} className="text-primary flex-shrink-0" />
+                          <span>{b.customer_name || b.company_name || b.user_name || 'Direct Advertiser'}</span>
+                        </div>
+                        <div className="text-xs text-muted mt-0.5">
+                          {b.campaign?.name || b.campaign_name || (b.campaign_id ? `Campaign #${b.campaign_id}` : 'Direct Booking')}
+                        </div>
                       </td>
 
                       <td>
@@ -382,6 +391,18 @@ export const BookingsPage = () => {
 
                       <td className="text-end">
                         <div className="d-inline-flex align-items-center gap-1.5">
+                          {/* View Booking Details Button for all users */}
+                          <button
+                            type="button"
+                            className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1"
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.55rem' }}
+                            onClick={() => setSelectedBooking(b)}
+                            title="View full reservation & invoice details"
+                          >
+                            <Eye size={12} />
+                            <span>Details</span>
+                          </button>
+
                           {isStaffApprover ? (
                             <>
                               <select
@@ -413,29 +434,28 @@ export const BookingsPage = () => {
                             </>
                           ) : (
                             <>
-                              {b.status === 'CONFIRMED' && (
+                              {/* If invoice or booking is paid in full */}
+                              {(b.is_paid || b.payment_status === 'PAID' || b.status === 'COMPLETED') ? (
                                 <Link
                                   to="/payments"
-                                  className="btn-ui btn-ui-primary btn-ui-sm"
+                                  className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1"
+                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
+                                  title="Paid in Full - View Invoice & Settlement Receipt"
+                                >
+                                  <Receipt size={12} />
+                                  <span>Invoice</span>
+                                </Link>
+                              ) : b.status === 'CONFIRMED' ? (
+                                <Link
+                                  to="/payments"
+                                  className="btn-ui btn-ui-primary btn-ui-sm d-inline-flex align-items-center gap-1"
                                   style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
                                   title="Pay for this confirmed reservation"
                                 >
                                   <CreditCard size={12} />
                                   <span>Pay Now</span>
                                 </Link>
-                              )}
-
-                              {b.status === 'COMPLETED' && (
-                                <Link
-                                  to="/payments"
-                                  className="btn-ui btn-ui-secondary btn-ui-sm"
-                                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
-                                  title="View invoice and payment receipt"
-                                >
-                                  <Receipt size={12} />
-                                  <span>Invoice</span>
-                                </Link>
-                              )}
+                              ) : null}
 
                               {b.status === 'PENDING' && (
                                 <button
@@ -536,7 +556,7 @@ export const BookingsPage = () => {
               <option value="">Direct Booking (No Campaign Link)</option>
               {campaigns.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.reference_code})
+                  {c.name} {c.campaign_reference ? `(${c.campaign_reference})` : ''}
                 </option>
               ))}
             </select>
@@ -587,6 +607,169 @@ export const BookingsPage = () => {
             />
           </div>
         </form>
+      </Modal>
+
+      {/* Booking Details Modal */}
+      <Modal
+        isOpen={Boolean(selectedBooking)}
+        onClose={() => setSelectedBooking(null)}
+        title="Reservation Details & Invoice Audit"
+        subtitle={`Booking Reference: ${selectedBooking ? getBookingReference(selectedBooking) : ''}`}
+        size="lg"
+        footer={
+          <div className="d-flex align-items-center justify-content-between w-100">
+            <div>
+              {selectedBooking && !isStaffApprover && !(selectedBooking.is_paid || selectedBooking.payment_status === 'PAID' || selectedBooking.status === 'COMPLETED') && selectedBooking.status === 'CONFIRMED' && (
+                <Link
+                  to="/payments"
+                  className="btn-ui btn-ui-primary btn-ui-sm d-inline-flex align-items-center gap-1"
+                >
+                  <CreditCard size={12} />
+                  <span>Proceed to Payment</span>
+                </Link>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn-ui btn-ui-secondary btn-ui-sm"
+              onClick={() => setSelectedBooking(null)}
+            >
+              Close
+            </button>
+          </div>
+        }
+      >
+        {selectedBooking && (
+          <div className="booking-details-view">
+            {/* Top Overview Card */}
+            <div className="p-3 mb-3 rounded-2 border bg-light-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <div>
+                <span className="text-xs text-muted d-block font-monospace">
+                  REFERENCE #{getBookingReference(selectedBooking)}
+                </span>
+                <h6 className="fw-bold mb-0 text-primary-emphasis">
+                  {selectedBooking.space?.name || selectedBooking.space_name || `Space #${selectedBooking.space_id}`}
+                </h6>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <StatusBadge
+                  status={
+                    selectedBooking.status === 'CONFIRMED'
+                      ? 'confirmed'
+                      : selectedBooking.status === 'PENDING'
+                      ? 'pending'
+                      : selectedBooking.status === 'COMPLETED'
+                      ? 'active'
+                      : 'rejected'
+                  }
+                  label={selectedBooking.status}
+                  size="md"
+                />
+                {selectedBooking.is_paid || selectedBooking.payment_status === 'PAID' || selectedBooking.status === 'COMPLETED' ? (
+                  <span className="badge bg-success-subtle text-success text-xs font-semibold py-1.5 px-2.5">
+                    Paid in Full
+                  </span>
+                ) : (
+                  <span className="badge bg-warning-subtle text-warning text-xs font-semibold py-1.5 px-2.5">
+                    Payment Pending
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="row g-3">
+              {/* Customer & Company Details */}
+              <div className="col-12 col-md-6">
+                <div className="p-3 border rounded-2 h-100 bg-light-subtle">
+                  <span className="badge bg-primary-subtle text-primary text-xs font-semibold mb-2">
+                    Customer / Billed Organization
+                  </span>
+                  <div className="text-xs mb-2">
+                    <span className="text-muted d-block">Client Name:</span>
+                    <strong className="text-primary-emphasis d-flex align-items-center gap-1">
+                      <User size={12} className="text-primary flex-shrink-0" />
+                      <span>{selectedBooking.customer_name || selectedBooking.user_name || 'Direct Advertiser'}</span>
+                    </strong>
+                  </div>
+                  <div className="text-xs mb-2">
+                    <span className="text-muted d-block">Company / Entity:</span>
+                    <strong className="text-dark-emphasis d-flex align-items-center gap-1">
+                      <Building2 size={12} className="text-primary flex-shrink-0" />
+                      <span>{selectedBooking.company_name || selectedBooking.advertiser_name || 'Individual Advertiser'}</span>
+                    </strong>
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-muted d-block">Parent Marketing Campaign:</span>
+                    <span className="text-secondary fw-medium">
+                      {selectedBooking.campaign?.name || selectedBooking.campaign_name || (selectedBooking.campaign_id ? `Campaign #${selectedBooking.campaign_id}` : 'Direct Booking')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Space & Flighting Window */}
+              <div className="col-12 col-md-6">
+                <div className="p-3 border rounded-2 h-100 bg-light-subtle">
+                  <span className="badge bg-info-subtle text-info text-xs font-semibold mb-2">
+                    Inventory &amp; Flight Schedule
+                  </span>
+                  <div className="text-xs mb-2">
+                    <span className="text-muted d-block">Space Code &amp; City:</span>
+                    <span className="font-monospace fw-bold text-dark-emphasis">
+                      {selectedBooking.space_code || `ID: ${selectedBooking.space_id}`} • {selectedBooking.space_location || selectedBooking.space?.location?.city || 'Karachi'}
+                    </span>
+                  </div>
+                  <div className="text-xs mb-2">
+                    <span className="text-muted d-block">Flighting Window:</span>
+                    <span className="text-dark-emphasis fw-medium d-flex align-items-center gap-1">
+                      <CalendarDays size={13} className="text-muted" />
+                      {selectedBooking.start_date} &rarr; {selectedBooking.end_date}
+                    </span>
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-muted d-block">Reservation Notes:</span>
+                    <span className="text-muted fst-italic">
+                      {selectedBooking.notes || 'No special flighting instructions provided.'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial & Commercial Invoice Info */}
+              <div className="col-12">
+                <div className="p-3 border rounded-2 bg-light-subtle">
+                  <span className="badge bg-secondary-subtle text-secondary text-xs font-semibold mb-2">
+                    Commercial Valuation &amp; Billing
+                  </span>
+                  <div className="row g-2 text-xs">
+                    <div className="col-12 col-sm-4">
+                      <span className="text-muted d-block">Total Inventory Cost:</span>
+                      <strong className="font-monospace text-primary-emphasis" style={{ fontSize: '0.95rem' }}>
+                        Rs. {getBookingAmount(selectedBooking).toLocaleString()}
+                      </strong>
+                    </div>
+                    <div className="col-12 col-sm-4">
+                      <span className="text-muted d-block">Provincial Sales Tax (GST):</span>
+                      <span className="text-secondary font-monospace">
+                        16% Statutory GST
+                      </span>
+                    </div>
+                    <div className="col-12 col-sm-4">
+                      <span className="text-muted d-block">Commercial Invoice:</span>
+                      {selectedBooking.invoice_number ? (
+                        <span className="font-monospace fw-bold text-primary">
+                          {selectedBooking.invoice_number}
+                        </span>
+                      ) : (
+                        <span className="text-muted font-monospace">Linked to Campaign Billing</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

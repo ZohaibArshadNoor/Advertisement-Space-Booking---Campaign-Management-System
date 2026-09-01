@@ -3,7 +3,8 @@ from marshmallow import (
     fields,
     validate,
     validates_schema,
-    ValidationError
+    ValidationError,
+    EXCLUDE
 )
 
 from app.models.booking import BookingStatus
@@ -13,9 +14,21 @@ class BookingCreateSchema(Schema):
     """
     Validates incoming request payload when creating a new booking.
     """
+    class Meta:
+        unknown = EXCLUDE
 
     space_id = fields.Integer(
         required=True
+    )
+
+    campaign_id = fields.Integer(
+        required=False,
+        allow_none=True
+    )
+
+    campaignId = fields.Integer(
+        required=False,
+        allow_none=True
     )
 
     advertiser_id = fields.Integer(

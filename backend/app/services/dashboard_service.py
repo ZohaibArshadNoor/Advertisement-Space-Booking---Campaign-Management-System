@@ -88,15 +88,53 @@ class DashboardService:
             adv_total_campaigns = my_campaigns.count()
             adv_active_campaigns = my_campaigns.filter_by(status=CampaignStatus.ACTIVE).count()
 
-            # Personal Bookings
-            my_bookings = Booking.query.filter_by(user_id=user_id)
-            adv_total_bookings = my_bookings.count()
-            adv_active_bookings = my_bookings.filter(
-                Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED]),
-                Booking.start_date <= today,
-                Booking.end_date >= today
-            ).count()
-            adv_pending_bookings = my_bookings.filter_by(status=BookingStatus.PENDING).count()
+            # Personal Bookings & Flight Progress
+            my_bookings_query = Booking.query.filter_by(user_id=user_id)
+            adv_total_bookings = my_bookings_query.count()
+            all_user_bookings = my_bookings_query.order_by(Booking.created_at.desc()).all()
+
+            adv_live_bookings = 0
+            adv_scheduled_bookings = 0
+            adv_pending_bookings = 0
+            adv_completed_bookings = 0
+
+            active_services = []
+            for b in all_user_bookings:
+                if b.status == BookingStatus.PENDING:
+                    adv_pending_bookings += 1
+                    flight_state = "PENDING_APPROVAL"
+                elif b.status == BookingStatus.COMPLETED or (b.status == BookingStatus.CONFIRMED and b.end_date < today):
+                    adv_completed_bookings += 1
+                    flight_state = "COMPLETED"
+                elif b.status == BookingStatus.CONFIRMED and b.start_date <= today <= b.end_date:
+                    adv_live_bookings += 1
+                    flight_state = "ACTIVE_FLIGHT"
+                elif b.status == BookingStatus.CONFIRMED and b.start_date > today:
+                    adv_scheduled_bookings += 1
+                    flight_state = "SCHEDULED"
+                else:
+                    adv_completed_bookings += 1
+                    flight_state = "COMPLETED"
+
+                if len(active_services) < 5:
+                    active_services.append({
+                        "id": b.id,
+                        "booking_reference": b.booking_reference,
+                        "space_name": b.space.name if b.space else f"Space #{b.space_id}",
+                        "space_city": b.space.location.city if (b.space and b.space.location) else "Karachi",
+                        "campaign_name": b.campaign.name if b.campaign else "Direct Booking",
+                        "start_date": b.start_date.isoformat(),
+                        "end_date": b.end_date.isoformat(),
+                        "status": b.status.value if hasattr(b.status, 'value') else str(b.status),
+                        "flight_state": flight_state,
+                        "total_price": str(b.total_price)
+                    })
+
+            # Personal Creatives Breakdown
+            my_creatives = Creative.query.join(Campaign).filter(Campaign.user_id == user_id).all()
+            adv_total_creatives = len(my_creatives)
+            adv_approved_creatives = len([c for c in my_creatives if c.status == MediaStatus.APPROVED])
+            adv_pending_creatives = len([c for c in my_creatives if c.status == MediaStatus.PENDING])
 
             # Personal Invoices & Balances (Checking user_id or advertiser_id)
             adv_invoices = Invoice.query.join(Invoice.campaign).filter(
@@ -109,6 +147,17 @@ class DashboardService:
             adv_invoiced = sum((Decimal(str(inv.total_amount)) for inv in adv_invoices), Decimal("0.00"))
             adv_paid = sum((Decimal(str(inv.amount_paid)) for inv in adv_invoices), Decimal("0.00"))
             adv_outstanding = max(Decimal("0.00"), adv_invoiced - adv_paid)
+
+            fulfillment_rate = round(
+                ((adv_live_bookings + adv_completed_bookings) / adv_total_bookings * 100)
+                if adv_total_bookings > 0 else 100.0,
+                1
+            )
+            clearance_rate = round(
+                (float(adv_paid) / float(adv_invoiced) * 100)
+                if adv_invoiced > 0 else 100.0,
+                1
+            )
 
             return {
                 "profile": profile_data,
@@ -133,6 +182,19 @@ class DashboardService:
                         "available_spaces": available_spaces,
                         "occupied_spaces": occupied_spaces
                     },
+                    "services": {
+                        "live_flights": adv_live_bookings,
+                        "scheduled_flights": adv_scheduled_bookings,
+                        "pending_flights": adv_pending_bookings,
+                        "completed_flights": adv_completed_bookings,
+                        "total_flights": adv_total_bookings,
+                        "creatives_approved": adv_approved_creatives,
+                        "creatives_pending": adv_pending_creatives,
+                        "creatives_total": adv_total_creatives,
+                        "fulfillment_rate": fulfillment_rate,
+                        "clearance_rate": clearance_rate
+                    },
+                    "active_services": active_services,
                     "campaigns": {
                         "total": adv_total_campaigns,
                         "active": adv_active_campaigns,
@@ -141,10 +203,10 @@ class DashboardService:
                     },
                     "bookings": {
                         "total": adv_total_bookings,
-                        "active": adv_active_bookings,
+                        "active": adv_live_bookings,
                         "pending": adv_pending_bookings,
                         "total_bookings": adv_total_bookings,
-                        "active_bookings": adv_active_bookings,
+                        "active_bookings": adv_live_bookings,
                         "pending_bookings": adv_pending_bookings
                     },
                     "financials": {

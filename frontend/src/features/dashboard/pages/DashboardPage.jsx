@@ -129,15 +129,15 @@ export const DashboardPage = () => {
     },
   };
 
-  // Occupancy / Space breakdown chart
+  // Network Occupancy / Space breakdown chart (for Space Manager / Admin)
   const spaceData = {
     labels: ['Available', 'Booked / Active', 'In Maintenance'],
     datasets: [
       {
         data: [
-          metrics.inventory?.available_spaces || 18,
-          metrics.inventory?.occupied_spaces || 32,
-          4,
+          metrics.inventory?.available_spaces || 0,
+          metrics.inventory?.occupied_spaces || 0,
+          Math.max(0, (metrics.inventory?.total_spaces || 0) - (metrics.inventory?.available_spaces || 0) - (metrics.inventory?.occupied_spaces || 0)),
         ],
         backgroundColor: [
           'rgba(22, 163, 74, 0.85)',
@@ -148,6 +148,37 @@ export const DashboardPage = () => {
       },
     ],
   };
+
+  // Advertiser Service Pipeline Progress chart (for Advertiser)
+  const serviceProgress = metrics.services || {};
+  const activeServices = metrics.active_services || [];
+
+  const advertiserServiceData = {
+    labels: ['Live on Billboard', 'Scheduled Flights', 'Pending Approval', 'Delivered Flights'],
+    datasets: [
+      {
+        data: [
+          serviceProgress.live_flights || 0,
+          serviceProgress.scheduled_flights || 0,
+          serviceProgress.pending_flights || 0,
+          serviceProgress.completed_flights || 0,
+        ],
+        backgroundColor: [
+          'rgba(37, 99, 235, 0.85)',   // Royal Blue for Live
+          'rgba(14, 165, 233, 0.85)',  // Sky Blue for Scheduled
+          'rgba(234, 179, 8, 0.85)',   // Amber for Pending
+          'rgba(22, 163, 74, 0.85)',   // Emerald for Delivered
+        ],
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  const hasAdvertiserServices =
+    (serviceProgress.live_flights || 0) +
+    (serviceProgress.scheduled_flights || 0) +
+    (serviceProgress.pending_flights || 0) +
+    (serviceProgress.completed_flights || 0) > 0;
 
   const doughnutOptions = {
     responsive: true,
@@ -504,33 +535,180 @@ export const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Right: Network Billboard Inventory Snapshot */}
+          {/* Right: Advertiser Campaign & Service Delivery Pipeline */}
           <div className="col-12 col-lg-5">
             <div className="card-enterprise h-100">
               <div className="card-header-enterprise">
-                <h3 className="card-title-enterprise">Network Inventory Allocation</h3>
-                <Link to="/spaces" className="text-xs text-primary text-decoration-none fw-semibold">
-                  Browse All
+                <div className="d-flex align-items-center gap-2">
+                  <Activity size={16} className="text-primary" />
+                  <h3 className="card-title-enterprise">My Campaign &amp; Service Pipeline</h3>
+                </div>
+                <Link to="/bookings" className="text-xs text-primary text-decoration-none fw-semibold">
+                  All Bookings
                 </Link>
               </div>
-              <div className="card-body-enterprise d-flex flex-column align-items-center justify-content-center">
-                <div style={{ height: '180px', width: '100%' }}>
-                  <Doughnut data={spaceData} options={doughnutOptions} />
+              <div className="card-body-enterprise d-flex flex-column align-items-center justify-content-between p-3">
+                {hasAdvertiserServices ? (
+                  <div style={{ height: '175px', width: '100%' }}>
+                    <Doughnut data={advertiserServiceData} options={doughnutOptions} />
+                  </div>
+                ) : (
+                  <div className="text-center py-4 my-auto">
+                    <Building2 size={32} className="text-muted mb-2 opacity-50" />
+                    <div className="fw-semibold text-xs text-primary-emphasis">No Active Campaign Flights</div>
+                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                      Reserve a billboard to launch your first brand flight.
+                    </div>
+                  </div>
+                )}
+
+                <div className="w-100 mt-3 pt-3 border-top">
+                  <div className="row g-2 text-center mb-3">
+                    <div className="col-3">
+                      <div className="fw-bold text-xs text-primary" style={{ fontSize: '0.9rem' }}>
+                        {serviceProgress.live_flights || 0}
+                      </div>
+                      <div className="text-muted text-truncate" style={{ fontSize: '0.68rem' }}>Live Display</div>
+                    </div>
+                    <div className="col-3">
+                      <div className="fw-bold text-xs text-info" style={{ fontSize: '0.9rem' }}>
+                        {serviceProgress.scheduled_flights || 0}
+                      </div>
+                      <div className="text-muted text-truncate" style={{ fontSize: '0.68rem' }}>Scheduled</div>
+                    </div>
+                    <div className="col-3">
+                      <div className="fw-bold text-xs text-warning" style={{ fontSize: '0.9rem' }}>
+                        {serviceProgress.pending_flights || 0}
+                      </div>
+                      <div className="text-muted text-truncate" style={{ fontSize: '0.68rem' }}>Pending</div>
+                    </div>
+                    <div className="col-3">
+                      <div className="fw-bold text-xs text-success" style={{ fontSize: '0.9rem' }}>
+                        {serviceProgress.completed_flights || 0}
+                      </div>
+                      <div className="text-muted text-truncate" style={{ fontSize: '0.68rem' }}>Delivered</div>
+                    </div>
+                  </div>
+
+                  {/* Operational Health & Delivery Indicators */}
+                  <div className="p-2.5 rounded-2 bg-light-subtle border">
+                    <div className="d-flex align-items-center justify-content-between text-xs mb-1.5">
+                      <span className="text-muted">Campaign Fulfillment Rate</span>
+                      <strong className="text-success font-monospace">
+                        {serviceProgress.fulfillment_rate || 100}%
+                      </strong>
+                    </div>
+                    <div className="progress" style={{ height: '5px', backgroundColor: 'rgba(0,0,0,0.06)' }}>
+                      <div
+                        className="progress-bar bg-success"
+                        role="progressbar"
+                        style={{ width: `${serviceProgress.fulfillment_rate || 100}%` }}
+                        aria-valuenow={serviceProgress.fulfillment_rate || 100}
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                      />
+                    </div>
+                    <div className="d-flex align-items-center justify-content-between text-xs mt-2 text-muted" style={{ fontSize: '0.72rem' }}>
+                      <span>Artwork Approved: <strong className="text-primary-emphasis">{serviceProgress.creatives_approved || 0}</strong> / {serviceProgress.creatives_total || 0}</span>
+                      <span>Settlement: <strong className="text-primary-emphasis">{serviceProgress.clearance_rate || 100}%</strong></span>
+                    </div>
+                  </div>
                 </div>
-                <div className="w-100 mt-3 pt-3 border-top d-flex justify-content-around text-center">
-                  <div>
-                    <div className="fw-bold text-xs text-success">37.5%</div>
-                    <div className="text-muted" style={{ fontSize: '0.7rem' }}>Available</div>
-                  </div>
-                  <div>
-                    <div className="fw-bold text-xs text-primary">66.7%</div>
-                    <div className="text-muted" style={{ fontSize: '0.7rem' }}>Booked</div>
-                  </div>
-                  <div>
-                    <div className="fw-bold text-xs text-warning">8.3%</div>
-                    <div className="text-muted" style={{ fontSize: '0.7rem' }}>Maintenance</div>
-                  </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Services & Billboard Flights in Progress */}
+          <div className="col-12 mt-3">
+            <div className="card-enterprise">
+              <div className="card-header-enterprise d-flex align-items-center justify-content-between">
+                <div className="d-flex align-items-center gap-2">
+                  <Building2 size={16} className="text-primary" />
+                  <h3 className="card-title-enterprise">Active Services &amp; Billboard Flights in Progress</h3>
                 </div>
+                <Link to="/bookings" className="text-xs text-primary text-decoration-none fw-semibold">
+                  Manage All Reservations &rarr;
+                </Link>
+              </div>
+              <div className="p-0">
+                {activeServices.length === 0 ? (
+                  <div className="text-center py-5 text-muted text-xs">
+                    No billboard services currently active. Browse the inventory catalog to reserve your first space.
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="enterprise-table mb-0 text-xs">
+                      <thead>
+                        <tr>
+                          <th>Inventory Space</th>
+                          <th>Parent Campaign</th>
+                          <th>Flighting Schedule</th>
+                          <th>Delivery Status</th>
+                          <th className="text-end">Service Valuation</th>
+                          <th className="text-end">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeServices.map((svc) => (
+                          <tr key={svc.id}>
+                            <td>
+                              <div className="fw-semibold text-primary-emphasis d-flex align-items-center gap-1.5">
+                                <Building2 size={13} className="text-primary flex-shrink-0" />
+                                <span>{svc.space_name}</span>
+                              </div>
+                              <div className="text-muted font-monospace mt-0.5" style={{ fontSize: '0.7rem' }}>
+                                REF #{svc.booking_reference} • {svc.space_city}
+                              </div>
+                            </td>
+                            <td>
+                              <div className="fw-medium text-dark-emphasis">{svc.campaign_name}</div>
+                            </td>
+                            <td>
+                              <div className="d-flex align-items-center gap-1 text-muted">
+                                <CalendarDays size={12} />
+                                <span>{svc.start_date} &rarr; {svc.end_date}</span>
+                              </div>
+                            </td>
+                            <td>
+                              {svc.flight_state === 'ACTIVE_FLIGHT' ? (
+                                <span className="status-pill status-active">
+                                  <span className="status-dot" />
+                                  <span>Live on Billboard</span>
+                                </span>
+                              ) : svc.flight_state === 'SCHEDULED' ? (
+                                <span className="status-pill status-info">
+                                  <span className="status-dot" />
+                                  <span>Scheduled Flight</span>
+                                </span>
+                              ) : svc.flight_state === 'PENDING_APPROVAL' ? (
+                                <span className="status-pill status-pending">
+                                  <span className="status-dot" />
+                                  <span>Pending Approval</span>
+                                </span>
+                              ) : (
+                                <span className="badge bg-secondary-subtle text-secondary text-xs font-normal">
+                                  Flight Concluded
+                                </span>
+                              )}
+                            </td>
+                            <td className="text-end font-monospace fw-semibold text-primary-emphasis">
+                              Rs. {parseFloat(svc.total_price || 0).toLocaleString()}
+                            </td>
+                            <td className="text-end">
+                              <Link
+                                to="/bookings"
+                                className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1"
+                              >
+                                <Eye size={12} />
+                                <span>Details</span>
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -801,15 +979,48 @@ export const DashboardPage = () => {
           <div className="col-12 col-lg-5">
             <div className="card-enterprise h-100">
               <div className="card-header-enterprise">
-                <h3 className="card-title-enterprise">Revenue &amp; Ledger Velocity</h3>
-                <Link to="/payments" className="text-xs text-primary text-decoration-none fw-semibold">
-                  Ledger
+                <h3 className="card-title-enterprise">
+                  {userRole === 'Space Manager' ? 'Network Inventory Allocation' : 'Revenue & Ledger Velocity'}
+                </h3>
+                <Link
+                  to={userRole === 'Space Manager' ? '/spaces' : '/payments'}
+                  className="text-xs text-primary text-decoration-none fw-semibold"
+                >
+                  {userRole === 'Space Manager' ? 'Browse All' : 'Ledger'}
                 </Link>
               </div>
-              <div className="card-body-enterprise">
-                <div style={{ height: '220px', width: '100%' }}>
-                  <Bar data={financialData} options={chartOptions} />
-                </div>
+              <div className="card-body-enterprise d-flex flex-column align-items-center justify-content-center p-3">
+                {userRole === 'Space Manager' ? (
+                  <>
+                    <div style={{ height: '180px', width: '100%' }}>
+                      <Doughnut data={spaceData} options={doughnutOptions} />
+                    </div>
+                    <div className="w-100 mt-3 pt-3 border-top d-flex justify-content-around text-center">
+                      <div>
+                        <div className="fw-bold text-xs text-success">
+                          {metrics.inventory?.available_spaces || 0}
+                        </div>
+                        <div className="text-muted" style={{ fontSize: '0.7rem' }}>Available</div>
+                      </div>
+                      <div>
+                        <div className="fw-bold text-xs text-primary">
+                          {metrics.inventory?.occupied_spaces || 0}
+                        </div>
+                        <div className="text-muted" style={{ fontSize: '0.7rem' }}>Booked</div>
+                      </div>
+                      <div>
+                        <div className="fw-bold text-xs text-warning">
+                          {Math.max(0, (metrics.inventory?.total_spaces || 0) - (metrics.inventory?.available_spaces || 0) - (metrics.inventory?.occupied_spaces || 0))}
+                        </div>
+                        <div className="text-muted" style={{ fontSize: '0.7rem' }}>Maintenance</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ height: '220px', width: '100%' }}>
+                    <Bar data={financialData} options={chartOptions} />
+                  </div>
+                )}
               </div>
             </div>
           </div>

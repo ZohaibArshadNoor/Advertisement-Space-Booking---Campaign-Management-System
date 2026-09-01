@@ -28,11 +28,29 @@ def booking_to_dict(booking):
     """
     Converts a Booking database object into JSON-safe data.
     """
+    # Resolve linked invoice and payment status
+    invoice = None
+    if booking.campaign and booking.campaign.invoices:
+        # Fetch the most recent or active invoice for this campaign
+        invoice = booking.campaign.invoices[-1]
+
+    is_paid = (invoice.status == "PAID") if invoice else (booking.status == "COMPLETED")
+    payment_status = invoice.status if invoice else ("PAID" if booking.status == "COMPLETED" else "UNPAID")
+
+    customer_name = booking.user.name if booking.user else (
+        booking.advertiser.company_name if booking.advertiser else "Customer"
+    )
+    company_name = booking.advertiser.company_name if booking.advertiser else (
+        booking.user.name if booking.user else "Company"
+    )
+
     return {
         "id": booking.id,
         "booking_reference": booking.booking_reference,
         "user_id": booking.user_id,
-        "user_name": booking.user.name if booking.user else None,
+        "user_name": customer_name,
+        "customer_name": customer_name,
+        "company_name": company_name,
         "advertiser_id": booking.advertiser_id,
         "advertiser_name": (
             booking.advertiser.company_name
@@ -41,11 +59,21 @@ def booking_to_dict(booking):
         ),
         "space_id": booking.space_id,
         "space_name": booking.space.name if booking.space else None,
+        "space_location": booking.space.location.city if (booking.space and booking.space.location) else None,
+        "space_type": booking.space.category.name if (booking.space and booking.space.category) else "Billboard",
+        "space_code": f"SPC-{booking.space.id:04d}" if booking.space else None,
+        "campaign_id": booking.campaign_id,
+        "campaign_name": booking.campaign.name if booking.campaign else None,
         "start_date": booking.start_date.isoformat(),
         "end_date": booking.end_date.isoformat(),
         "status": booking.status,
         "total_price": str(booking.total_price),
         "notes": booking.notes,
+        "invoice_id": invoice.id if invoice else None,
+        "invoice_number": invoice.invoice_number if invoice else None,
+        "invoice_status": invoice.status if invoice else None,
+        "payment_status": payment_status,
+        "is_paid": is_paid,
         "created_at": (
             booking.created_at.isoformat()
             if booking.created_at
@@ -151,6 +179,8 @@ def create_booking():
     if not advertiser_id and current_user and current_user.advertiser_id:
         advertiser_id = current_user.advertiser_id
 
+    campaign_id = validated_data.get("campaign_id") or validated_data.get("campaignId")
+
     # Step 4: Create booking through the service layer.
     booking, error = BookingService.create_booking(
         user_id=current_user_id,
@@ -158,6 +188,7 @@ def create_booking():
         start_date=validated_data["start_date"],
         end_date=validated_data["end_date"],
         advertiser_id=advertiser_id,
+        campaign_id=campaign_id,
         notes=validated_data.get("notes")
     )
 

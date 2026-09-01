@@ -60,6 +60,8 @@ def campaign_to_dict(campaign, include_bookings=False):
             else None
         ),
         "total_bookings": len(campaign.bookings),
+        "space_names": [b.space.name for b in campaign.bookings if b.space],
+        "spaces_text": ", ".join([b.space.name for b in campaign.bookings if b.space]) if campaign.bookings else None,
         "created_at": (
             campaign.created_at.isoformat()
             if campaign.created_at

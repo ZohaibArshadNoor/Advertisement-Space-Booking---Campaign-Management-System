@@ -151,6 +151,7 @@ class BookingService:
         start_date,
         end_date,
         advertiser_id=None,
+        campaign_id=None,
         notes=None
     ):
         """

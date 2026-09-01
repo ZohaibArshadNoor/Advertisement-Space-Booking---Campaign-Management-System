@@ -14,6 +14,36 @@ invoice_status_schema = InvoiceStatusUpdateSchema()
 
 
 def invoice_to_dict(invoice, include_payments=False):
+    # Determine customer name (from campaign user, or booking user, or advertiser)
+    customer_name = None
+    if invoice.campaign and invoice.campaign.user:
+        customer_name = invoice.campaign.user.name
+    elif invoice.advertiser:
+        customer_name = invoice.advertiser.company_name
+
+    # Extract associated spaces and flight dates from campaign bookings
+    space_names = []
+    spaces_info = []
+    if invoice.campaign and invoice.campaign.bookings:
+        seen_spaces = set()
+        for b in invoice.campaign.bookings:
+            if b.space and b.space.id not in seen_spaces:
+                seen_spaces.add(b.space.id)
+                space_names.append(b.space.name)
+                spaces_info.append({
+                    "id": b.space.id,
+                    "name": b.space.name,
+                    "location": b.space.location.city if (b.space and b.space.location) else None,
+                    "flight_dates": f"{b.start_date.isoformat()} to {b.end_date.isoformat()}"
+                })
+            if not customer_name and b.user:
+                customer_name = b.user.name
+
+    primary_space_name = ", ".join(space_names) if space_names else (invoice.campaign.name if invoice.campaign else "OOH Billboard Inventory")
+    purpose = f"Billboard Space: {primary_space_name}" if space_names else (
+        invoice.campaign.description if (invoice.campaign and invoice.campaign.description) else "Advertising Inventory Space Reservation"
+    )
+
     data = {
         "id": invoice.id,
         "invoice_number": invoice.invoice_number,
@@ -21,6 +51,11 @@ def invoice_to_dict(invoice, include_payments=False):
         "campaign_name": invoice.campaign.name if invoice.campaign else None,
         "advertiser_id": invoice.advertiser_id,
         "advertiser_name": invoice.advertiser.company_name if invoice.advertiser else None,
+        "customer_name": customer_name or (invoice.advertiser.company_name if invoice.advertiser else "Commercial Advertiser"),
+        "space_name": primary_space_name,
+        "space_names": space_names,
+        "spaces": spaces_info,
+        "purpose": purpose,
         "subtotal": str(invoice.subtotal),
         "tax": str(invoice.tax),
         "tax_amount": str(invoice.tax),

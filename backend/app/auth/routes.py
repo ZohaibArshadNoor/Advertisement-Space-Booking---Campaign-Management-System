@@ -117,7 +117,7 @@ def register():
             "message": "Default Advertiser role is not configured."
         }), 500
 
-    # 🔒 Strict Security: Account created in unverified/inactive state
+    # Strict Security: Account created in unverified/inactive state
     user = User(
         name=validated_data["name"].strip(),
         email=email,
@@ -394,7 +394,7 @@ def login():
             "message": "Invalid email or password."
         }), 401
 
-    # 🔒 Prevent unverified or inactive accounts from logging in.
+    # Prevent unverified or inactive accounts from logging in.
     if not user.is_active:
         return jsonify({
             "success": False,

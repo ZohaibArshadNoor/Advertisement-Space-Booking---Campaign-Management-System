@@ -21,26 +21,84 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronRight,
-  DollarSign
+  DollarSign,
+  Share2,
+  Video,
+  Globe,
+  Star,
+  Tv,
+  Megaphone
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const CATEGORY_OPTIONS = [
-  'All Categories',
-  '3D Anamorphic LED',
-  'Highway Unipole',
-  'Digital Totem Kiosk',
-  'Overhead Bridge Banner',
-  'Pylon LED Display',
+  'All Channels & Services',
+  'Social Media Marketing (Meta & Instagram)',
+  'YouTube Video Advertising',
+  'Influencer & Creator Sponsorship',
+  'Digital 4K LED Screen',
+  'Static Highway Unipole',
+  'Programmatic Display Network',
+  'Transit Bus Shelter Display'
 ];
 
-const CITY_OPTIONS = ['All Cities', 'Lahore', 'Karachi', 'Islamabad', 'Dubai', 'New York'];
+const CITY_OPTIONS = ['All Locations', 'Digital Network', 'Karachi', 'Lahore', 'Islamabad'];
 
 const STATUS_OPTIONS = [
   { label: 'All Statuses', value: '' },
   { label: 'Active & Available', value: 'ACTIVE' },
   { label: 'Under Maintenance', value: 'MAINTENANCE' },
 ];
+
+const getChannelBadge = (catName = '') => {
+  const name = catName.toLowerCase();
+  if (name.includes('social') || name.includes('meta') || name.includes('instagram')) {
+    return (
+      <span className="badge bg-primary-subtle text-primary text-xs d-inline-flex align-items-center gap-1">
+        <Share2 size={11} />
+        <span>Social Media</span>
+      </span>
+    );
+  }
+  if (name.includes('youtube') || name.includes('video')) {
+    return (
+      <span className="badge bg-danger-subtle text-danger text-xs d-inline-flex align-items-center gap-1">
+        <Video size={11} />
+        <span>YouTube Ads</span>
+      </span>
+    );
+  }
+  if (name.includes('influencer') || name.includes('creator')) {
+    return (
+      <span className="badge bg-warning-subtle text-warning text-xs d-inline-flex align-items-center gap-1">
+        <Star size={11} />
+        <span>Influencer Sponsorship</span>
+      </span>
+    );
+  }
+  if (name.includes('programmatic') || name.includes('web') || name.includes('display')) {
+    return (
+      <span className="badge bg-info-subtle text-info text-xs d-inline-flex align-items-center gap-1">
+        <Globe size={11} />
+        <span>Web / App Display</span>
+      </span>
+    );
+  }
+  if (name.includes('led') || name.includes('screen') || name.includes('4k')) {
+    return (
+      <span className="badge bg-success-subtle text-success text-xs d-inline-flex align-items-center gap-1">
+        <Tv size={11} />
+        <span>Digital DOOH LED</span>
+      </span>
+    );
+  }
+  return (
+    <span className="badge bg-secondary-subtle text-secondary text-xs d-inline-flex align-items-center gap-1">
+      <Building2 size={11} />
+      <span>{catName || 'Billboard Space'}</span>
+    </span>
+  );
+};
 
 export const SpacesPage = () => {
   const { user } = useAuth();
@@ -51,8 +109,8 @@ export const SpacesPage = () => {
 
   // Filters & Search
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [selectedCity, setSelectedCity] = useState('All Cities');
+  const [selectedCategory, setSelectedCategory] = useState('All Channels & Services');
+  const [selectedCity, setSelectedCity] = useState('All Locations');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
 
@@ -76,7 +134,7 @@ export const SpacesPage = () => {
       setSpaces(data.spaces || data || []);
     } catch (err) {
       console.error('Failed to load spaces', err);
-      setError(err.response?.data?.message || 'Failed to load advertising spaces.');
+      setError(err.response?.data?.message || 'Failed to load advertising channels and services.');
     } finally {
       setLoading(false);
     }
@@ -91,13 +149,16 @@ export const SpacesPage = () => {
     const nameMatch = (s.name || '').toLowerCase().includes(search.toLowerCase());
     const codeMatch = (s.code || '').toLowerCase().includes(search.toLowerCase());
     const cityMatch = (s.location?.city || '').toLowerCase().includes(search.toLowerCase());
-    const matchesSearch = nameMatch || codeMatch || cityMatch;
+    const catMatch = (s.category?.name || '').toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = nameMatch || codeMatch || cityMatch || catMatch;
 
     const matchesCat =
+      selectedCategory === 'All Channels & Services' ||
       selectedCategory === 'All Categories' ||
       (s.category?.name || '') === selectedCategory;
 
     const matchesCity =
+      selectedCity === 'All Locations' ||
       selectedCity === 'All Cities' ||
       (s.location?.city || '') === selectedCity;
 
@@ -328,9 +389,7 @@ export const SpacesPage = () => {
                     </td>
 
                     <td>
-                      <span className="badge bg-secondary-subtle text-secondary text-xs">
-                        {s.category?.name || 'Digital LED'}
-                      </span>
+                      {getChannelBadge(s.category?.name)}
                     </td>
 
                     <td>
@@ -406,9 +465,7 @@ export const SpacesPage = () => {
                     style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)', minHeight: '110px' }}
                   >
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <span className="badge bg-black bg-opacity-60 text-white text-xs">
-                        {s.category?.name || 'Digital LED'}
-                      </span>
+                      {getChannelBadge(s.category?.name)}
                       <StatusBadge status={s.status || (s.is_active ? 'active' : 'maintenance')} size="sm" />
                     </div>
                     <div className="text-white fw-bold fs-6 mt-2 text-truncate">

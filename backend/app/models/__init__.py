@@ -46,6 +46,7 @@ from app.models.creative import (
     MediaAsset,
     MediaStatus
 )
+from app.models.influencer import Influencer
 
 __all__ = [
     "Role",
@@ -72,5 +73,6 @@ __all__ = [
     "AuditAction",
     "Creative",
     "MediaAsset",
-    "MediaStatus"
+    "MediaStatus",
+    "Influencer"
 ]

@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Shield,
   Activity,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 
 const ROLE_BADGE_CLASSES = {
@@ -178,6 +179,26 @@ export const Sidebar = ({
               >
                 <Megaphone size={18} />
                 {!collapsed && <span>Campaigns</span>}
+              </NavLink>
+            )}
+
+            {/* Influencer Marketplace (Advertiser, Sales Executive, Administrator, Space Manager) */}
+            {isAuthorized([
+              'Advertiser',
+              'Sales Executive',
+              'Space Manager',
+              'Administrator',
+            ]) && (
+              <NavLink
+                to="/influencers"
+                className={({ isActive }) =>
+                  `nav-item-link ${isActive ? 'active' : ''}`
+                }
+                onClick={() => setMobileOpen(false)}
+                title="Influencers & Creators"
+              >
+                <Sparkles size={18} />
+                {!collapsed && <span>Influencers</span>}
               </NavLink>
             )}
 

@@ -12,6 +12,7 @@ from app.models.booking import Booking, BookingStatus
 from app.models.payment import Invoice, InvoiceStatus, Payment, PaymentStatus, PaymentMethod
 from app.models.creative import Creative, MediaStatus
 from app.models.notification import Notification, NotificationType
+from app.models.influencer import Influencer
 
 
 def seed_demo_data():
@@ -90,6 +91,9 @@ def seed_demo_data():
         {"name": "DHA Phase 5 Commercial Ring Road", "address": "Bedian Road Interchange DHA Phase 5", "city": "Lahore", "latitude": Decimal("31.4697"), "longitude": Decimal("74.4124")},
         {"name": "Blue Area Jinnah Avenue", "address": "Jinnah Avenue Blue Area Sector G-6", "city": "Islamabad", "latitude": Decimal("33.7167"), "longitude": Decimal("73.0667")},
         {"name": "Centaurus Flyover LED Zone", "address": "Jinnah Avenue opposite Centaurus Mall", "city": "Islamabad", "latitude": Decimal("33.7077"), "longitude": Decimal("73.0501")},
+        {"name": "Meta Ads Manager Network (Facebook & Instagram)", "address": "Meta Global Ad Network", "city": "Digital Network", "latitude": Decimal("24.8607"), "longitude": Decimal("67.0681")},
+        {"name": "YouTube Video Network & Google Ads", "address": "Google Video Partner Network", "city": "Digital Network", "latitude": Decimal("31.5102"), "longitude": Decimal("74.3441")},
+        {"name": "Agency Creator & Influencer Roster", "address": "Verified Digital Creators Network", "city": "Digital Network", "latitude": Decimal("33.7167"), "longitude": Decimal("73.0667")},
     ]
 
     locations_map = {}
@@ -108,7 +112,11 @@ def seed_demo_data():
         "Digital 4K LED Screen",
         "Static Highway Unipole",
         "Mall Digital Display",
-        "Transit Bus Shelter Display"
+        "Transit Bus Shelter Display",
+        "Social Media Marketing (Meta & Instagram)",
+        "YouTube Video Advertising",
+        "Influencer & Creator Sponsorship",
+        "Programmatic Display Network"
     ]
 
     categories_map = {}
@@ -121,7 +129,7 @@ def seed_demo_data():
         categories_map[cat.name] = cat
 
     # -------------------------------------------------------------------------
-    # 4. ADVERTISING SPACES
+    # 4. ADVERTISING SPACES & DIGITAL MARKETING AGENCY SERVICES
     # -------------------------------------------------------------------------
     spaces_data = [
         {
@@ -158,6 +166,51 @@ def seed_demo_data():
             "description": "Dual-sided illuminated transit poster board targeting weekend family footfall.",
             "dimensions": "6x4 ft",
             "base_rate": Decimal("350000.00"),
+            "is_active": True
+        },
+        {
+            "name": "Meta Social Growth Flight (Facebook & Instagram Feed + Reels)",
+            "category_name": "Social Media Marketing (Meta & Instagram)",
+            "location_name": "Meta Ads Manager Network (Facebook & Instagram)",
+            "description": "Targeted Meta Ads campaign reaching 500,000+ active users with 9:16 Reels and 1:1 Feed carousel creative placements.",
+            "dimensions": "1080x1920 (9:16) & 1080x1080 (1:1)",
+            "base_rate": Decimal("350000.00"),
+            "is_active": True
+        },
+        {
+            "name": "YouTube 30s 4K Video Pre-Roll & In-Stream Campaign",
+            "category_name": "YouTube Video Advertising",
+            "location_name": "YouTube Video Network & Google Ads",
+            "description": "High-impact non-skippable & skippable 1080p/4K video ad flight placed across top trending Pakistani YouTube channels.",
+            "dimensions": "1920x1080 (16:9 4K Video)",
+            "base_rate": Decimal("550000.00"),
+            "is_active": True
+        },
+        {
+            "name": "Tech YouTuber Dedicated Review & Unboxing Sponsorship",
+            "category_name": "Influencer & Creator Sponsorship",
+            "location_name": "Agency Creator & Influencer Roster",
+            "description": "Full dedicated 8-10 minute YouTube sponsorship video + pinned link in description by a verified Tech creator (500k+ subs).",
+            "dimensions": "16:9 Full HD Video + Link",
+            "base_rate": Decimal("250000.00"),
+            "is_active": True
+        },
+        {
+            "name": "Lifestyle & Fashion Instagram Creator Collab Package",
+            "category_name": "Influencer & Creator Sponsorship",
+            "location_name": "Agency Creator & Influencer Roster",
+            "description": "2 High-engagement Instagram Reels + 3 Interactive Stories with swipe-up product link by top lifestyle creators.",
+            "dimensions": "1080x1920 (9:16 Video)",
+            "base_rate": Decimal("180000.00"),
+            "is_active": True
+        },
+        {
+            "name": "Google High-Intent Search & Display Network Flight",
+            "category_name": "Programmatic Display Network",
+            "location_name": "YouTube Video Network & Google Ads",
+            "description": "Multi-device web banner and keyword search ad flight with guaranteed 100,000+ targeted impressions.",
+            "dimensions": "728x90 & 300x250 Banners",
+            "base_rate": Decimal("220000.00"),
             "is_active": True
         }
     ]
@@ -329,6 +382,223 @@ def seed_demo_data():
                 is_read=True
             )
         )
+
+    # -------------------------------------------------------------------------
+    # 10. INFLUENCERS & CREATOR MEDIA KITS
+    # -------------------------------------------------------------------------
+    influencers_data = [
+        {
+            "name": "Ali Raza",
+            "handle": "@techwithali",
+            "platform": "YouTube",
+            "niche": "Tech & Gadgets",
+            "bio": "Leading Pakistani tech reviewer covering smartphone unboxings, gadget teardowns, and software benchmarks.",
+            "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+            "followers_count": 780000,
+            "avg_views": 195000,
+            "engagement_rate": Decimal("7.45"),
+            "tier": "Macro Creator",
+            "packages": [
+                {
+                    "id": "pkg_dedicated",
+                    "title": "Dedicated 10-Min YouTube Review",
+                    "deliverables": "Full dedicated video, technical benchmark test + pinned comment link",
+                    "price": 250000
+                },
+                {
+                    "id": "pkg_integrated",
+                    "title": "60s Mid-Roll Video Integration",
+                    "deliverables": "60s in-video organic shoutout + description affiliate link",
+                    "price": 130000
+                },
+                {
+                    "id": "pkg_shorts",
+                    "title": "2 YouTube Shorts & Community Post",
+                    "deliverables": "2 High-impact vertical YouTube shorts + Community tab banner",
+                    "price": 95000
+                }
+            ],
+            "portfolio_links": [
+                {"title": "Jazz 5G Speed Test & Review", "url": "https://youtube.com/watch?v=demo1"},
+                {"title": "Flagship Smartphone Unboxing", "url": "https://youtube.com/watch?v=demo2"}
+            ],
+            "is_verified": True,
+            "is_available": True,
+            "rating": Decimal("4.95"),
+            "completed_campaigns": 24
+        },
+        {
+            "name": "Ayesha & Zainab",
+            "handle": "@fashiontwins_official",
+            "platform": "Instagram",
+            "niche": "Fashion & Lifestyle",
+            "bio": "Lifestyle, haute couture & beauty creators inspiring 500k+ modern youth across Karachi & Lahore.",
+            "avatar_url": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80",
+            "followers_count": 520000,
+            "avg_views": 120000,
+            "engagement_rate": Decimal("8.20"),
+            "tier": "Macro Creator",
+            "packages": [
+                {
+                    "id": "pkg_reels",
+                    "title": "2 Instagram Reels + 3 Stories",
+                    "deliverables": "2 High-engagement aesthetic Reels + 3 swipe-up Stories",
+                    "price": 180000
+                },
+                {
+                    "id": "pkg_takeover",
+                    "title": "1-Day Brand Takeover & Event Visit",
+                    "deliverables": "On-site flagship store launch coverage + Live stream",
+                    "price": 280000
+                }
+            ],
+            "portfolio_links": [
+                {"title": "Summer Lawn Collection Launch", "url": "https://instagram.com/p/demo1"}
+            ],
+            "is_verified": True,
+            "is_available": True,
+            "rating": Decimal("4.90"),
+            "completed_campaigns": 38
+        },
+        {
+            "name": "Chef Bilal",
+            "handle": "@karachifoodguide",
+            "platform": "YouTube",
+            "niche": "Food & Culinary",
+            "bio": "Street food explorer, restaurant critic, and FMCG brand partner covering Pakistan's top food culture.",
+            "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+            "followers_count": 640000,
+            "avg_views": 160000,
+            "engagement_rate": Decimal("6.90"),
+            "tier": "Macro Creator",
+            "packages": [
+                {
+                    "id": "pkg_restaurant",
+                    "title": "Full Episode Food & Beverage Showcase",
+                    "deliverables": "Dedicated 15-min episode featuring brand ingredients / venue",
+                    "price": 220000
+                },
+                {
+                    "id": "pkg_shoutout",
+                    "title": "30s In-Video Tasting & Sponsor Link",
+                    "deliverables": "30-second taste test integration + description link",
+                    "price": 110000
+                }
+            ],
+            "portfolio_links": [
+                {"title": "Best Biryani in Burns Road", "url": "https://youtube.com/watch?v=demo3"}
+            ],
+            "is_verified": True,
+            "is_available": True,
+            "rating": Decimal("4.85"),
+            "completed_campaigns": 19
+        },
+        {
+            "name": "Hamza Tariq (Hamza Plays)",
+            "handle": "@hamzaplays_pk",
+            "platform": "YouTube",
+            "niche": "Gaming & Esports",
+            "bio": "Top esports streamer & gaming content creator with massive youth following in mobile & PC gaming.",
+            "avatar_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+            "followers_count": 910000,
+            "avg_views": 250000,
+            "engagement_rate": Decimal("9.10"),
+            "tier": "Celebrity Creator",
+            "packages": [
+                {
+                    "id": "pkg_stream",
+                    "title": "2-Hour Sponsored Live Stream + Overlay",
+                    "deliverables": "2-hour dedicated tournament stream + persistent banner logo overlay",
+                    "price": 200000
+                },
+                {
+                    "id": "pkg_tournament",
+                    "title": "Community Cup Tournament Title Sponsor",
+                    "deliverables": "Full naming rights for monthly 500-player community tournament",
+                    "price": 450000
+                }
+            ],
+            "portfolio_links": [
+                {"title": "PUBG Mobile Pro Finals Stream", "url": "https://youtube.com/watch?v=demo4"}
+            ],
+            "is_verified": True,
+            "is_available": True,
+            "rating": Decimal("4.92"),
+            "completed_campaigns": 42
+        },
+        {
+            "name": "Dr. Saad Farooq",
+            "handle": "@drsaad_fintech",
+            "platform": "LinkedIn",
+            "niche": "Business & Finance",
+            "bio": "Venture partner & financial literacy leader providing corporate brand trust and executive audience reach.",
+            "avatar_url": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80",
+            "followers_count": 180000,
+            "avg_views": 45000,
+            "engagement_rate": Decimal("5.60"),
+            "tier": "Micro Creator",
+            "packages": [
+                {
+                    "id": "pkg_article",
+                    "title": "Thought Leadership Article & Dedicated Post",
+                    "deliverables": "In-depth case study article on financial technology + LinkedIn post",
+                    "price": 140000
+                },
+                {
+                    "id": "pkg_webinar",
+                    "title": "Keynote Speaker at Brand Webinar",
+                    "deliverables": "45-min virtual keynote session for corporate clients",
+                    "price": 250000
+                }
+            ],
+            "portfolio_links": [
+                {"title": "Future of Digital Banking in South Asia", "url": "https://linkedin.com/pulse/demo"}
+            ],
+            "is_verified": True,
+            "is_available": True,
+            "rating": Decimal("5.00"),
+            "completed_campaigns": 15
+        },
+        {
+            "name": "Zoya Malik",
+            "handle": "@zoyatrends",
+            "platform": "TikTok",
+            "niche": "Fashion & Lifestyle",
+            "bio": "Viral TikTok trendsetter & beauty ambassador reaching Gen-Z consumers nationwide with high engagement.",
+            "avatar_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80",
+            "followers_count": 1400000,
+            "avg_views": 480000,
+            "engagement_rate": Decimal("11.30"),
+            "tier": "Celebrity Creator",
+            "packages": [
+                {
+                    "id": "pkg_tiktok",
+                    "title": "3 Viral TikTok Videos with Branded Hashtag",
+                    "deliverables": "3 Creative 15-30s TikTok videos + branded sound usage",
+                    "price": 220000
+                },
+                {
+                    "id": "pkg_livetrip",
+                    "title": "TikTok LIVE Brand Launch Session",
+                    "deliverables": "1-Hour live shopping stream with pinned product cart links",
+                    "price": 175000
+                }
+            ],
+            "portfolio_links": [
+                {"title": "Viral Skincare Routine Challenge", "url": "https://tiktok.com/@zoyatrends/video/demo"}
+            ],
+            "is_verified": True,
+            "is_available": True,
+            "rating": Decimal("4.88"),
+            "completed_campaigns": 51
+        }
+    ]
+
+    for inf_data in influencers_data:
+        inf = Influencer.query.filter_by(handle=inf_data["handle"]).first()
+        if not inf:
+            inf = Influencer(**inf_data)
+            db.session.add(inf)
 
     db.session.commit()
     print("[SEED] Demo data seeded successfully!")

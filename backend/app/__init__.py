@@ -19,6 +19,7 @@ from app.notifications import notifications_bp
 from app.audit_logs import audit_logs_bp
 from app.reports import reports_bp
 from app.creatives import creatives_bp
+from app.influencers import influencers_bp
 from app.errors import register_error_handlers
 
 
@@ -125,6 +126,9 @@ def create_app(config_class=Config):
 
     # Register the media & creatives Blueprint.
     app.register_blueprint(creatives_bp)
+
+    # Register the influencer & creator marketplace Blueprint.
+    app.register_blueprint(influencers_bp)
 
     # Register centralized error handling & response middleware
     register_error_handlers(app)

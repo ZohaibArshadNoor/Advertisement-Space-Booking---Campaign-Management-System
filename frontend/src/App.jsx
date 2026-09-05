@@ -25,6 +25,7 @@ import AvailabilityPage from './features/availability/pages/AvailabilityPage';
 import Campaigns from './pages/Campaigns';
 import BookingsPage from './features/bookings/pages/BookingsPage';
 import CreativesPage from './features/creatives/pages/CreativesPage';
+import InfluencersPage from './features/influencers/pages/InfluencersPage';
 import PaymentsPage from './features/payments/pages/PaymentsPage';
 import NotificationsPage from './features/notifications/pages/NotificationsPage';
 import ProfilePage from './features/profile/pages/ProfilePage';
@@ -53,6 +54,7 @@ function App() {
                 <Route path="/spaces" element={<SpacesPage />} />
                 <Route path="/availability" element={<AvailabilityPage />} />
                 <Route path="/campaigns" element={<Campaigns />} />
+                <Route path="/influencers" element={<InfluencersPage />} />
                 <Route path="/bookings" element={<BookingsPage />} />
                 <Route path="/creatives" element={<CreativesPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />

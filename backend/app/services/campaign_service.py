@@ -121,7 +121,13 @@ class CampaignService:
         start_date=None,
         end_date=None,
         budget=None,
-        advertiser_id=None
+        advertiser_id=None,
+        marketing_channel="Meta Ads & YouTube Video",
+        target_audience="Youth & Tech Users (18-35)",
+        primary_goal="Brand Awareness & Video Views",
+        pipeline_stage="BRIEFING",
+        deliverables_checklist=None,
+        performance_metrics=None
     ):
         """
         Creates a new campaign in DRAFT status.
@@ -134,7 +140,25 @@ class CampaignService:
             start_date=start_date,
             end_date=end_date,
             budget=budget,
-            status=CampaignStatus.DRAFT
+            status=CampaignStatus.DRAFT,
+            marketing_channel=marketing_channel,
+            target_audience=target_audience,
+            primary_goal=primary_goal,
+            pipeline_stage=pipeline_stage,
+            deliverables_checklist=deliverables_checklist or [
+                {"id": "t1", "task": "Lock Creative Brief & Audience Targeting", "completed": True},
+                {"id": "t2", "task": "Copywriting, Video Storyboard & Script", "completed": False},
+                {"id": "t3", "task": "Client Creative Review & Approval", "completed": False},
+                {"id": "t4", "task": "Launch Live Ads across Channels", "completed": False},
+                {"id": "t5", "task": "Campaign Optimization & ROI Report", "completed": False}
+            ],
+            performance_metrics=performance_metrics or {
+                "impressions": 0,
+                "clicks": 0,
+                "ctr": "0.0",
+                "cpc": "0.0",
+                "video_views": 0
+            }
         )
 
         db.session.add(campaign)
@@ -188,6 +212,24 @@ class CampaignService:
 
         if "budget" in data:
             campaign.budget = data["budget"]
+
+        if "marketing_channel" in data:
+            campaign.marketing_channel = data["marketing_channel"]
+
+        if "target_audience" in data:
+            campaign.target_audience = data["target_audience"]
+
+        if "primary_goal" in data:
+            campaign.primary_goal = data["primary_goal"]
+
+        if "pipeline_stage" in data:
+            campaign.pipeline_stage = data["pipeline_stage"]
+
+        if "deliverables_checklist" in data:
+            campaign.deliverables_checklist = data["deliverables_checklist"]
+
+        if "performance_metrics" in data:
+            campaign.performance_metrics = data["performance_metrics"]
 
         db.session.commit()
 

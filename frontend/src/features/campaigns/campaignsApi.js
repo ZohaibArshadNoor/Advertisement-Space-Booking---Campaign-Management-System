@@ -14,7 +14,11 @@ export const campaignsApi = {
     return response.data;
   },
   updateCampaign: async (id, data) => {
-    const response = await apiClient.put(`/campaigns/${id}`, data);
+    const response = await apiClient.patch(`/campaigns/${id}`, data);
+    return response.data;
+  },
+  updateStatus: async (id, status) => {
+    const response = await apiClient.patch(`/campaigns/${id}/status`, { status });
     return response.data;
   },
   deleteCampaign: async (id) => {
@@ -22,3 +26,4 @@ export const campaignsApi = {
     return response.data;
   },
 };
+export default campaignsApi;

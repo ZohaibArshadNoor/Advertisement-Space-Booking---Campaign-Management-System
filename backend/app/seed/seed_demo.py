@@ -238,20 +238,108 @@ def seed_demo_data():
     adv_user = users_map["Advertiser"]
     campaign_data = [
         {
-            "name": "Super 4G Mega Data Summer Campaign",
-            "description": "National high-frequency billboard blitz promoting summer mobile internet packages.",
+            "name": "Super 4G Mega Data YouTube & Meta Blitz",
+            "description": "National high-frequency YouTube 4K video pre-roll and Meta Reels blitz promoting summer mobile internet packages.",
             "budget": Decimal("5000000.00"),
             "start_date": date.today() - timedelta(days=15),
             "end_date": date.today() + timedelta(days=45),
-            "status": CampaignStatus.ACTIVE
+            "status": CampaignStatus.ACTIVE,
+            "marketing_channel": "YouTube Video Ads",
+            "target_audience": "Tech Enthusiasts & Youth (18-35), Urban Metro Cities",
+            "primary_goal": "Brand Awareness & Video Views",
+            "pipeline_stage": "LIVE",
+            "deliverables_checklist": [
+                {"id": "t1", "task": "Lock Creative Brief & Audience Targeting", "completed": True},
+                {"id": "t2", "task": "Scriptwriting, Video Storyboard & 60s Script", "completed": True},
+                {"id": "t3", "task": "Client Creative Review & Approval", "completed": True},
+                {"id": "t4", "task": "Publish Live Ads on Meta & YouTube Network", "completed": True},
+                {"id": "t5", "task": "Final Performance & Attribution ROI Report", "completed": False}
+            ],
+            "performance_metrics": {
+                "impressions": 2450000,
+                "clicks": 98400,
+                "ctr": "4.02",
+                "cpc": "11.20",
+                "video_views": 620000
+            }
         },
         {
-            "name": "JazzCash Digital Wallet Autumn Promo",
-            "description": "Financial awareness transit shelter campaign promoting zero transaction fees.",
+            "name": "JazzCash Zero-Fee Influencer Collab & Viral Promo",
+            "description": "Creator sponsorship flight with top tech reviewers & lifestyle ambassadors endorsing instant mobile cashback.",
             "budget": Decimal("2500000.00"),
-            "start_date": date.today() + timedelta(days=30),
+            "start_date": date.today() + timedelta(days=5),
+            "end_date": date.today() + timedelta(days=60),
+            "status": CampaignStatus.ACTIVE,
+            "marketing_channel": "Influencer Sponsorships",
+            "target_audience": "Young Professionals, Freelancers & Online Shoppers (20-40)",
+            "primary_goal": "Lead Generation & App Installs",
+            "pipeline_stage": "REVIEW",
+            "deliverables_checklist": [
+                {"id": "t1", "task": "Lock Creative Brief & Audience Targeting", "completed": True},
+                {"id": "t2", "task": "Draft Creator Talking Points & Promo Codes", "completed": True},
+                {"id": "t3", "task": "Client Review of Creator Video Drafts", "completed": True},
+                {"id": "t4", "task": "Broadcast Dedicated Videos & Swipe-up Reels", "completed": False},
+                {"id": "t5", "task": "Influencer Engagement Analytics Audit", "completed": False}
+            ],
+            "performance_metrics": {
+                "impressions": 920000,
+                "clicks": 41500,
+                "ctr": "4.51",
+                "cpc": "13.80",
+                "video_views": 280000
+            }
+        },
+        {
+            "name": "Khaadi Summer E-Commerce Meta & Display Launch",
+            "description": "Multi-format Meta Carousel & Google Display Network campaign driving online checkout conversions.",
+            "budget": Decimal("3200000.00"),
+            "start_date": date.today() + timedelta(days=12),
+            "end_date": date.today() + timedelta(days=75),
+            "status": CampaignStatus.DRAFT,
+            "marketing_channel": "Meta (Facebook & Instagram)",
+            "target_audience": "Fashion-Forward Women & Gen-Z (18-45), Nationwide",
+            "primary_goal": "E-Commerce Sales & ROAS",
+            "pipeline_stage": "PRODUCTION",
+            "deliverables_checklist": [
+                {"id": "t1", "task": "Lock Creative Brief & Audience Targeting", "completed": True},
+                {"id": "t2", "task": "High-Res Product Photography & Reels Editing", "completed": True},
+                {"id": "t3", "task": "Client Creative Review & Sign-off", "completed": False},
+                {"id": "t4", "task": "Launch Dynamic Product Ads (DPA)", "completed": False},
+                {"id": "t5", "task": "ROAS & Cart Checkout Conversion Report", "completed": False}
+            ],
+            "performance_metrics": {
+                "impressions": 450000,
+                "clicks": 18200,
+                "ctr": "4.04",
+                "cpc": "12.10",
+                "video_views": 95000
+            }
+        },
+        {
+            "name": "Foodpanda Late-Night Craving Video Ads",
+            "description": "Hyper-targeted 15s non-skippable YouTube bumper ads and display banners triggering between 10PM and 3AM.",
+            "budget": Decimal("1800000.00"),
+            "start_date": date.today() + timedelta(days=20),
             "end_date": date.today() + timedelta(days=90),
-            "status": CampaignStatus.DRAFT
+            "status": CampaignStatus.DRAFT,
+            "marketing_channel": "Programmatic Display Network",
+            "target_audience": "University Students & Late Night Gamers (18-30)",
+            "primary_goal": "Mobile App Installs",
+            "pipeline_stage": "BRIEFING",
+            "deliverables_checklist": [
+                {"id": "t1", "task": "Lock Creative Brief & Time-of-Day Targeting", "completed": True},
+                {"id": "t2", "task": "Produce 15s Bumper Video & Animated Banners", "completed": False},
+                {"id": "t3", "task": "Client Approval of Bumper Cuts", "completed": False},
+                {"id": "t4", "task": "Publish Programmatic Ad Flights", "completed": False},
+                {"id": "t5", "task": "Midnight Orders Attribution Report", "completed": False}
+            ],
+            "performance_metrics": {
+                "impressions": 0,
+                "clicks": 0,
+                "ctr": "0.0",
+                "cpc": "0.0",
+                "video_views": 0
+            }
         }
     ]
 
@@ -267,7 +355,13 @@ def seed_demo_data():
                 budget=c_data["budget"],
                 start_date=c_data["start_date"],
                 end_date=c_data["end_date"],
-                status=c_data["status"]
+                status=c_data["status"],
+                marketing_channel=c_data.get("marketing_channel", "YouTube Video Ads"),
+                target_audience=c_data.get("target_audience", "Tech & Youth, 18-35"),
+                primary_goal=c_data.get("primary_goal", "Brand Awareness"),
+                pipeline_stage=c_data.get("pipeline_stage", "BRIEFING"),
+                deliverables_checklist=c_data.get("deliverables_checklist", []),
+                performance_metrics=c_data.get("performance_metrics", {})
             )
             db.session.add(camp)
             db.session.flush()
@@ -277,7 +371,7 @@ def seed_demo_data():
     # 6. BOOKINGS & AVAILABILITY
     # -------------------------------------------------------------------------
     space1 = spaces_map["Shahrah-e-Faisal Mega LED A1"]
-    active_camp = campaigns_map["Super 4G Mega Data Summer Campaign"]
+    active_camp = campaigns_map["Super 4G Mega Data YouTube & Meta Blitz"]
 
     b_start = date.today() - timedelta(days=10)
     b_end = date.today() + timedelta(days=20)

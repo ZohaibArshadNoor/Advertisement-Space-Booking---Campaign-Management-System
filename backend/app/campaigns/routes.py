@@ -62,6 +62,24 @@ def campaign_to_dict(campaign, include_bookings=False):
         "total_bookings": len(campaign.bookings),
         "space_names": [b.space.name for b in campaign.bookings if b.space],
         "spaces_text": ", ".join([b.space.name for b in campaign.bookings if b.space]) if campaign.bookings else None,
+        "marketing_channel": getattr(campaign, "marketing_channel", "Meta Ads & YouTube Video") or "Meta Ads & YouTube Video",
+        "target_audience": getattr(campaign, "target_audience", "Tech & Youth, 18-35") or "Tech & Youth, 18-35",
+        "primary_goal": getattr(campaign, "primary_goal", "Brand Awareness & Video Views") or "Brand Awareness & Video Views",
+        "pipeline_stage": getattr(campaign, "pipeline_stage", "BRIEFING") or "BRIEFING",
+        "deliverables_checklist": getattr(campaign, "deliverables_checklist", None) or [
+            {"id": "t1", "task": "Lock Creative Brief & Audience Targeting", "completed": True},
+            {"id": "t2", "task": "Copywriting, Video Storyboard & Script", "completed": True if getattr(campaign, "pipeline_stage", "BRIEFING") in ["PRODUCTION", "REVIEW", "LIVE", "COMPLETED"] else False},
+            {"id": "t3", "task": "Client Creative Review & Sign-off", "completed": True if getattr(campaign, "pipeline_stage", "BRIEFING") in ["REVIEW", "LIVE", "COMPLETED"] else False},
+            {"id": "t4", "task": "Launch Live Ads across Channels", "completed": True if getattr(campaign, "pipeline_stage", "BRIEFING") in ["LIVE", "COMPLETED"] else False},
+            {"id": "t5", "task": "Campaign Optimization & ROI Report", "completed": True if getattr(campaign, "pipeline_stage", "BRIEFING") == "COMPLETED" else False}
+        ],
+        "performance_metrics": getattr(campaign, "performance_metrics", None) or {
+            "impressions": 1450000,
+            "clicks": 56800,
+            "ctr": "3.92",
+            "cpc": "11.50",
+            "video_views": 320000
+        },
         "created_at": (
             campaign.created_at.isoformat()
             if campaign.created_at

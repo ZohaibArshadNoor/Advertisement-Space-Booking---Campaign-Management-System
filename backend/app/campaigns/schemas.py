@@ -6,7 +6,7 @@ from marshmallow import (
     ValidationError
 )
 
-from app.models.campaign import CampaignStatus
+from app.models.campaign import CampaignStatus, PipelineStage
 
 
 class CampaignCreateSchema(Schema):
@@ -42,6 +42,41 @@ class CampaignCreateSchema(Schema):
     )
 
     advertiser_id = fields.Integer(
+        required=False,
+        allow_none=True
+    )
+
+    marketing_channel = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    target_audience = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    primary_goal = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    pipeline_stage = fields.String(
+        required=False,
+        allow_none=True,
+        validate=validate.OneOf(
+            PipelineStage.ALL,
+            error="Pipeline stage must be one of: {choices}"
+        )
+    )
+
+    deliverables_checklist = fields.List(
+        fields.Raw(),
+        required=False,
+        allow_none=True
+    )
+
+    performance_metrics = fields.Dict(
         required=False,
         allow_none=True
     )
@@ -91,6 +126,41 @@ class CampaignUpdateSchema(Schema):
         allow_none=True,
         as_string=True,
         places=2
+    )
+
+    marketing_channel = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    target_audience = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    primary_goal = fields.String(
+        required=False,
+        allow_none=True
+    )
+
+    pipeline_stage = fields.String(
+        required=False,
+        allow_none=True,
+        validate=validate.OneOf(
+            PipelineStage.ALL,
+            error="Pipeline stage must be one of: {choices}"
+        )
+    )
+
+    deliverables_checklist = fields.List(
+        fields.Raw(),
+        required=False,
+        allow_none=True
+    )
+
+    performance_metrics = fields.Dict(
+        required=False,
+        allow_none=True
     )
 
     @validates_schema

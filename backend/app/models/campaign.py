@@ -4,6 +4,25 @@ from datetime import datetime, timezone
 from app.extensions import db
 
 
+class PipelineStage:
+    """
+    Digital Marketing Production & Execution Pipeline Stages.
+    """
+    BRIEFING = "BRIEFING"
+    PRODUCTION = "PRODUCTION"
+    REVIEW = "REVIEW"
+    LIVE = "LIVE"
+    COMPLETED = "COMPLETED"
+
+    ALL = [
+        BRIEFING,
+        PRODUCTION,
+        REVIEW,
+        LIVE,
+        COMPLETED
+    ]
+
+
 class CampaignStatus:
     """
     Defines the lifecycle statuses for an advertising campaign.
@@ -116,6 +135,44 @@ class Campaign(db.Model):
     budget = db.Column(
         db.Numeric(14, 2),
         nullable=True
+    )
+
+    # Digital Marketing Specific Attributes
+    marketing_channel = db.Column(
+        db.String(100),
+        nullable=True,
+        default="Meta Ads & YouTube Video"
+    )
+
+    target_audience = db.Column(
+        db.String(255),
+        nullable=True,
+        default="Tech Enthusiasts & Youth, 18-35"
+    )
+
+    primary_goal = db.Column(
+        db.String(100),
+        nullable=True,
+        default="Brand Awareness & Video Views"
+    )
+
+    pipeline_stage = db.Column(
+        db.String(50),
+        nullable=False,
+        default="BRIEFING",
+        index=True
+    )
+
+    deliverables_checklist = db.Column(
+        db.JSON,
+        nullable=True,
+        default=list
+    )
+
+    performance_metrics = db.Column(
+        db.JSON,
+        nullable=True,
+        default=dict
     )
 
     # Timestamp when the campaign was created.

@@ -48,7 +48,6 @@ const NICHES = [
 ];
 const TIERS = ['All Tiers', 'Celebrity Creator', 'Macro Creator', 'Micro Creator', 'Nano Creator'];
 
-// Helper for Initials Avatar with Graceful Network Fallback
 const CreatorAvatar = ({ name = '', avatarUrl = '', size = 52, className = '' }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -116,7 +115,6 @@ export const InfluencersPage = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // In-App Toast System
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success', title = '') => {
@@ -126,20 +124,18 @@ export const InfluencersPage = () => {
     }, 4500);
   };
 
-  // Filters
   const [selectedPlatform, setSelectedPlatform] = useState('All Platforms');
   const [selectedNiche, setSelectedNiche] = useState('All Niches');
   const [selectedTier, setSelectedTier] = useState('All Tiers');
   const [search, setSearch] = useState('');
 
-  // Modals
   const [inspectingCreator, setInspectingCreator] = useState(null);
   const [hiringCreator, setHiringCreator] = useState(null);
   const [editingCreator, setEditingCreator] = useState(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [deletingCreator, setDeletingCreator] = useState(null);
+  const [copiedField, setCopiedField] = useState(null);
 
-  // Admin Creator Form State
   const [creatorForm, setCreatorForm] = useState({
     name: '',
     handle: '',
@@ -163,7 +159,6 @@ export const InfluencersPage = () => {
   const [savingCreator, setSavingCreator] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // Hire Form State
   const [hireForm, setHireForm] = useState({
     campaign_id: '',
     package_id: '',
@@ -217,6 +212,14 @@ export const InfluencersPage = () => {
     fetchInfluencers();
   };
 
+  const handleCopy = (text, field) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+      showToast('Copied to clipboard', 'success', 'Copied');
+    });
+  };
+
   const handleOpenHireModal = (creator) => {
     setHireError('');
     setHiringCreator(creator);
@@ -254,7 +257,6 @@ export const InfluencersPage = () => {
     }
   };
 
-  // --- Admin Add / Edit Handlers ---
   const handleOpenCreateModal = () => {
     setFormError('');
     setIsCreatingNew(true);
@@ -384,33 +386,50 @@ export const InfluencersPage = () => {
     }
   };
 
+  const formatNumber = (num) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num?.toString() || '0';
+  };
+
+  const formatPrice = (price) => {
+    return `Rs. ${Number(price || 0).toLocaleString()}`;
+  };
+
   const getPlatformBadge = (platform) => {
     switch (platform) {
       case 'YouTube':
         return (
-          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#dc2626', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
-            <Video size={13} className="text-danger flex-shrink-0" />
+          <span className="badge d-inline-flex align-items-center gap-1 px-2 py-1 text-xs" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#dc2626', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+            <Video size={12} className="flex-shrink-0" />
             <span className="fw-semibold">YouTube</span>
           </span>
         );
       case 'Instagram':
         return (
-          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(217, 70, 239, 0.12)', color: '#c026d3', border: '1px solid rgba(217, 70, 239, 0.25)' }}>
-            <Share2 size={13} className="flex-shrink-0" />
+          <span className="badge d-inline-flex align-items-center gap-1 px-2 py-1 text-xs" style={{ background: 'rgba(217, 70, 239, 0.12)', color: '#c026d3', border: '1px solid rgba(217, 70, 239, 0.25)' }}>
+            <Share2 size={12} className="flex-shrink-0" />
             <span className="fw-semibold">Instagram</span>
           </span>
         );
       case 'TikTok':
         return (
-          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(15, 23, 42, 0.08)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}>
-            <TrendingUp size={13} className="flex-shrink-0" />
+          <span className="badge d-inline-flex align-items-center gap-1 px-2 py-1 text-xs" style={{ background: 'rgba(15, 23, 42, 0.08)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}>
+            <TrendingUp size={12} className="flex-shrink-0" />
             <span className="fw-semibold">TikTok</span>
+          </span>
+        );
+      case 'LinkedIn':
+        return (
+          <span className="badge d-inline-flex align-items-center gap-1 px-2 py-1 text-xs" style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', border: '1px solid rgba(2, 132, 199, 0.25)' }}>
+            <Briefcase size={12} className="flex-shrink-0" />
+            <span className="fw-semibold">LinkedIn</span>
           </span>
         );
       default:
         return (
-          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', border: '1px solid rgba(2, 132, 199, 0.25)' }}>
-            <Users size={13} className="flex-shrink-0" />
+          <span className="badge d-inline-flex align-items-center gap-1 px-2 py-1 text-xs" style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', border: '1px solid rgba(2, 132, 199, 0.25)' }}>
+            <Users size={12} className="flex-shrink-0" />
             <span className="fw-semibold">{platform}</span>
           </span>
         );
@@ -419,14 +438,13 @@ export const InfluencersPage = () => {
 
   return (
     <div className="page-container">
-      {/* Toast Notification Container */}
       {toast && (
         <div
           className="position-fixed bottom-0 end-0 p-3"
           style={{ zIndex: 9999, maxWidth: '380px' }}
         >
           <div
-            className={`d-flex align-items-start gap-2.5 p-3 rounded-3 shadow-lg border text-xs`}
+            className={`d-flex align-items-start gap-2 p-3 rounded-3 shadow-lg border`}
             style={{
               backgroundColor: 'var(--color-bg-surface)',
               borderColor: toast.type === 'success' ? '#22c55e' : toast.type === 'danger' ? '#ef4444' : '#3b82f6',
@@ -437,8 +455,8 @@ export const InfluencersPage = () => {
             {toast.type === 'danger' && <AlertTriangle size={18} className="text-danger flex-shrink-0 mt-0.5" />}
             {toast.type === 'info' && <Info size={18} className="text-primary flex-shrink-0 mt-0.5" />}
             <div className="flex-grow-1">
-              {toast.title && <div className="fw-bold text-primary-emphasis mb-0.5">{toast.title}</div>}
-              <div className="text-muted">{toast.message}</div>
+              {toast.title && <div className="fw-bold text-primary-emphasis mb-0.5" style={{ fontSize: '0.8rem' }}>{toast.title}</div>}
+              <div className="text-muted" style={{ fontSize: '0.75rem' }}>{toast.message}</div>
             </div>
             <button
               type="button"
@@ -451,13 +469,12 @@ export const InfluencersPage = () => {
         </div>
       )}
 
-      {/* Page Header Banner (Cleanly spaced without collisions) */}
       <div
         className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 p-4 rounded-3 border"
         style={{ backgroundColor: 'var(--color-bg-surface)', boxShadow: 'var(--shadow-xs)' }}
       >
-        <div style={{ maxWidth: '720px' }}>
-          <div className="d-flex align-items-center gap-2 mb-1.5">
+        <div style={{ maxWidth: '680px', minWidth: 0 }}>
+          <div className="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
             <span className="badge bg-primary-subtle text-primary font-semibold px-2.5 py-1 text-xs">
               Digital Marketing Agency Hub
             </span>
@@ -469,14 +486,13 @@ export const InfluencersPage = () => {
           <h1 className="h4 fw-bold text-primary-emphasis mb-1">
             Influencer &amp; Content Creator Marketplace
           </h1>
-          <p className="text-muted text-xs mb-0" style={{ lineHeight: '1.5' }}>
+          <p className="text-muted mb-0" style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>
             Discover vetted YouTube reviewers, Instagram lifestyle creators, and TikTok influencers. Inspect media kits, rate cards, and commission video sponsorships directly for your marketing campaigns.
           </p>
         </div>
 
-        {/* Header Actions & Stats Badge Row with Ample Gap */}
         <div className="d-flex align-items-center gap-3 flex-wrap flex-shrink-0">
-          <div className="d-flex align-items-center gap-3 bg-light-subtle px-3.5 py-2 rounded-2 border">
+          <div className="d-flex align-items-center gap-3 bg-light-subtle px-3 py-2 rounded-2 border">
             <div>
               <div className="fw-bold fs-6 text-primary text-center">{influencers.length}</div>
               <div className="text-muted text-center" style={{ fontSize: '0.7rem' }}>Creators</div>
@@ -501,9 +517,8 @@ export const InfluencersPage = () => {
         </div>
       </div>
 
-      {/* Filter & Search Toolbar */}
       <div className="toolbar-ui p-3 rounded-3 border mb-4" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
-        <form onSubmit={handleSearchSubmit} className="toolbar-search">
+        <form onSubmit={handleSearchSubmit} className="toolbar-search mb-2 mb-md-0">
           <Search size={15} className="toolbar-search-icon" />
           <input
             type="text"
@@ -516,14 +531,13 @@ export const InfluencersPage = () => {
         </form>
 
         <div className="d-flex flex-wrap align-items-center gap-2">
-          {/* Platform Pills */}
           <div className="btn-group btn-group-sm" role="group">
             {PLATFORMS.map((plat) => (
               <button
                 key={plat}
                 type="button"
                 className={`btn btn-sm ${selectedPlatform === plat ? 'btn-primary' : 'btn-outline-secondary'}`}
-                style={{ fontSize: '0.76rem', padding: '0.4rem 0.75rem' }}
+                style={{ fontSize: '0.72rem', padding: '0.35rem 0.65rem' }}
                 onClick={() => setSelectedPlatform(plat)}
               >
                 {plat}
@@ -533,7 +547,7 @@ export const InfluencersPage = () => {
 
           <select
             className="form-select-ui"
-            style={{ width: 'auto', height: '38px', fontSize: '0.78rem' }}
+            style={{ width: 'auto', height: '38px', fontSize: '0.75rem' }}
             value={selectedNiche}
             onChange={(e) => setSelectedNiche(e.target.value)}
           >
@@ -544,7 +558,7 @@ export const InfluencersPage = () => {
 
           <select
             className="form-select-ui"
-            style={{ width: 'auto', height: '38px', fontSize: '0.78rem' }}
+            style={{ width: 'auto', height: '38px', fontSize: '0.75rem' }}
             value={selectedTier}
             onChange={(e) => setSelectedTier(e.target.value)}
           >
@@ -555,7 +569,6 @@ export const InfluencersPage = () => {
         </div>
       </div>
 
-      {/* Creator Cards Grid */}
       {loading ? (
         <div className="text-center py-5">
           <div className="spinner-border text-primary spinner-border-sm" role="status" />
@@ -571,21 +584,13 @@ export const InfluencersPage = () => {
         <div className="row g-4">
           {influencers.map((inf) => (
             <div key={inf.id} className="col-12 col-md-6 col-xxl-4">
-              <div
-                className="h-100 d-flex flex-column justify-content-between p-4 rounded-3 border"
-                style={{
-                  backgroundColor: 'var(--color-bg-surface)',
-                  boxShadow: 'var(--shadow-sm)',
-                  transition: 'box-shadow 0.2s ease, transform 0.2s ease'
-                }}
-              >
+              <div className="ui-card-standard h-100 d-flex flex-column justify-content-between">
                 <div>
-                  {/* Top Creator Header Card */}
-                  <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
-                    <div className="d-flex align-items-start gap-3" style={{ minWidth: 0, flex: '1 1 auto' }}>
-                      <CreatorAvatar name={inf.name} avatarUrl={inf.avatar_url} size={52} />
+                  <div className="d-flex align-items-start justify-content-between gap-2 mb-3">
+                    <div className="d-flex align-items-start gap-2.5" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                      <CreatorAvatar name={inf.name} avatarUrl={inf.avatar_url} size={48} />
                       <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-                        <div className="d-flex align-items-center gap-1.5 mb-1" style={{ minWidth: 0 }}>
+                        <div className="d-flex align-items-center gap-1.5 mb-0.5" style={{ minWidth: 0 }}>
                           <h3
                             className="fw-bold text-primary-emphasis mb-0 text-truncate fs-6"
                             title={inf.name}
@@ -601,29 +606,27 @@ export const InfluencersPage = () => {
                           )}
                         </div>
                         <div
-                          className="text-muted font-monospace text-xs text-truncate mb-2"
+                          className="text-muted font-monospace text-xs text-truncate mb-1.5"
                           title={inf.handle}
                         >
                           {inf.handle}
                         </div>
-                        {/* Niche & Tier Tags positioned cleanly with distinct spacing */}
-                        <div className="d-flex align-items-center gap-1.5 flex-wrap">
-                          <span className="badge bg-primary-subtle text-primary font-medium px-2 py-0.5" style={{ fontSize: '0.72rem' }}>
+                        <div className="d-flex align-items-center gap-1 flex-wrap">
+                          <span className="badge bg-primary-subtle text-primary font-medium px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
                             {inf.niche}
                           </span>
-                          <span className="badge bg-secondary-subtle text-secondary font-medium px-2 py-0.5" style={{ fontSize: '0.72rem' }}>
+                          <span className="badge bg-secondary-subtle text-secondary font-medium px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
                             {inf.tier}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Platform & Admin Action Buttons in Top Right */}
                     <div className="d-flex flex-column align-items-end gap-1.5 flex-shrink-0">
                       {getPlatformBadge(inf.platform)}
 
                       {isAdminOrManager && (
-                        <div className="d-flex align-items-center gap-1 mt-1">
+                        <div className="d-flex align-items-center gap-1">
                           <button
                             type="button"
                             className="btn-ui-icon p-1 text-muted"
@@ -647,13 +650,11 @@ export const InfluencersPage = () => {
                     </div>
                   </div>
 
-                  {/* Bio Description with clean spacing */}
                   <p
-                    className="text-muted text-xs mb-3 mt-1"
+                    className="text-muted mb-3"
                     style={{
-                      fontSize: '0.8rem',
+                      fontSize: '0.75rem',
                       lineHeight: '1.45',
-                      minHeight: '38px',
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
@@ -663,64 +664,47 @@ export const InfluencersPage = () => {
                     {inf.bio || 'Verified content creator available for dedicated sponsorships and brand activations.'}
                   </p>
 
-                  {/* Key Metrics Stats Banner */}
-                  <div className="p-2.5 rounded-2 bg-light-subtle border d-flex justify-content-around text-center mb-3">
-                    <div>
-                      <div className="fw-bold text-primary-emphasis" style={{ fontSize: '0.92rem' }}>
-                        {inf.followers_count >= 1000000
-                          ? `${(inf.followers_count / 1000000).toFixed(1)}M`
-                          : `${(inf.followers_count / 1000).toFixed(0)}K`}
+                  <div className="ui-metrics-strip mb-3">
+                    <div className="ui-metric-col">
+                      <div className="ui-metric-value text-primary-emphasis">
+                        {formatNumber(inf.followers_count)}
                       </div>
-                      <div className="text-muted" style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Followers
-                      </div>
+                      <div className="ui-metric-label">Followers</div>
                     </div>
-                    <div className="vr opacity-25" />
-                    <div>
-                      <div className="fw-bold text-primary-emphasis" style={{ fontSize: '0.92rem' }}>
-                        {inf.avg_views >= 1000000
-                          ? `${(inf.avg_views / 1000000).toFixed(1)}M`
-                          : `${(inf.avg_views / 1000).toFixed(0)}K`}
+                    <div className="ui-metric-col">
+                      <div className="ui-metric-value text-primary-emphasis">
+                        {formatNumber(inf.avg_views)}
                       </div>
-                      <div className="text-muted" style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Avg Views
-                      </div>
+                      <div className="ui-metric-label">Avg Views</div>
                     </div>
-                    <div className="vr opacity-25" />
-                    <div>
-                      <div className="fw-bold text-success" style={{ fontSize: '0.92rem' }}>
+                    <div className="ui-metric-col">
+                      <div className="ui-metric-value text-success">
                         {inf.engagement_rate}%
                       </div>
-                      <div className="text-muted" style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Engagement
-                      </div>
+                      <div className="ui-metric-label">Engagement</div>
                     </div>
                   </div>
 
-                  {/* Featured Deliverables Rate Card (Zero Overlapping Text) */}
                   <div className="mb-3">
-                    <div className="text-muted text-xs mb-2 fw-semibold d-flex align-items-center justify-content-between" style={{ fontSize: '0.7rem' }}>
+                    <div className="text-muted text-xs mb-1.5 fw-semibold d-flex align-items-center justify-content-between" style={{ fontSize: '0.68rem' }}>
                       <span>SPONSORSHIP PACKAGES</span>
                       <span className="text-primary">{inf.packages?.length || 0} Available</span>
                     </div>
-                    <div className="d-flex flex-column gap-2">
+                    <div className="d-flex flex-column gap-1.5">
                       {(inf.packages || []).slice(0, 2).map((pkg) => (
-                        <div
-                          key={pkg.id}
-                          className="d-flex align-items-center justify-content-between p-2.5 rounded-2 bg-light-subtle border gap-2"
-                        >
+                        <div key={pkg.id} className="ui-package-tile">
                           <span
                             className="text-truncate text-dark-emphasis fw-medium"
-                            style={{ fontSize: '0.76rem', minWidth: 0, flex: '1 1 auto' }}
+                            style={{ fontSize: '0.72rem', minWidth: 0, flex: '1 1 auto' }}
                             title={pkg.title}
                           >
                             {pkg.title}
                           </span>
                           <span
-                            className="badge bg-primary-subtle text-primary font-monospace fw-bold flex-shrink-0 px-2.5 py-1 text-xs"
-                            style={{ whiteSpace: 'nowrap' }}
+                            className="badge bg-primary-subtle text-primary font-monospace fw-bold flex-shrink-0 px-2 py-1"
+                            style={{ whiteSpace: 'nowrap', fontSize: '0.7rem' }}
                           >
-                            Rs. {pkg.price?.toLocaleString()}
+                            {formatPrice(pkg.price)}
                           </span>
                         </div>
                       ))}
@@ -728,8 +712,7 @@ export const InfluencersPage = () => {
                   </div>
                 </div>
 
-                {/* Card Action Buttons (Ample margin, zero boundary collisions) */}
-                <div className="d-flex align-items-center justify-content-between pt-3 border-top gap-2 mt-2">
+                <div className="d-flex align-items-center justify-content-between pt-3 border-top gap-2 mt-1">
                   <button
                     type="button"
                     className="btn-ui btn-ui-secondary btn-ui-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1.5 py-2"
@@ -753,26 +736,46 @@ export const InfluencersPage = () => {
         </div>
       )}
 
-      {/* =========================================================================
-          MODAL 1: INSPECT CREATOR MEDIA KIT & RATE CARD (IMPROVISED, NO OVERLAPS)
-          ========================================================================= */}
       {inspectingCreator && (
         <div
           className="modal-backdrop-ui"
-          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
           onClick={(e) => e.target === e.currentTarget && setInspectingCreator(null)}
         >
           <div
-            className="modal-dialog-ui modal-lg"
-            style={{ maxWidth: '780px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-surface)', borderRadius: '12px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}
+            className="modal-dialog-ui modal-xl"
+            style={{ maxWidth: '860px', width: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-surface)', borderRadius: '16px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}
             role="dialog"
             aria-modal="true"
           >
-            {/* Modal Header (Fixed) */}
-            <div className="modal-header-ui" style={{ padding: '1.15rem 1.5rem', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div className="d-flex align-items-center gap-2">
-                <Award size={18} className="text-primary" />
-                <h3 className="modal-title-ui mb-0 fs-6 fw-bold">Creator Media Kit &amp; Rate Card</h3>
+            <div 
+              className="modal-header-ui" 
+              style={{ 
+                padding: '1.25rem 1.5rem', 
+                borderBottom: '1px solid var(--color-border)', 
+                flexShrink: 0, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.04) 0%, rgba(37, 99, 235, 0.01) 100%)'
+              }}
+            >
+              <div className="d-flex align-items-center gap-2.5">
+                <div 
+                  className="d-flex align-items-center justify-content-center rounded-2"
+                  style={{ 
+                    width: '34px', 
+                    height: '34px', 
+                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+                  }}
+                >
+                  <Award size={17} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="modal-title-ui mb-0 fw-bold" style={{ fontSize: '0.95rem' }}>Creator Media Kit &amp; Rate Card</h3>
+                  <span className="text-muted" style={{ fontSize: '0.68rem' }}>Official sponsorship documentation &amp; brand collaboration details</span>
+                </div>
               </div>
               <button
                 type="button"
@@ -784,163 +787,306 @@ export const InfluencersPage = () => {
               </button>
             </div>
 
-            {/* Modal Body (Fully Scrollable) */}
             <div
               className="modal-body-ui"
-              style={{ padding: '1.5rem', overflowY: 'auto', flex: '1 1 auto', maxHeight: 'calc(90vh - 130px)' }}
+              style={{ padding: '0', overflowY: 'auto', flex: '1 1 auto', maxHeight: 'calc(92vh - 70px)' }}
             >
-              {/* Media Kit Header Banner */}
-              <div className="p-3.5 rounded-3 bg-light-subtle border mb-4 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
-                <div className="d-flex align-items-center gap-3">
-                  <CreatorAvatar
-                    name={inspectingCreator.name}
-                    avatarUrl={inspectingCreator.avatar_url}
-                    size={64}
-                  />
-                  <div>
-                    <div className="d-flex align-items-center gap-1.5 mb-0.5">
-                      <h4 className="fw-bold fs-5 text-primary-emphasis mb-0">
-                        {inspectingCreator.name}
-                      </h4>
+              <div
+                className="p-4 border-bottom"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, rgba(37, 99, 235, 0.01) 100%)',
+                  boxSizing: 'border-box',
+                  width: '100%'
+                }}
+              >
+                <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4">
+                  <div className="d-flex align-items-start gap-3" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                    <div className="position-relative flex-shrink-0">
+                      <CreatorAvatar
+                        name={inspectingCreator.name}
+                        avatarUrl={inspectingCreator.avatar_url}
+                        size={64}
+                        className="shadow"
+                      />
                       {inspectingCreator.is_verified && (
-                        <CheckCircle2 size={16} className="text-primary" title="Verified Creator" />
+                        <div 
+                          className="position-absolute d-flex align-items-center justify-content-center bg-primary rounded-circle"
+                          style={{ 
+                            bottom: '-2px', 
+                            right: '-2px',
+                            width: '20px', 
+                            height: '20px', 
+                            border: '3px solid var(--color-bg-surface)',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                          }}
+                        >
+                          <CheckCircle2 size={11} className="text-white" />
+                        </div>
                       )}
                     </div>
-                    <div className="text-muted font-monospace text-xs mb-1.5">
-                      {inspectingCreator.handle} • {inspectingCreator.platform}
-                    </div>
-                    <div className="d-flex align-items-center gap-1.5 flex-wrap">
-                      <span className="badge bg-primary-subtle text-primary text-xs px-2 py-0.5">
-                        {inspectingCreator.niche}
-                      </span>
-                      <span className="badge bg-secondary-subtle text-secondary text-xs px-2 py-0.5">
-                        {inspectingCreator.tier}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="d-flex gap-4 text-center border-start ps-sm-4 pt-2 pt-sm-0">
-                  <div>
-                    <div className="fw-bold text-primary fs-5">
-                      {inspectingCreator.followers_count >= 1000000
-                        ? `${(inspectingCreator.followers_count / 1000000).toFixed(1)}M`
-                        : `${(inspectingCreator.followers_count / 1000).toFixed(0)}K`}
-                    </div>
-                    <div className="text-muted text-xs text-uppercase" style={{ letterSpacing: '0.5px' }}>Reach</div>
-                  </div>
-                  <div>
-                    <div className="fw-bold text-success fs-5">{inspectingCreator.engagement_rate}%</div>
-                    <div className="text-muted text-xs text-uppercase" style={{ letterSpacing: '0.5px' }}>Engagement</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Channel Bio */}
-              <div className="mb-4">
-                <h5 className="fw-bold text-xs text-primary-emphasis mb-2 text-uppercase" style={{ letterSpacing: '0.5px' }}>
-                  Creator Channel Bio &amp; Reach Overview
-                </h5>
-                <p className="text-muted text-xs mb-0 bg-light-subtle p-3 rounded-2 border" style={{ lineHeight: '1.6' }}>
-                  {inspectingCreator.bio || 'Professional verified digital creator available for sponsorships.'}
-                </p>
-              </div>
-
-              {/* Deliverables Packages (Clean Card Layout without any badge collisions) */}
-              <div className="mb-4">
-                <h5 className="fw-bold text-xs text-primary-emphasis mb-2 text-uppercase" style={{ letterSpacing: '0.5px' }}>
-                  Official Deliverables &amp; Pricing Packages
-                </h5>
-                <div className="d-flex flex-column gap-3">
-                  {(inspectingCreator.packages || []).map((pkg) => (
-                    <div key={pkg.id} className="p-3.5 rounded-3 bg-light-subtle border">
-                      <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
-                        <strong className="text-xs text-primary-emphasis fs-6" style={{ minWidth: 0, flex: '1 1 auto' }}>
-                          {pkg.title}
-                        </strong>
-                        <span className="badge bg-primary text-white font-monospace text-xs px-2.5 py-1.5 flex-shrink-0" style={{ whiteSpace: 'nowrap' }}>
-                          Rs. {pkg.price?.toLocaleString()}
-                        </span>
+                    <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+                      <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        <h4 className="fw-bold text-primary-emphasis mb-0" style={{ fontSize: '1.15rem' }}>
+                          {inspectingCreator.name}
+                        </h4>
+                        {inspectingCreator.is_verified && (
+                          <span className="badge bg-primary-subtle text-primary d-inline-flex align-items-center gap-1 px-2 py-0.5" style={{ fontSize: '0.65rem' }}>
+                            <ShieldCheck size={11} />
+                            Verified Partner
+                          </span>
+                        )}
                       </div>
-                      <p className="text-muted text-xs mb-0" style={{ fontSize: '0.82rem', lineHeight: '1.5' }}>
-                        {pkg.deliverables}
-                      </p>
+                      <div className="d-flex align-items-center gap-2 text-muted mb-1.5 flex-wrap">
+                        <span className="font-monospace" style={{ fontSize: '0.78rem' }}>{inspectingCreator.handle}</span>
+                        <span style={{ fontSize: '0.7rem' }}>•</span>
+                        <span style={{ fontSize: '0.78rem' }}>{inspectingCreator.platform}</span>
+                      </div>
+                      <div className="d-flex align-items-center gap-1.5 flex-wrap">
+                        <span className="badge bg-primary-subtle text-primary px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
+                          {inspectingCreator.niche}
+                        </span>
+                        <span className="badge bg-secondary-subtle text-secondary px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
+                          {inspectingCreator.tier}
+                        </span>
+                        {inspectingCreator.is_available !== false && (
+                          <span className="badge bg-success-subtle text-success px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
+                            Available
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="d-flex gap-2 align-items-center justify-content-lg-end flex-shrink-0 flex-wrap">
+                    <div
+                      className="p-2.5 px-3 rounded-2 text-center border"
+                      style={{ backgroundColor: 'var(--color-bg-surface)', minWidth: '90px' }}
+                    >
+                      <div className="d-flex align-items-center justify-content-center gap-1 text-primary fw-bold" style={{ fontSize: '1rem' }}>
+                        <Users size={14} />
+                        <span>{formatNumber(inspectingCreator.followers_count)}</span>
+                      </div>
+                      <div className="text-muted fw-semibold text-uppercase mt-0.5" style={{ fontSize: '0.6rem', letterSpacing: '0.5px' }}>
+                        Audience
+                      </div>
+                    </div>
+
+                    <div
+                      className="p-2.5 px-3 rounded-2 text-center border"
+                      style={{ backgroundColor: 'var(--color-bg-surface)', minWidth: '90px' }}
+                    >
+                      <div className="d-flex align-items-center justify-content-center gap-1 text-primary fw-bold" style={{ fontSize: '1rem' }}>
+                        <Eye size={14} />
+                        <span>{formatNumber(inspectingCreator.avg_views)}</span>
+                      </div>
+                      <div className="text-muted fw-semibold text-uppercase mt-0.5" style={{ fontSize: '0.6rem', letterSpacing: '0.5px' }}>
+                        Avg Views
+                      </div>
+                    </div>
+
+                    <div
+                      className="p-2.5 px-3 rounded-2 text-center border"
+                      style={{ backgroundColor: 'var(--color-bg-surface)', minWidth: '90px' }}
+                    >
+                      <div className="d-flex align-items-center justify-content-center gap-1 text-success fw-bold" style={{ fontSize: '1rem' }}>
+                        <TrendingUp size={14} />
+                        <span>{inspectingCreator.engagement_rate}%</span>
+                      </div>
+                      <div className="text-muted fw-semibold text-uppercase mt-0.5" style={{ fontSize: '0.6rem', letterSpacing: '0.5px' }}>
+                        Engagement
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Past Verified Brand Integrations (Clean Spacing and URL separation) */}
-              {inspectingCreator.portfolio_links && inspectingCreator.portfolio_links.length > 0 && (
-                <div>
-                  <h5 className="fw-bold text-xs text-primary-emphasis mb-2 text-uppercase" style={{ letterSpacing: '0.5px' }}>
-                    Past Verified Brand Integrations
-                  </h5>
-                  <div className="d-flex flex-column gap-2">
-                    {inspectingCreator.portfolio_links.map((link, idx) => (
-                      <div key={idx} className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between p-3 rounded-2 border text-xs bg-light-subtle gap-2">
-                        <span className="fw-semibold text-dark-emphasis">{link.title}</span>
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="badge bg-secondary-subtle text-secondary font-monospace d-inline-flex align-items-center gap-1 text-decoration-none px-2.5 py-1"
-                        >
-                          <span>{link.url}</span>
-                          <ExternalLink size={11} />
-                        </a>
+              <div className="p-4">
+                <div className="mb-4">
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <Sparkles size={14} className="text-primary" />
+                    <h5 className="fw-bold text-primary-emphasis mb-0 text-uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                      Creator Bio &amp; Channel Overview
+                    </h5>
+                  </div>
+                  <div
+                    className="p-3 rounded-2 border"
+                    style={{
+                      lineHeight: '1.6',
+                      borderLeft: '3px solid var(--color-brand-500, #2563eb)',
+                      fontSize: '0.8rem',
+                      backgroundColor: 'var(--color-bg-subtle)'
+                    }}
+                  >
+                    {inspectingCreator.bio || 'Professional verified digital creator available for sponsorships and brand activations.'}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-2.5">
+                    <div className="d-flex align-items-center gap-2">
+                      <Briefcase size={14} className="text-primary" />
+                      <h5 className="fw-bold text-primary-emphasis mb-0 text-uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                        Deliverables &amp; Pricing Packages
+                      </h5>
+                    </div>
+                    <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: '0.65rem' }}>
+                      {(inspectingCreator.packages || []).length} Available
+                    </span>
+                  </div>
+
+                  <div className="d-flex flex-column gap-2.5 w-100">
+                    {(inspectingCreator.packages || []).map((pkg, idx) => (
+                      <div
+                        key={pkg.id || idx}
+                        className="p-3 rounded-3 border w-100"
+                        style={{
+                          backgroundColor: 'var(--color-bg-surface)',
+                          borderColor: 'var(--color-border)',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between gap-3 mb-2">
+                          <div className="d-flex align-items-center gap-2" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                            <div 
+                              className="d-flex align-items-center justify-content-center rounded-1 flex-shrink-0"
+                              style={{ 
+                                width: '28px', 
+                                height: '28px', 
+                                background: idx === 0 ? 'rgba(37, 99, 235, 0.1)' : 'rgba(100, 116, 139, 0.1)',
+                                color: idx === 0 ? '#2563eb' : '#64748b'
+                              }}
+                            >
+                              <Video size={14} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <span className="fw-bold text-primary-emphasis d-block text-truncate" style={{ fontSize: '0.85rem' }}>
+                                {pkg.title}
+                              </span>
+                              {idx === 0 && (
+                                <span className="text-primary" style={{ fontSize: '0.6rem', fontWeight: 600 }}>
+                                  RECOMMENDED
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span
+                            className="badge bg-primary text-white font-monospace flex-shrink-0 px-2.5 py-1.5"
+                            style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', fontWeight: 600 }}
+                          >
+                            {formatPrice(pkg.price)}
+                          </span>
+                        </div>
+
+                        <div className="d-flex align-items-start gap-2 pt-2 border-top">
+                          <Check size={13} className="text-success flex-shrink-0 mt-0.5" />
+                          <span className="text-muted" style={{ fontSize: '0.75rem', lineHeight: '1.5' }}>
+                            {pkg.deliverables}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
+
+                {inspectingCreator.portfolio_links && inspectingCreator.portfolio_links.length > 0 && (
+                  <div>
+                    <div className="d-flex align-items-center gap-2 mb-2.5">
+                      <Award size={14} className="text-primary" />
+                      <h5 className="fw-bold text-primary-emphasis mb-0 text-uppercase" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                        Past Brand Integrations
+                      </h5>
+                    </div>
+                    <div className="d-flex flex-column gap-2 w-100">
+                      {inspectingCreator.portfolio_links.map((link, idx) => (
+                        <div
+                          key={idx}
+                          className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between p-3 rounded-2 border gap-2 w-100"
+                          style={{
+                            backgroundColor: 'var(--color-bg-surface)',
+                            borderColor: 'var(--color-border)',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+                            <CheckCircle2 size={14} className="text-success flex-shrink-0" />
+                            <span className="fw-semibold text-primary-emphasis text-truncate" style={{ fontSize: '0.78rem' }}>{link.title}</span>
+                          </div>
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="badge bg-primary-subtle text-primary font-monospace d-inline-flex align-items-center gap-1.5 text-decoration-none px-2.5 py-1.5"
+                            style={{ fontSize: '0.7rem' }}
+                          >
+                            <span className="text-truncate" style={{ maxWidth: '200px' }}>{link.url}</span>
+                            <ExternalLink size={11} className="flex-shrink-0" />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="d-flex align-items-center gap-2 mt-4 p-3 rounded-2 border" style={{ backgroundColor: 'var(--color-bg-subtle)' }}>
+                  <Info size={14} className="text-primary flex-shrink-0" />
+                  <span className="text-muted" style={{ fontSize: '0.7rem', lineHeight: '1.5' }}>
+                    All rates are in Pakistani Rupees (PKR). Prices may vary based on campaign requirements, exclusivity, and usage rights. Final pricing is confirmed upon contract signing.
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* Modal Footer (Fixed) */}
-            <div className="modal-footer-ui" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', background: 'var(--color-bg-subtle)' }}>
+            <div className="modal-footer-ui" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', background: 'var(--color-bg-subtle)' }}>
               <button
                 type="button"
-                className="btn-ui btn-ui-secondary btn-ui-sm px-3"
-                onClick={() => setInspectingCreator(null)}
+                className="btn-ui-icon p-1.5 text-muted"
+                onClick={() => handleCopy(`${inspectingCreator.name} | ${inspectingCreator.handle} | ${inspectingCreator.platform} | ${inspectingCreator.niche} | ${formatNumber(inspectingCreator.followers_count)} Followers | ${inspectingCreator.engagement_rate}% Engagement`, 'mediaKit')}
+                title="Copy Creator Summary"
               >
-                Close
+                {copiedField === 'mediaKit' ? <Check size={14} className="text-success" /> : <Copy size={14} />}
               </button>
-              <button
-                type="button"
-                className="btn-ui btn-ui-primary btn-ui-sm d-flex align-items-center gap-1.5 px-3"
-                onClick={() => {
-                  const creator = inspectingCreator;
-                  setInspectingCreator(null);
-                  handleOpenHireModal(creator);
-                }}
-              >
-                <Send size={13} />
-                <span>Hire {inspectingCreator.name}</span>
-              </button>
+              <div className="d-flex gap-2">
+                <button
+                  type="button"
+                  className="btn-ui btn-ui-secondary btn-ui-sm px-3"
+                  onClick={() => setInspectingCreator(null)}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn-ui btn-ui-primary btn-ui-sm d-flex align-items-center gap-1.5 px-3.5 py-2"
+                  onClick={() => {
+                    const creator = inspectingCreator;
+                    setInspectingCreator(null);
+                    handleOpenHireModal(creator);
+                  }}
+                >
+                  <Send size={13} />
+                  <span>Hire {inspectingCreator.name.split(' ')[0]}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* =========================================================================
-          MODAL 2: COMMISSION / HIRE CREATOR PROPOSAL (SCROLLABLE & POLISHED)
-          ========================================================================= */}
       {hiringCreator && (
         <div
           className="modal-backdrop-ui"
-          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
           onClick={(e) => e.target === e.currentTarget && setHiringCreator(null)}
         >
           <div
             className="modal-dialog-ui"
-            style={{ maxWidth: '580px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-surface)', borderRadius: '12px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}
+            style={{ maxWidth: '560px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-surface)', borderRadius: '14px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-header-ui" style={{ padding: '1.15rem 1.5rem', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="modal-header-ui" style={{ padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div className="d-flex align-items-center gap-2">
                 <Send size={16} className="text-primary" />
-                <h3 className="modal-title-ui mb-0 fs-6 fw-bold">Commission Creator Sponsorship</h3>
+                <h3 className="modal-title-ui mb-0 fw-bold" style={{ fontSize: '0.9rem' }}>Commission Creator Sponsorship</h3>
               </div>
               <button
                 type="button"
@@ -958,10 +1104,10 @@ export const InfluencersPage = () => {
             >
               <div
                 className="modal-body-ui"
-                style={{ padding: '1.5rem', overflowY: 'auto', flex: '1 1 auto', maxHeight: 'calc(90vh - 140px)' }}
+                style={{ padding: '1.4rem', overflowY: 'auto', flex: '1 1 auto', maxHeight: 'calc(90vh - 130px)' }}
               >
                 {hireError && (
-                  <div className="alert alert-danger py-2 px-3 text-xs mb-3 d-flex align-items-center gap-2">
+                  <div className="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: '0.75rem' }}>
                     <AlertTriangle size={14} className="flex-shrink-0" />
                     <span>{hireError}</span>
                   </div>
@@ -973,9 +1119,9 @@ export const InfluencersPage = () => {
                     avatarUrl={hiringCreator.avatar_url}
                     size={44}
                   />
-                  <div>
-                    <div className="fw-bold text-xs text-primary-emphasis fs-6">{hiringCreator.name}</div>
-                    <div className="text-muted font-monospace text-xs">
+                  <div style={{ minWidth: 0 }}>
+                    <div className="fw-bold text-primary-emphasis" style={{ fontSize: '0.85rem' }}>{hiringCreator.name}</div>
+                    <div className="text-muted font-monospace" style={{ fontSize: '0.72rem' }}>
                       {hiringCreator.handle} • {hiringCreator.platform}
                     </div>
                   </div>
@@ -993,7 +1139,7 @@ export const InfluencersPage = () => {
                   >
                     {campaigns.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name} (Budget: Rs. {parseFloat(c.budget || 0).toLocaleString()})
+                        {c.name} (Budget: {formatPrice(c.budget || 0)})
                       </option>
                     ))}
                   </select>
@@ -1011,7 +1157,7 @@ export const InfluencersPage = () => {
                   >
                     {(hiringCreator.packages || []).map((pkg) => (
                       <option key={pkg.id} value={pkg.id}>
-                        {pkg.title} — Rs. {pkg.price?.toLocaleString()}
+                        {pkg.title} — {formatPrice(pkg.price)}
                       </option>
                     ))}
                   </select>
@@ -1044,7 +1190,7 @@ export const InfluencersPage = () => {
                 </div>
               </div>
 
-              <div className="modal-footer-ui" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', background: 'var(--color-bg-subtle)' }}>
+              <div className="modal-footer-ui" style={{ padding: '0.9rem 1.4rem', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', background: 'var(--color-bg-subtle)' }}>
                 <button
                   type="button"
                   className="btn-ui btn-ui-secondary btn-ui-sm px-3"
@@ -1066,13 +1212,10 @@ export const InfluencersPage = () => {
         </div>
       )}
 
-      {/* =========================================================================
-          MODAL 3: ADMIN ADD / EDIT CREATOR MODAL (100% FULLY SCROLLABLE & RESPONSIVE)
-          ========================================================================= */}
       {(editingCreator || isCreatingNew) && (
         <div
           className="modal-backdrop-ui"
-          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setEditingCreator(null);
@@ -1082,15 +1225,14 @@ export const InfluencersPage = () => {
         >
           <div
             className="modal-dialog-ui modal-lg"
-            style={{ maxWidth: '800px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-surface)', borderRadius: '12px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}
+            style={{ maxWidth: '780px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-surface)', borderRadius: '14px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}
             role="dialog"
             aria-modal="true"
           >
-            {/* Modal Header (Fixed) */}
-            <div className="modal-header-ui" style={{ padding: '1.15rem 1.5rem', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="modal-header-ui" style={{ padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div className="d-flex align-items-center gap-2">
-                <ShieldCheck size={18} className="text-primary" />
-                <h3 className="modal-title-ui mb-0 fs-6 fw-bold">
+                <ShieldCheck size={17} className="text-primary" />
+                <h3 className="modal-title-ui mb-0 fw-bold" style={{ fontSize: '0.9rem' }}>
                   {isCreatingNew ? 'Add Influencer to Marketplace' : `Edit Creator: ${editingCreator?.name}`}
                 </h3>
               </div>
@@ -1107,25 +1249,23 @@ export const InfluencersPage = () => {
               </button>
             </div>
 
-            {/* Modal Form with Scrollable Body */}
             <form
               onSubmit={handleSaveCreatorSubmit}
               style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}
             >
               <div
                 className="modal-body-ui"
-                style={{ padding: '1.5rem', overflowY: 'auto', flex: '1 1 auto', maxHeight: 'calc(90vh - 140px)' }}
+                style={{ padding: '1.4rem', overflowY: 'auto', flex: '1 1 auto', maxHeight: 'calc(90vh - 130px)' }}
               >
                 {formError && (
-                  <div className="alert alert-danger py-2 px-3 text-xs mb-3 d-flex align-items-center gap-2">
+                  <div className="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: '0.75rem' }}>
                     <AlertTriangle size={14} className="flex-shrink-0" />
                     <span>{formError}</span>
                   </div>
                 )}
 
-                {/* Live Card Preview Box */}
                 <div className="p-3 rounded-3 bg-light-subtle border mb-4">
-                  <div className="text-muted text-xs mb-2 fw-bold text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                  <div className="text-muted mb-2 fw-bold text-uppercase" style={{ fontSize: '0.65rem', letterSpacing: '0.5px' }}>
                     LIVE CARD PREVIEW
                   </div>
                   <div className="d-flex align-items-center gap-3">
@@ -1135,27 +1275,26 @@ export const InfluencersPage = () => {
                       size={48}
                     />
                     <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                      <div className="d-flex align-items-center gap-2 mb-0.5">
-                        <span className="fw-bold text-primary-emphasis fs-6">
+                      <div className="d-flex align-items-center gap-2 mb-0.5 flex-wrap">
+                        <span className="fw-bold text-primary-emphasis" style={{ fontSize: '0.85rem' }}>
                           {creatorForm.name || 'Creator Full Name'}
                         </span>
                         {creatorForm.is_verified && (
-                          <CheckCircle2 size={15} className="text-primary" title="Verified Creator" />
+                          <CheckCircle2 size={14} className="text-primary" title="Verified Creator" />
                         )}
-                        <span className="badge bg-primary-subtle text-primary text-xs">
+                        <span className="badge bg-primary-subtle text-primary" style={{ fontSize: '0.65rem' }}>
                           {creatorForm.platform}
                         </span>
                       </div>
-                      <div className="text-muted font-monospace text-xs">
+                      <div className="text-muted font-monospace" style={{ fontSize: '0.72rem' }}>
                         {creatorForm.handle || '@handle'} • {creatorForm.niche} • {creatorForm.tier}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Section 1: Basic Identity */}
                 <div className="mb-4">
-                  <h6 className="fw-bold text-xs text-primary-emphasis text-uppercase mb-2.5" style={{ letterSpacing: '0.5px' }}>
+                  <h6 className="fw-bold text-primary-emphasis text-uppercase mb-2.5" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                     1. Basic Profile Information
                   </h6>
                   <div className="row g-3">
@@ -1281,9 +1420,8 @@ export const InfluencersPage = () => {
                   </div>
                 </div>
 
-                {/* Section 2: Audience Metrics */}
                 <div className="mb-4">
-                  <h6 className="fw-bold text-xs text-primary-emphasis text-uppercase mb-2.5" style={{ letterSpacing: '0.5px' }}>
+                  <h6 className="fw-bold text-primary-emphasis text-uppercase mb-2.5" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                     2. Audience &amp; Performance Metrics
                   </h6>
                   <div className="row g-3">
@@ -1331,83 +1469,117 @@ export const InfluencersPage = () => {
                   </div>
                 </div>
 
-                {/* Section 3: Deliverables Packages */}
                 <div className="mb-4">
-                  <h6 className="fw-bold text-xs text-primary-emphasis text-uppercase mb-2.5" style={{ letterSpacing: '0.5px' }}>
+                  <h6 className="fw-bold text-primary-emphasis text-uppercase mb-2.5" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                     3. Sponsorship Rate Card &amp; Deliverables
                   </h6>
 
-                  {/* Package 1 */}
-                  <div className="p-3.5 rounded-3 bg-light-subtle border mb-3">
-                    <div className="fw-bold text-xs text-primary-emphasis mb-2">Package 1 (Primary Deliverable)</div>
-                    <div className="row g-2">
+                  <div className="ui-form-fieldset mb-3">
+                    <div className="ui-form-fieldset-title">
+                      <span>Package 1 (Primary Deliverable)</span>
+                      <span className="badge bg-primary-subtle text-primary" style={{ fontSize: '0.65rem' }}>Primary</span>
+                    </div>
+                    <div className="row g-3">
                       <div className="col-12 col-md-8">
-                        <input
-                          type="text"
-                          className="form-input-ui mb-2"
-                          placeholder="Package Title (e.g. Dedicated YouTube Video Review)"
-                          value={creatorForm.pkg1_title}
-                          onChange={(e) => setCreatorForm({ ...creatorForm, pkg1_title: e.target.value })}
-                          required
-                        />
-                        <input
-                          type="text"
-                          className="form-input-ui"
-                          placeholder="Deliverables description (e.g. Full 10-min review + description link)"
-                          value={creatorForm.pkg1_deliverables}
-                          onChange={(e) => setCreatorForm({ ...creatorForm, pkg1_deliverables: e.target.value })}
-                        />
+                        <div className="form-group-ui mb-0">
+                          <label className="form-label-ui">
+                            <span>Package Title <span className="form-required">*</span></span>
+                          </label>
+                          <input
+                            type="text"
+                            className="form-input-ui"
+                            placeholder="e.g. Dedicated YouTube Video Review"
+                            value={creatorForm.pkg1_title}
+                            onChange={(e) => setCreatorForm({ ...creatorForm, pkg1_title: e.target.value })}
+                            required
+                          />
+                        </div>
                       </div>
                       <div className="col-12 col-md-4">
-                        <label className="form-label-ui mb-1"><span>Rate (PKR) <span className="form-required">*</span></span></label>
-                        <input
-                          type="number"
-                          className="form-input-ui"
-                          placeholder="Price in PKR"
-                          value={creatorForm.pkg1_price}
-                          onChange={(e) => setCreatorForm({ ...creatorForm, pkg1_price: e.target.value })}
-                          required
-                        />
+                        <div className="form-group-ui mb-0">
+                          <label className="form-label-ui">
+                            <span>Rate (PKR) <span className="form-required">*</span></span>
+                          </label>
+                          <input
+                            type="number"
+                            className="form-input-ui"
+                            placeholder="Price in PKR"
+                            value={creatorForm.pkg1_price}
+                            onChange={(e) => setCreatorForm({ ...creatorForm, pkg1_price: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <div className="form-group-ui mb-0">
+                          <label className="form-label-ui">
+                            <span>Deliverables &amp; Scope Description</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="form-input-ui"
+                            placeholder="e.g. Full 10-min review + permanent description sponsor link"
+                            value={creatorForm.pkg1_deliverables}
+                            onChange={(e) => setCreatorForm({ ...creatorForm, pkg1_deliverables: e.target.value })}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Package 2 */}
-                  <div className="p-3.5 rounded-3 bg-light-subtle border">
-                    <div className="fw-bold text-xs text-primary-emphasis mb-2">Package 2 (Secondary / Add-on)</div>
-                    <div className="row g-2">
+                  <div className="ui-form-fieldset mb-0">
+                    <div className="ui-form-fieldset-title">
+                      <span>Package 2 (Secondary / Add-on)</span>
+                      <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: '0.65rem' }}>Add-on</span>
+                    </div>
+                    <div className="row g-3">
                       <div className="col-12 col-md-8">
-                        <input
-                          type="text"
-                          className="form-input-ui mb-2"
-                          placeholder="Package Title (e.g. 60s Mid-Roll Integration)"
-                          value={creatorForm.pkg2_title}
-                          onChange={(e) => setCreatorForm({ ...creatorForm, pkg2_title: e.target.value })}
-                        />
-                        <input
-                          type="text"
-                          className="form-input-ui"
-                          placeholder="Deliverables description..."
-                          value={creatorForm.pkg2_deliverables}
-                          onChange={(e) => setCreatorForm({ ...creatorForm, pkg2_deliverables: e.target.value })}
-                        />
+                        <div className="form-group-ui mb-0">
+                          <label className="form-label-ui">
+                            <span>Package Title</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="form-input-ui"
+                            placeholder="e.g. 60s Mid-Roll Integration"
+                            value={creatorForm.pkg2_title}
+                            onChange={(e) => setCreatorForm({ ...creatorForm, pkg2_title: e.target.value })}
+                          />
+                        </div>
                       </div>
                       <div className="col-12 col-md-4">
-                        <label className="form-label-ui mb-1"><span>Rate (PKR)</span></label>
-                        <input
-                          type="number"
-                          className="form-input-ui"
-                          placeholder="Price in PKR"
-                          value={creatorForm.pkg2_price}
-                          onChange={(e) => setCreatorForm({ ...creatorForm, pkg2_price: e.target.value })}
-                        />
+                        <div className="form-group-ui mb-0">
+                          <label className="form-label-ui">
+                            <span>Rate (PKR)</span>
+                          </label>
+                          <input
+                            type="number"
+                            className="form-input-ui"
+                            placeholder="Price in PKR"
+                            value={creatorForm.pkg2_price}
+                            onChange={(e) => setCreatorForm({ ...creatorForm, pkg2_price: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <div className="form-group-ui mb-0">
+                          <label className="form-label-ui">
+                            <span>Deliverables &amp; Scope Description</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="form-input-ui"
+                            placeholder="e.g. 60s in-video organic sponsor segment"
+                            value={creatorForm.pkg2_deliverables}
+                            onChange={(e) => setCreatorForm({ ...creatorForm, pkg2_deliverables: e.target.value })}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Section 4: Status Toggles */}
-                <div className="d-flex gap-4 p-3 rounded-2 bg-light-subtle border">
+                <div className="d-flex gap-4 p-3 rounded-2 bg-light-subtle border flex-wrap">
                   <div className="form-check form-switch">
                     <input
                       className="form-check-input"
@@ -1416,7 +1588,7 @@ export const InfluencersPage = () => {
                       checked={creatorForm.is_verified}
                       onChange={(e) => setCreatorForm({ ...creatorForm, is_verified: e.target.checked })}
                     />
-                    <label className="form-check-label text-xs fw-semibold" htmlFor="verifiedSwitch">
+                    <label className="form-check-label fw-semibold" htmlFor="verifiedSwitch" style={{ fontSize: '0.75rem' }}>
                       Verified Brand Safe Creator
                     </label>
                   </div>
@@ -1429,15 +1601,14 @@ export const InfluencersPage = () => {
                       checked={creatorForm.is_available}
                       onChange={(e) => setCreatorForm({ ...creatorForm, is_available: e.target.checked })}
                     />
-                    <label className="form-check-label text-xs fw-semibold" htmlFor="availSwitch">
+                    <label className="form-check-label fw-semibold" htmlFor="availSwitch" style={{ fontSize: '0.75rem' }}>
                       Available for Commissioning
                     </label>
                   </div>
                 </div>
               </div>
 
-              {/* Modal Footer (Fixed at bottom) */}
-              <div className="modal-footer-ui" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', background: 'var(--color-bg-subtle)' }}>
+              <div className="modal-footer-ui" style={{ padding: '0.9rem 1.4rem', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', background: 'var(--color-bg-subtle)' }}>
                 <button
                   type="button"
                   className="btn-ui btn-ui-secondary btn-ui-sm px-3"
@@ -1462,25 +1633,22 @@ export const InfluencersPage = () => {
         </div>
       )}
 
-      {/* =========================================================================
-          MODAL 4: CONFIRM DELETE CREATOR MODAL
-          ========================================================================= */}
       {deletingCreator && (
         <div
           className="modal-backdrop-ui"
-          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
           onClick={(e) => e.target === e.currentTarget && setDeletingCreator(null)}
         >
           <div
             className="modal-dialog-ui modal-sm"
-            style={{ maxWidth: '420px', width: '100%', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-surface)', borderRadius: '12px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}
+            style={{ maxWidth: '420px', width: '100%', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-surface)', borderRadius: '14px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-header-ui" style={{ padding: '1.15rem 1.5rem', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="modal-header-ui" style={{ padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div className="d-flex align-items-center gap-2">
-                <AlertTriangle size={18} className="text-danger" />
-                <h3 className="modal-title-ui text-danger mb-0 fs-6 fw-bold">Remove Creator</h3>
+                <AlertTriangle size={17} className="text-danger" />
+                <h3 className="modal-title-ui text-danger mb-0 fw-bold" style={{ fontSize: '0.9rem' }}>Remove Creator</h3>
               </div>
               <button
                 type="button"
@@ -1492,20 +1660,20 @@ export const InfluencersPage = () => {
               </button>
             </div>
 
-            <div className="modal-body-ui" style={{ padding: '1.5rem' }}>
-              <p className="text-muted text-xs mb-3" style={{ lineHeight: '1.5' }}>
+            <div className="modal-body-ui" style={{ padding: '1.4rem' }}>
+              <p className="text-muted mb-3" style={{ fontSize: '0.78rem', lineHeight: '1.5' }}>
                 Are you sure you want to remove <strong className="text-primary-emphasis">{deletingCreator.name}</strong> ({deletingCreator.handle}) from the active influencer marketplace?
               </p>
               <div className="p-2.5 rounded-2 bg-light-subtle border d-flex align-items-center gap-2.5">
                 <CreatorAvatar name={deletingCreator.name} avatarUrl={deletingCreator.avatar_url} size={36} />
                 <div>
-                  <div className="fw-bold text-xs text-primary-emphasis">{deletingCreator.name}</div>
-                  <div className="text-muted font-monospace text-xs">{deletingCreator.platform} • {deletingCreator.niche}</div>
+                  <div className="fw-bold text-primary-emphasis" style={{ fontSize: '0.8rem' }}>{deletingCreator.name}</div>
+                  <div className="text-muted font-monospace" style={{ fontSize: '0.7rem' }}>{deletingCreator.platform} • {deletingCreator.niche}</div>
                 </div>
               </div>
             </div>
 
-            <div className="modal-footer-ui" style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', background: 'var(--color-bg-subtle)' }}>
+            <div className="modal-footer-ui" style={{ padding: '0.9rem 1.4rem', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', background: 'var(--color-bg-subtle)' }}>
               <button
                 type="button"
                 className="btn-ui btn-ui-secondary btn-ui-sm px-3"

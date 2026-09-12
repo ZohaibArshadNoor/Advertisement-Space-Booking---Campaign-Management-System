@@ -21,6 +21,7 @@ import LandingPage from './pages/LandingPage';
 import DashboardPage from './features/dashboard/pages/DashboardPage';
 import UsersPage from './features/users/pages/UsersPage';
 import SpacesPage from './features/spaces/pages/SpacePage';
+import DigitalServicesPage from './features/digitalServices/pages/DigitalServicesPage';
 import AvailabilityPage from './features/availability/pages/AvailabilityPage';
 import Campaigns from './pages/Campaigns';
 import BookingsPage from './features/bookings/pages/BookingsPage';
@@ -52,6 +53,7 @@ function App() {
               <Route element={<AppShell />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/spaces" element={<SpacesPage />} />
+                <Route path="/digital-services" element={<DigitalServicesPage />} />
                 <Route path="/availability" element={<AvailabilityPage />} />
                 <Route path="/campaigns" element={<Campaigns />} />
                 <Route path="/influencers" element={<InfluencersPage />} />

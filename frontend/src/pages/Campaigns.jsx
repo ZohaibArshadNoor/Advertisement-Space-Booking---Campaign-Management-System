@@ -42,8 +42,13 @@ import {
   AlertTriangle,
   Info,
   Lock,
-  UserCheck
+  UserCheck,
+  Globe,
+  PieChart,
+  FileText
 } from 'lucide-react';
+import { digitalServicesApi } from '../features/digitalServices/digitalServicesApi';
+import { influencersApi } from '../features/influencers/influencersApi';
 
 const PIPELINE_STAGES = [
   { id: 'BRIEFING', label: '1. Briefing & Strategy', icon: Target, desc: 'Objective & audience targeting locked' },
@@ -59,7 +64,8 @@ const CHANNELS = [
   'Meta (Facebook & Instagram)',
   'Influencer Sponsorships',
   'Programmatic Display Network',
-  'Omnichannel Digital & OOH'
+  'DOOH LED Digital Billboard',
+  'Connected TV (CTV / OTT)'
 ];
 
 export const Campaigns = () => {
@@ -77,6 +83,8 @@ export const Campaigns = () => {
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [campaignHiredCreators, setCampaignHiredCreators] = useState([]);
+  const [savingTask, setSavingTask] = useState(null);
 
   const showToast = (message, type = 'success', title = '') => {
     setToast({ type, message, title });
@@ -90,8 +98,11 @@ export const Campaigns = () => {
   const [stageFilter, setStageFilter] = useState('');
   const [page, setPage] = useState(1);
 
-  // Drawer state for campaign inspection & pipeline progression
+  // Drawer state for campaign inspection & pipeline progression (Track button)
   const [inspectingCampaign, setInspectingCampaign] = useState(null);
+  // Separate Modal state for detailed financial investment breakdown (Breakdown button)
+  const [breakdownCampaign, setBreakdownCampaign] = useState(null);
+  const [campaignDigitalServices, setCampaignDigitalServices] = useState([]);
   const [updatingPipeline, setUpdatingPipeline] = useState(false);
 
   // Create Modal state
@@ -147,6 +158,29 @@ export const Campaigns = () => {
   useEffect(() => {
     fetchCampaigns();
   }, [page, statusFilter, channelFilter, stageFilter]);
+
+  const activeCampaignForServices = inspectingCampaign || breakdownCampaign;
+  useEffect(() => {
+    if (activeCampaignForServices?.id) {
+      digitalServicesApi.getBookedServices(activeCampaignForServices.id).then((res) => {
+        setCampaignDigitalServices(res.services || []);
+      });
+      influencersApi.getHiredCreators(activeCampaignForServices.id).then((res) => {
+        const serverHired = activeCampaignForServices.hired_creators || activeCampaignForServices.performance_metrics?.hired_creators || [];
+        const localHired = res.hired || [];
+        const combined = [...localHired];
+        serverHired.forEach((sh) => {
+          if (!combined.some((ch) => ch.id === sh.id || (ch.influencer_id === sh.influencer_id && ch.package_title === sh.package_title))) {
+            combined.push(sh);
+          }
+        });
+        setCampaignHiredCreators(combined);
+      });
+    } else {
+      setCampaignDigitalServices([]);
+      setCampaignHiredCreators([]);
+    }
+  }, [activeCampaignForServices?.id]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -355,15 +389,6 @@ export const Campaigns = () => {
       {/* Page Header Banner */}
       <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 p-4 rounded-3 border" style={{ backgroundColor: 'var(--color-bg-surface)', boxShadow: 'var(--shadow-xs)' }}>
         <div style={{ maxWidth: '750px' }}>
-          <div className="d-flex align-items-center gap-2 mb-1.5">
-            <span className="badge bg-primary-subtle text-primary font-semibold px-2.5 py-1 text-xs">
-              Digital Marketing Agency Operations
-            </span>
-            <span className="text-muted text-xs d-flex align-items-center gap-1">
-              <ShieldCheck size={14} className="text-success" />
-              Multi-Stage Production Pipeline
-            </span>
-          </div>
           <h1 className="h4 fw-bold text-primary-emphasis mb-1">
             Advertising &amp; Video Campaign Pipeline
           </h1>
@@ -474,14 +499,14 @@ export const Campaigns = () => {
               <table className="enterprise-table table mb-0 align-middle">
                 <thead style={{ backgroundColor: 'var(--color-bg-subtle)' }}>
                   <tr>
-                    <th style={{ width: '12%' }}>Reference</th>
-                    <th style={{ width: '15%' }}>Client / Brand</th>
-                    <th style={{ width: '22%' }}>Campaign &amp; Channel</th>
-                    <th style={{ width: '14%' }}>Flight Range</th>
+                    <th style={{ width: '11%' }}>Reference</th>
+                    <th style={{ width: '14%' }}>Client / Brand</th>
+                    <th style={{ width: '20%' }}>Campaign &amp; Channel</th>
+                    <th style={{ width: '13%' }}>Flight Range</th>
                     <th style={{ width: '11%' }}>Budget</th>
-                    <th style={{ width: '13%' }}>Production Stage</th>
-                    <th style={{ width: '8%' }}>Status</th>
-                    <th style={{ width: '5%' }} className="text-end">Action</th>
+                    <th style={{ width: '12%' }}>Production Stage</th>
+                    <th style={{ width: '7%' }}>Status</th>
+                    <th style={{ width: '12%' }} className="text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -562,16 +587,36 @@ export const Campaigns = () => {
 
                       {/* 8. Quick Actions */}
                       <td className="text-end" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1"
-                          style={{ fontSize: '0.72rem', padding: '0.25rem 0.5rem' }}
-                          onClick={() => setInspectingCampaign(c)}
-                          title="Open Pipeline & Progress Tracker"
-                        >
-                          <Eye size={12} />
-                          <span>Track</span>
-                        </button>
+                        <div className="d-inline-flex align-items-center justify-content-end gap-2 flex-nowrap">
+                          <button
+                            type="button"
+                            className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1.5 text-nowrap"
+                            style={{ fontSize: '0.74rem', padding: '0.3rem 0.65rem' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setInspectingCampaign(null);
+                              setBreakdownCampaign(c);
+                            }}
+                            title="View Consolidated Financial Breakdown & Chart"
+                          >
+                            <PieChart size={13} />
+                            <span>Breakdown</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-ui btn-ui-primary btn-ui-sm d-inline-flex align-items-center gap-1.5 text-nowrap"
+                            style={{ fontSize: '0.74rem', padding: '0.3rem 0.65rem' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setBreakdownCampaign(null);
+                              setInspectingCampaign(c);
+                            }}
+                            title="Open Pipeline & Progress Tracker"
+                          >
+                            <Eye size={13} />
+                            <span>Track</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -805,22 +850,20 @@ export const Campaigns = () => {
             {/* 4. Financial Budget Allocation & Spend Breakdown */}
             {(() => {
               const totalBudget = parseFloat(inspectingCampaign.budget) || 1500000;
-              const influencerSpend = inspectingCampaign.influencer_spend !== undefined 
-                ? parseFloat(inspectingCampaign.influencer_spend) 
-                : Math.round(totalBudget * 0.45);
-              const mediaSpend = inspectingCampaign.media_spend !== undefined 
-                ? parseFloat(inspectingCampaign.media_spend) 
-                : Math.round(totalBudget * 0.35);
-              const productionSpend = inspectingCampaign.production_spend !== undefined 
-                ? parseFloat(inspectingCampaign.production_spend) 
-                : Math.round(totalBudget * 0.08);
-              const totalCommitted = influencerSpend + mediaSpend + productionSpend;
+              
+              // Dynamic spend from actual booked digital services
+              const digitalSpend = campaignDigitalServices.reduce((sum, s) => sum + (parseFloat(s.agreed_price) || 0), 0);
+              const physicalSpend = inspectingCampaign.media_spend ? parseFloat(inspectingCampaign.media_spend) : 0;
+              const influencerSpend = campaignHiredCreators.reduce((sum, c) => sum + (parseFloat(c.agreed_fee) || 0), 0) || (inspectingCampaign.influencer_spend ? parseFloat(inspectingCampaign.influencer_spend) : 0);
+
+              const totalCommitted = digitalSpend + physicalSpend + influencerSpend;
               const remainingBudget = Math.max(0, totalBudget - totalCommitted);
 
-              const influencerPct = Math.round((influencerSpend / totalBudget) * 100);
-              const mediaPct = Math.round((mediaSpend / totalBudget) * 100);
-              const prodPct = Math.round((productionSpend / totalBudget) * 100);
-              const remainingPct = Math.max(0, 100 - influencerPct - mediaPct - prodPct);
+              const digitalPct = totalBudget > 0 ? Math.round((digitalSpend / totalBudget) * 100) : 0;
+              const physicalPct = totalBudget > 0 ? Math.round((physicalSpend / totalBudget) * 100) : 0;
+              const influencerPct = totalBudget > 0 ? Math.round((influencerSpend / totalBudget) * 100) : 0;
+              const committedPct = totalBudget > 0 ? Math.round((totalCommitted / totalBudget) * 100) : 0;
+              const remainingPct = Math.max(0, 100 - committedPct);
 
               return (
                 <div
@@ -836,9 +879,25 @@ export const Campaigns = () => {
                         Financial ceiling vs. committed channels &amp; creator fees
                       </div>
                     </div>
-                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle text-xs px-2.5 py-1">
-                      Total: Rs. {totalBudget.toLocaleString()}
-                    </span>
+                    <div className="d-flex align-items-center gap-2">
+                      <button
+                        type="button"
+                        className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1.5"
+                        onClick={() => {
+                          const target = inspectingCampaign;
+                          setInspectingCampaign(null);
+                          setBreakdownCampaign(target);
+                        }}
+                        style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}
+                        title="View Detailed Asset & Investment Ledger"
+                      >
+                        <BarChart3 size={12} className="text-primary flex-shrink-0" />
+                        <span>Investment Breakdown</span>
+                      </button>
+                      <span className="badge bg-primary-subtle text-primary border border-primary-subtle text-xs px-2.5 py-1">
+                        Total: Rs. {totalBudget.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Visual Spend Breakdown Progress Bar */}
@@ -851,41 +910,60 @@ export const Campaigns = () => {
                       className="progress rounded-pill overflow-hidden border"
                       style={{ height: '10px', backgroundColor: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)' }}
                     >
+                      {digitalPct > 0 && (
+                        <div
+                          className="progress-bar bg-primary"
+                          style={{ width: `${digitalPct}%` }}
+                          title={`Digital Ads: ${digitalPct}% (Rs. ${digitalSpend.toLocaleString()})`}
+                        />
+                      )}
+                      {physicalPct > 0 && (
+                        <div
+                          className="progress-bar bg-info"
+                          style={{ width: `${physicalPct}%` }}
+                          title={`Physical DOOH: ${physicalPct}% (Rs. ${physicalSpend.toLocaleString()})`}
+                        />
+                      )}
+                      {influencerPct > 0 && (
+                        <div
+                          className="progress-bar"
+                          style={{ width: `${influencerPct}%`, backgroundColor: '#8b5cf6' }}
+                          title={`Creator Sponsorships: ${influencerPct}% (Rs. ${influencerSpend.toLocaleString()})`}
+                        />
+                      )}
                       <div
-                        className="progress-bar bg-primary"
-                        style={{ width: `${mediaPct}%` }}
-                        title={`Media Space: ${mediaPct}% (Rs. ${mediaSpend.toLocaleString()})`}
-                      />
-                      <div
-                        className="progress-bar"
-                        style={{ width: `${influencerPct}%`, backgroundColor: '#8b5cf6' }}
-                        title={`Influencer Talent: ${influencerPct}% (Rs. ${influencerSpend.toLocaleString()})`}
-                      />
-                      <div
-                        className="progress-bar bg-warning"
-                        style={{ width: `${prodPct}%` }}
-                        title={`Creative Production: ${prodPct}% (Rs. ${productionSpend.toLocaleString()})`}
-                      />
-                      <div
-                        className="progress-bar bg-success opacity-50"
+                        className="progress-bar bg-success"
                         style={{ width: `${remainingPct}%` }}
-                        title={`Remaining Balance: ${remainingPct}% (Rs. ${remainingBudget.toLocaleString()})`}
+                        title={`Available Reserve: ${remainingPct}% (Rs. ${remainingBudget.toLocaleString()})`}
                       />
                     </div>
                   </div>
 
-                  {/* 4-Pillar Metric Grid */}
+                  {/* 4-Card Metric Grid: 3 Channels + Liquid Reserve */}
                   <div className="row g-2">
                     <div className="col-6 col-md-3">
                       <div className="p-2.5 rounded-2 border h-100" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
                         <div className="d-flex align-items-center gap-1.5 text-muted mb-1" style={{ fontSize: '0.68rem' }}>
                           <span className="rounded-circle d-inline-block flex-shrink-0" style={{ width: '7px', height: '7px', backgroundColor: 'var(--color-brand-600)' }} />
-                          <span className="text-uppercase fw-semibold">Media Spaces</span>
+                          <span className="text-uppercase fw-semibold">Digital Ads</span>
                         </div>
                         <div className="fw-bold text-xs text-primary-emphasis font-monospace">
-                          Rs. {mediaSpend.toLocaleString()}
+                          Rs. {digitalSpend.toLocaleString()}
                         </div>
-                        <div className="text-muted text-xs mt-0.5" style={{ fontSize: '0.65rem' }}>{mediaPct}% of total</div>
+                        <div className="text-muted text-xs mt-0.5" style={{ fontSize: '0.65rem' }}>{digitalPct}% of total</div>
+                      </div>
+                    </div>
+
+                    <div className="col-6 col-md-3">
+                      <div className="p-2.5 rounded-2 border h-100" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
+                        <div className="d-flex align-items-center gap-1.5 text-muted mb-1" style={{ fontSize: '0.68rem' }}>
+                          <span className="rounded-circle d-inline-block flex-shrink-0" style={{ width: '7px', height: '7px', backgroundColor: '#0ea5e9' }} />
+                          <span className="text-uppercase fw-semibold">DOOH Screens</span>
+                        </div>
+                        <div className="fw-bold text-xs text-primary-emphasis font-monospace">
+                          Rs. {physicalSpend.toLocaleString()}
+                        </div>
+                        <div className="text-muted text-xs mt-0.5" style={{ fontSize: '0.65rem' }}>{physicalPct}% of total</div>
                       </div>
                     </div>
 
@@ -893,7 +971,7 @@ export const Campaigns = () => {
                       <div className="p-2.5 rounded-2 border h-100" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
                         <div className="d-flex align-items-center gap-1.5 text-muted mb-1" style={{ fontSize: '0.68rem' }}>
                           <span className="rounded-circle d-inline-block flex-shrink-0" style={{ width: '7px', height: '7px', backgroundColor: '#8b5cf6' }} />
-                          <span className="text-uppercase fw-semibold">Influencers</span>
+                          <span className="text-uppercase fw-semibold">Creators</span>
                         </div>
                         <div className="fw-bold text-xs text-primary-emphasis font-monospace">
                           Rs. {influencerSpend.toLocaleString()}
@@ -905,21 +983,8 @@ export const Campaigns = () => {
                     <div className="col-6 col-md-3">
                       <div className="p-2.5 rounded-2 border h-100" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
                         <div className="d-flex align-items-center gap-1.5 text-muted mb-1" style={{ fontSize: '0.68rem' }}>
-                          <span className="rounded-circle d-inline-block flex-shrink-0" style={{ width: '7px', height: '7px', backgroundColor: '#d97706' }} />
-                          <span className="text-uppercase fw-semibold">Production</span>
-                        </div>
-                        <div className="fw-bold text-xs text-primary-emphasis font-monospace">
-                          Rs. {productionSpend.toLocaleString()}
-                        </div>
-                        <div className="text-muted text-xs mt-0.5" style={{ fontSize: '0.65rem' }}>{prodPct}% of total</div>
-                      </div>
-                    </div>
-
-                    <div className="col-6 col-md-3">
-                      <div className="p-2.5 rounded-2 border h-100" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
-                        <div className="d-flex align-items-center gap-1.5 text-muted mb-1" style={{ fontSize: '0.68rem' }}>
                           <span className="rounded-circle d-inline-block flex-shrink-0" style={{ width: '7px', height: '7px', backgroundColor: '#10b981' }} />
-                          <span className="text-uppercase fw-semibold">Remaining</span>
+                          <span className="text-uppercase fw-semibold">Reserve</span>
                         </div>
                         <div className="fw-bold text-xs text-success font-monospace">
                           Rs. {remainingBudget.toLocaleString()}
@@ -932,7 +997,86 @@ export const Campaigns = () => {
               );
             })()}
 
-            {/* 5. Live Digital Performance Metrics Widget */}
+            {/* 5. Affiliated Digital Marketing Services & Ad Packages */}
+            <div className="rounded-3 border bg-light-subtle w-100 p-4" style={{ width: '100%', boxSizing: 'border-box' }}>
+              <div className="pb-2.5 mb-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                  <span className="fw-bold text-xs text-primary-emphasis text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                    Affiliated Digital Marketing Services
+                  </span>
+                  <div className="text-muted text-xs mt-0.5" style={{ fontSize: '0.72rem' }}>
+                    Active YouTube, Meta, PPC, and Programmatic packages provisioned for this campaign
+                  </div>
+                </div>
+                <Link
+                  to={`/digital-services`}
+                  className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1"
+                  style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                >
+                  <Plus size={12} className="flex-shrink-0" />
+                  <span>Provision Digital Service</span>
+                </Link>
+              </div>
+
+              {campaignDigitalServices.length === 0 ? (
+                <div className="p-3 rounded-2 border text-center" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
+                  <div className="d-flex align-items-center justify-content-center gap-1.5 text-muted text-xs mb-1">
+                    <Globe size={14} className="text-primary flex-shrink-0" />
+                    <span className="fw-semibold">Default Channel Active: {inspectingCampaign.marketing_channel || 'YouTube Video Ads'}</span>
+                  </div>
+                  <p className="text-muted text-xs mb-2" style={{ fontSize: '0.74rem' }}>
+                    You can add discounted YouTube, Meta Reels, or Programmatic CPM blitz packages to scale this campaign.
+                  </p>
+                  <Link
+                    to="/digital-services"
+                    className="btn-ui btn-ui-primary btn-ui-sm d-inline-flex align-items-center gap-1.5"
+                    style={{ fontSize: '0.72rem', padding: '0.3rem 0.75rem' }}
+                  >
+                    <Globe size={12} />
+                    <span>Explore Digital Marketing Catalog</span>
+                  </Link>
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-2 w-100">
+                  {campaignDigitalServices.map((ds) => (
+                    <div
+                      key={ds.id}
+                      className="p-2.5 rounded-2 border d-flex align-items-center justify-content-between flex-wrap gap-2"
+                      style={{ backgroundColor: 'var(--color-bg-surface)', boxSizing: 'border-box' }}
+                    >
+                      <div className="d-flex align-items-center gap-2" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                        <div
+                          className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 bg-primary-subtle text-primary"
+                          style={{ width: '28px', height: '28px' }}
+                        >
+                          <Globe size={14} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="fw-bold text-xs text-primary-emphasis text-truncate">
+                            {ds.service_title}
+                          </div>
+                          <div className="text-muted text-xs d-flex align-items-center gap-1.5" style={{ fontSize: '0.68rem' }}>
+                            <span className="badge bg-secondary-subtle text-secondary py-0 px-1">{ds.platform}</span>
+                            <span>{ds.start_date} &rarr; {ds.end_date}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-end flex-shrink-0">
+                        <div className="fw-bold text-xs text-primary font-monospace">
+                          Rs. {ds.agreed_price?.toLocaleString()}
+                        </div>
+                        <span className="badge bg-success-subtle text-success py-0 px-1" style={{ fontSize: '0.64rem' }}>
+                          {ds.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 6. Live Digital Performance Metrics Widget */}
             <div className="p-3.5 rounded-3 bg-light-subtle border w-100" style={{ width: '100%', boxSizing: 'border-box' }}>
               <h6 className="fw-bold text-xs text-primary-emphasis text-uppercase mb-2.5" style={{ letterSpacing: '0.5px' }}>
                 Live Digital Advertising Performance
@@ -965,21 +1109,28 @@ export const Campaigns = () => {
               </div>
             </div>
 
-            {/* 5. Quick Links to Media Creatives & Space Inventory */}
+            {/* 7. Quick Navigation Links */}
             <div className="d-flex align-items-center gap-2 pt-2 border-top w-100" style={{ width: '100%', boxSizing: 'border-box' }}>
+              <Link
+                to={`/digital-services`}
+                className="btn-ui btn-ui-secondary btn-ui-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1.5 py-2"
+              >
+                <Globe size={13} className="flex-shrink-0" />
+                <span>Digital Services</span>
+              </Link>
               <Link
                 to={`/creatives?campaign_id=${inspectingCampaign.id}`}
                 className="btn-ui btn-ui-secondary btn-ui-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1.5 py-2"
               >
-                <UploadCloud size={13} />
+                <UploadCloud size={13} className="flex-shrink-0" />
                 <span>Media Creatives</span>
               </Link>
               <Link
                 to={`/spaces?campaign_id=${inspectingCampaign.id}`}
                 className="btn-ui btn-ui-primary btn-ui-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1.5 py-2"
               >
-                <Layers size={13} />
-                <span>Book Advertising Spaces</span>
+                <Layers size={13} className="flex-shrink-0" />
+                <span>Book OOH Spaces</span>
               </Link>
             </div>
           </div>
@@ -1157,6 +1308,474 @@ export const Campaigns = () => {
           </div>
         </form>
       </Modal>
+
+      {/* =========================================================================
+          CHART-POWERED DETAILED CAMPAIGN INVESTMENT BREAKDOWN MODAL (DYNAMIC REAL-TIME SPEND)
+          ========================================================================= */}
+      {breakdownCampaign && (
+        <Modal
+          isOpen={Boolean(breakdownCampaign)}
+          onClose={() => setBreakdownCampaign(null)}
+          title={`Investment & Budget Allocation: ${breakdownCampaign.name}`}
+          subtitle={`Ref: ${breakdownCampaign.campaign_reference || `CMP-2026-${String(breakdownCampaign.id).padStart(4, '0')}`} • Client: ${breakdownCampaign.advertiser_name || breakdownCampaign.advertiser?.name || 'Jazz Digital Marketing'}`}
+          size="xl"
+          footer={
+            <div className="d-flex align-items-center justify-content-between w-100 flex-wrap gap-2">
+              <span className="text-muted text-xs">
+                Consolidated Financial Ledger Reconciled across Physical, Digital &amp; Creator Channels
+              </span>
+              <button
+                type="button"
+                className="btn-ui btn-ui-secondary btn-ui-sm"
+                onClick={() => setBreakdownCampaign(null)}
+              >
+                Close Ledger
+              </button>
+            </div>
+          }
+        >
+          {(() => {
+            const totalBudget = parseFloat(breakdownCampaign.budget) || 1500000;
+            
+            // Dynamic spend calculation from actual booked digital services
+            const digitalSpend = campaignDigitalServices.reduce((sum, s) => sum + (parseFloat(s.agreed_price) || 0), 0);
+            
+            // Dynamic spend from hired influencers
+            const influencerSpend = campaignHiredCreators.reduce((sum, c) => sum + (parseFloat(c.agreed_fee) || 0), 0) || (breakdownCampaign.influencer_spend ? parseFloat(breakdownCampaign.influencer_spend) : 0);
+
+            // Physical DOOH spaces
+            const physicalSpend = breakdownCampaign.media_spend ? parseFloat(breakdownCampaign.media_spend) : 0;
+
+            const totalCommitted = digitalSpend + physicalSpend + influencerSpend;
+            const remainingBudget = Math.max(0, totalBudget - totalCommitted);
+
+            const digitalPct = totalBudget > 0 ? Math.round((digitalSpend / totalBudget) * 100) : 0;
+            const physicalPct = totalBudget > 0 ? Math.round((physicalSpend / totalBudget) * 100) : 0;
+            const influencerPct = totalBudget > 0 ? Math.round((influencerSpend / totalBudget) * 100) : 0;
+            const committedPct = totalBudget > 0 ? Math.round((totalCommitted / totalBudget) * 100) : 0;
+            const remainingPct = Math.max(0, 100 - committedPct);
+
+            return (
+              <div className="d-flex flex-column gap-4 w-100" style={{ width: '100%', boxSizing: 'border-box' }}>
+                
+                {/* 1. Top Financial Ceiling Summary Banner */}
+                <div className="p-4 rounded-3 border bg-light-subtle d-flex flex-column gap-3.5 w-100" style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 w-100">
+                    <div>
+                      <div className="text-muted text-xs text-uppercase fw-semibold" style={{ letterSpacing: '0.5px' }}>
+                        Total Campaign Budget Ceiling
+                      </div>
+                      <div className="fs-3 fw-bold text-primary font-monospace">
+                        Rs. {totalBudget.toLocaleString()}
+                      </div>
+                      <div className="text-muted text-xs mt-1">
+                        Active Flight Window: <span className="font-monospace text-primary-emphasis fw-medium">{breakdownCampaign.start_date || '2026-09-01'} &rarr; {breakdownCampaign.end_date || '2026-10-15'}</span>
+                      </div>
+                    </div>
+
+                    <div className="d-flex align-items-center gap-3 flex-wrap">
+                      <div className="p-3 rounded-2 border bg-surface" style={{ backgroundColor: 'var(--color-bg-surface)', minWidth: '170px' }}>
+                        <div className="text-muted text-xs">Total Committed Spend</div>
+                        <div className="fw-bold text-primary-emphasis font-monospace fs-6">
+                          Rs. {totalCommitted.toLocaleString()}
+                        </div>
+                        <span className={`badge text-xs mt-1 ${committedPct > 0 ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'}`}>
+                          {committedPct}% Allocated
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-2 border bg-surface" style={{ backgroundColor: 'var(--color-bg-surface)', minWidth: '170px' }}>
+                        <div className="text-success text-xs">Unallocated Liquid Reserve</div>
+                        <div className="fw-bold text-success font-monospace fs-6">
+                          Rs. {remainingBudget.toLocaleString()}
+                        </div>
+                        <span className="badge bg-success-subtle text-success text-xs mt-1">
+                          {remainingPct}% Available
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Visual Multi-Channel Allocation Chart Bar */}
+                  <div className="w-100 pt-2 border-top" style={{ width: '100%' }}>
+                    <div className="d-flex align-items-center justify-content-between text-xs text-muted mb-2 font-monospace" style={{ fontSize: '0.74rem' }}>
+                      <span className="fw-semibold text-primary-emphasis text-uppercase" style={{ letterSpacing: '0.5px' }}>Budget Allocation Chart</span>
+                      <span>{committedPct}% Committed • {remainingPct}% Liquid Reserve</span>
+                    </div>
+                    <div className="progress rounded-pill overflow-hidden" style={{ height: '12px', backgroundColor: 'var(--color-border)' }}>
+                      {digitalPct > 0 && (
+                        <div className="progress-bar bg-primary" role="progressbar" style={{ width: `${digitalPct}%` }} title={`Digital Online Ads: Rs. ${digitalSpend.toLocaleString()} (${digitalPct}%)`} />
+                      )}
+                      {physicalPct > 0 && (
+                        <div className="progress-bar bg-info" role="progressbar" style={{ width: `${physicalPct}%` }} title={`Physical DOOH Billboards: Rs. ${physicalSpend.toLocaleString()} (${physicalPct}%)`} />
+                      )}
+                      {influencerPct > 0 && (
+                        <div className="progress-bar" role="progressbar" style={{ width: `${influencerPct}%`, backgroundColor: '#8b5cf6' }} title={`Creator Sponsorships: Rs. ${influencerSpend.toLocaleString()} (${influencerPct}%)`} />
+                      )}
+                      <div className="progress-bar bg-success" role="progressbar" style={{ width: `${remainingPct}%` }} title={`Liquid Reserve: Rs. ${remainingBudget.toLocaleString()} (${remainingPct}%)`} />
+                    </div>
+                    
+                    {/* Legend */}
+                    <div className="d-flex align-items-center gap-3 mt-2.5 flex-wrap text-xs font-monospace" style={{ fontSize: '0.72rem' }}>
+                      <span className="d-inline-flex align-items-center gap-1.5"><span className="rounded-circle bg-primary" style={{ width: '9px', height: '9px' }}></span> Digital Ads ({digitalPct}%)</span>
+                      <span className="d-inline-flex align-items-center gap-1.5"><span className="rounded-circle bg-info" style={{ width: '9px', height: '9px' }}></span> DOOH Screens ({physicalPct}%)</span>
+                      <span className="d-inline-flex align-items-center gap-1.5"><span className="rounded-circle" style={{ width: '9px', height: '9px', backgroundColor: '#8b5cf6' }}></span> Creator Sponsorships ({influencerPct}%)</span>
+                      <span className="d-inline-flex align-items-center gap-1.5"><span className="rounded-circle bg-success" style={{ width: '9px', height: '9px' }}></span> Liquid Reserve ({remainingPct}%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. 3-Channel Breakdown Visual Cards */}
+                <div className="row g-3 w-100 m-0" style={{ width: '100%' }}>
+                  {/* Pillar 1: Digital Online Ads */}
+                  <div className="col-12 col-md-4 p-0 pe-md-2 mb-2 mb-md-0">
+                    <div className="p-3.5 rounded-3 border h-100 d-flex flex-column justify-content-between w-100" style={{ backgroundColor: 'var(--color-bg-surface)', boxSizing: 'border-box' }}>
+                      <div>
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="rounded-circle bg-primary-subtle text-primary p-1.5 d-flex align-items-center justify-content-center">
+                              <Globe size={16} />
+                            </div>
+                            <span className="fw-bold text-xs text-primary-emphasis text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                              1. Digital Online Ads
+                            </span>
+                          </div>
+                          <span className="badge bg-primary-subtle text-primary font-monospace text-xs px-2 py-0.5">
+                            {digitalPct}% Share
+                          </span>
+                        </div>
+                        <div className="fs-5 fw-bold text-primary font-monospace mb-2">
+                          Rs. {digitalSpend.toLocaleString()}
+                        </div>
+                        <div className="d-flex flex-column gap-1.5 text-xs text-secondary">
+                          <div className="d-flex justify-content-between">
+                            <span>Active Packages:</span>
+                            <span className="fw-medium text-primary-emphasis">{campaignDigitalServices.length} Provisioned</span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span>Status:</span>
+                            <span className={digitalSpend > 0 ? "text-success fw-medium" : "text-muted"}>
+                              {digitalSpend > 0 ? "Active In-Flight" : "Unallocated / Ready to Book"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pillar 2: Physical DOOH Billboards */}
+                  <div className="col-12 col-md-4 p-0 px-md-1 mb-2 mb-md-0">
+                    <div className="p-3.5 rounded-3 border h-100 d-flex flex-column justify-content-between w-100" style={{ backgroundColor: 'var(--color-bg-surface)', boxSizing: 'border-box' }}>
+                      <div>
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="rounded-circle bg-info-subtle text-info p-1.5 d-flex align-items-center justify-content-center">
+                              <Layers size={16} />
+                            </div>
+                            <span className="fw-bold text-xs text-primary-emphasis text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                              2. Physical DOOH Screens
+                            </span>
+                          </div>
+                          <span className="badge bg-info-subtle text-info font-monospace text-xs px-2 py-0.5">
+                            {physicalPct}% Share
+                          </span>
+                        </div>
+                        <div className="fs-5 fw-bold text-info font-monospace mb-2">
+                          Rs. {physicalSpend.toLocaleString()}
+                        </div>
+                        <div className="d-flex flex-column gap-1.5 text-xs text-secondary">
+                          <div className="d-flex justify-content-between">
+                            <span>Screen Bookings:</span>
+                            <span className="fw-medium text-primary-emphasis">{physicalSpend > 0 ? "1 Prime Screen Slot" : "0 Spaces Reserved"}</span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span>Status:</span>
+                            <span className={physicalSpend > 0 ? "text-success fw-medium" : "text-muted"}>
+                              {physicalSpend > 0 ? "Slot Reserved" : "Unallocated / Ready to Book"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pillar 3: Influencer Sponsorships */}
+                  <div className="col-12 col-md-4 p-0 ps-md-2">
+                    <div className="p-3.5 rounded-3 border h-100 d-flex flex-column justify-content-between w-100" style={{ backgroundColor: 'var(--color-bg-surface)', boxSizing: 'border-box' }}>
+                      <div>
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="rounded-circle p-1.5 d-flex align-items-center justify-content-center text-white" style={{ backgroundColor: '#8b5cf6' }}>
+                              <Sparkles size={16} />
+                            </div>
+                            <span className="fw-bold text-xs text-primary-emphasis text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                              3. Creator Sponsorships
+                            </span>
+                          </div>
+                          <span className="badge font-monospace text-xs px-2 py-0.5 text-white" style={{ backgroundColor: '#8b5cf6' }}>
+                            {influencerPct}% Share
+                          </span>
+                        </div>
+                        <div className="fs-5 fw-bold font-monospace mb-2" style={{ color: '#8b5cf6' }}>
+                          Rs. {influencerSpend.toLocaleString()}
+                        </div>
+                        <div className="d-flex flex-column gap-1.5 text-xs text-secondary">
+                          <div className="d-flex justify-content-between">
+                            <span>Hired Creators:</span>
+                            <span className="fw-medium text-primary-emphasis">
+                              {campaignHiredCreators.length > 0
+                                ? `${campaignHiredCreators.length} Hired Creator${campaignHiredCreators.length > 1 ? 's' : ''}`
+                                : (influencerSpend > 0 ? "1 Creator" : "0 Contracts Executed")}
+                            </span>
+                          </div>
+                          <div className="d-flex justify-content-between">
+                            <span>Status:</span>
+                            <span className={influencerSpend > 0 ? "text-success fw-medium" : "text-muted"}>
+                              {influencerSpend > 0 ? "Contract Active" : "Unallocated / Ready to Book"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Itemized Service & Booked Deliverables Ledger */}
+                <div className="p-4 rounded-3 border bg-light-subtle w-100" style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <div className="pb-2.5 mb-3 border-bottom d-flex align-items-center justify-content-between w-100">
+                    <span className="fw-bold text-xs text-primary-emphasis text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                      Detailed Line-Item Channel Ledger &amp; Booked Services
+                    </span>
+                    <span className={`badge text-xs ${totalCommitted > 0 ? 'bg-primary text-white' : 'bg-secondary-subtle text-secondary'}`}>
+                      {totalCommitted > 0 ? 'Reconciled Active Ledger' : 'No Committed Line-Items'}
+                    </span>
+                  </div>
+
+                  {campaignDigitalServices.length === 0 && physicalSpend === 0 && campaignHiredCreators.length === 0 && influencerSpend === 0 ? (
+                    <div className="p-4 rounded-2 border text-center" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
+                      <div className="d-flex align-items-center justify-content-center gap-2 text-muted text-xs mb-1.5">
+                        <Info size={16} className="text-primary flex-shrink-0" />
+                        <span className="fw-bold text-primary-emphasis fs-6">100% Budget Unallocated</span>
+                      </div>
+                      <p className="text-muted text-xs mb-3" style={{ maxWidth: '480px', margin: '0 auto', lineHeight: '1.5' }}>
+                        This campaign is in its initial strategy state with no services, screen spaces, or creators booked yet. The entire budget ceiling of <strong>Rs. {totalBudget.toLocaleString()}</strong> is fully liquid and ready to allocate.
+                      </p>
+                      <div className="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                        <Link
+                          to="/digital-services"
+                          className="btn-ui btn-ui-primary btn-ui-sm d-inline-flex align-items-center gap-1.5"
+                          onClick={() => setBreakdownCampaign(null)}
+                        >
+                          <Globe size={13} />
+                          <span>Provision Digital Ad Packages</span>
+                        </Link>
+                        <Link
+                          to="/spaces"
+                          className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1.5"
+                          onClick={() => setBreakdownCampaign(null)}
+                        >
+                          <Layers size={13} />
+                          <span>Browse DOOH Screen Spaces</span>
+                        </Link>
+                        <Link
+                          to="/influencers"
+                          className="btn-ui btn-ui-secondary btn-ui-sm d-inline-flex align-items-center gap-1.5"
+                          onClick={() => setBreakdownCampaign(null)}
+                        >
+                          <Sparkles size={13} />
+                          <span>Hire Creator Talent</span>
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="d-flex flex-column gap-3 w-100" style={{ width: '100%' }}>
+                      
+                      {/* Section: Booked Digital Ad Services */}
+                      {campaignDigitalServices.length > 0 && (
+                        <div className="d-flex flex-column gap-2 w-100">
+                          <div className="text-xs fw-semibold text-primary-emphasis text-uppercase d-flex align-items-center gap-1.5" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
+                            <Globe size={13} className="text-primary" />
+                            <span>Digital Marketing &amp; Online Ads ({campaignDigitalServices.length})</span>
+                          </div>
+                          {campaignDigitalServices.map((ds) => (
+                            <div
+                              key={ds.id}
+                              className="p-3.5 rounded-2 border d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 w-100"
+                              style={{ width: '100%', boxSizing: 'border-box', backgroundColor: 'var(--color-bg-surface)' }}
+                            >
+                              <div className="d-flex align-items-center gap-3" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                                <div className="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center flex-shrink-0">
+                                  <Globe size={18} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <div className="fw-bold text-xs text-primary-emphasis mb-0.5">{ds.service_title}</div>
+                                  <div className="text-muted text-xs font-monospace" style={{ fontSize: '0.74rem' }}>
+                                    Platform: {ds.platform} • Flight: {ds.start_date} &rarr; {ds.end_date} ({ds.duration_days || 30} Days)
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-md-end flex-shrink-0 d-flex flex-column align-items-md-end gap-1">
+                                <div className="fw-bold text-primary font-monospace fs-6">Rs. {Number(ds.agreed_price || 0).toLocaleString()}</div>
+                                <span className="badge bg-success-subtle text-success text-xs">{ds.discount_applied || 'Standard Rate'}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Section: Booked Physical DOOH Screen Slots */}
+                      {physicalSpend > 0 && (
+                        <div className="d-flex flex-column gap-2 w-100">
+                          <div className="text-xs fw-semibold text-primary-emphasis text-uppercase d-flex align-items-center gap-1.5" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
+                            <Layers size={13} className="text-info" />
+                            <span>Physical DOOH Screen Bookings</span>
+                          </div>
+                          <div
+                            className="p-3.5 rounded-2 border d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 w-100"
+                            style={{ width: '100%', boxSizing: 'border-box', backgroundColor: 'var(--color-bg-surface)' }}
+                          >
+                            <div className="d-flex align-items-center gap-3" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                              <div className="rounded-circle bg-info-subtle text-info p-2 d-flex align-items-center justify-content-center flex-shrink-0">
+                                <Layers size={18} />
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <div className="fw-bold text-xs text-primary-emphasis mb-0.5">Gulberg Main Blvd Digital LED Billboard (Lahore)</div>
+                                <div className="text-muted text-xs font-monospace" style={{ fontSize: '0.74rem' }}>
+                                  40ft x 20ft 4K Screen • 30 Days Slot @ Rs. 14,000 / day
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-md-end flex-shrink-0 d-flex flex-column align-items-md-end gap-1">
+                              <div className="fw-bold text-info font-monospace fs-6">Rs. {physicalSpend.toLocaleString()}</div>
+                              <span className="badge bg-success-subtle text-success text-xs">Slot Reserved</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Section: Booked Influencer & Creator Sponsorships */}
+                      {(campaignHiredCreators.length > 0 || influencerSpend > 0) && (
+                        <div className="d-flex flex-column gap-2 w-100">
+                          <div className="text-xs fw-semibold text-primary-emphasis text-uppercase d-flex align-items-center gap-1.5" style={{ fontSize: '0.7rem', letterSpacing: '0.5px' }}>
+                            <Sparkles size={13} style={{ color: '#8b5cf6' }} />
+                            <span>Hired Creator Collaborations &amp; Availments ({campaignHiredCreators.length || 1})</span>
+                          </div>
+                          {campaignHiredCreators.length > 0 ? (
+                            campaignHiredCreators.map((hc) => (
+                              <div
+                                key={hc.id}
+                                className="p-3.5 rounded-2 border d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 w-100"
+                                style={{ width: '100%', boxSizing: 'border-box', backgroundColor: 'var(--color-bg-surface)' }}
+                              >
+                                <div className="d-flex align-items-center gap-3" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                                  {hc.avatar_url ? (
+                                    <img
+                                      src={hc.avatar_url}
+                                      alt={hc.influencer_name || 'Creator'}
+                                      className="rounded-circle border flex-shrink-0"
+                                      style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                                      onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                  ) : (
+                                    <div
+                                      className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+                                      style={{ width: '40px', height: '40px', backgroundColor: '#8b5cf6' }}
+                                    >
+                                      <Sparkles size={18} />
+                                    </div>
+                                  )}
+                                  <div style={{ minWidth: 0 }}>
+                                    <div className="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                      <span className="fw-bold text-xs text-primary-emphasis">{hc.influencer_name}</span>
+                                      <span className="text-muted text-xs font-monospace">({hc.influencer_handle})</span>
+                                      <span className="badge bg-secondary-subtle text-secondary py-0 px-1 text-xs">{hc.platform}</span>
+                                    </div>
+                                    <div className="text-primary-emphasis text-xs fw-medium">
+                                      {hc.package_title}
+                                    </div>
+                                    <div className="text-muted text-xs font-monospace mt-0.5" style={{ fontSize: '0.73rem' }}>
+                                      {hc.deliverables}
+                                    </div>
+                                    {hc.target_date && (
+                                      <div className="text-muted text-xs mt-0.5" style={{ fontSize: '0.7rem' }}>
+                                        Target Publication Date: <span className="font-monospace text-primary fw-medium">{hc.target_date}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-md-end flex-shrink-0 d-flex flex-column align-items-md-end gap-1">
+                                  <div className="fw-bold font-monospace fs-6" style={{ color: '#8b5cf6' }}>Rs. {Number(hc.agreed_fee || 0).toLocaleString()}</div>
+                                  <span className="badge bg-success-subtle text-success text-xs">Contract Active</span>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div
+                              className="p-3.5 rounded-2 border d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 w-100"
+                              style={{ width: '100%', boxSizing: 'border-box', backgroundColor: 'var(--color-bg-surface)' }}
+                            >
+                              <div className="d-flex align-items-center gap-3" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                                <div className="rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0 text-white" style={{ backgroundColor: '#8b5cf6' }}>
+                                  <Sparkles size={18} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <div className="fw-bold text-xs text-primary-emphasis mb-0.5">Creator Sponsorship: @zaintech_official (YouTube)</div>
+                                  <div className="text-muted text-xs font-monospace" style={{ fontSize: '0.74rem' }}>
+                                    Dedicated 1080p Video Review + Pinned CTA Link • 640k Subscribers
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-md-end flex-shrink-0 d-flex flex-column align-items-md-end gap-1">
+                                <div className="fw-bold font-monospace fs-6" style={{ color: '#8b5cf6' }}>Rs. {influencerSpend.toLocaleString()}</div>
+                                <span className="badge bg-success-subtle text-success text-xs">Contract Executed</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Consolidated Financial Balance Sheet Reconciliation (Strict Left-Right Spacing) */}
+                <div className="p-4 rounded-3 border bg-light-subtle w-100" style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <div className="pb-2.5 mb-3 border-bottom d-flex align-items-center justify-content-between w-100">
+                    <span className="fw-bold text-xs text-primary-emphasis text-uppercase" style={{ letterSpacing: '0.5px' }}>
+                      Financial Balance Sheet Reconciliation
+                    </span>
+                    <span className="badge bg-secondary-subtle text-secondary font-monospace text-xs">Reconciliation Ledger</span>
+                  </div>
+
+                  <div className="d-flex flex-column gap-2.5 w-100 text-xs font-monospace" style={{ width: '100%' }}>
+                    <div className="d-flex align-items-center justify-content-between pb-2 border-bottom w-100">
+                      <span className="text-secondary text-start">1. Digital Online Ad Placements</span>
+                      <span className="fw-bold text-primary-emphasis text-end">Rs. {digitalSpend.toLocaleString()} ({digitalPct}%)</span>
+                    </div>
+                    <div className="d-flex align-items-center justify-content-between pb-2 border-bottom w-100">
+                      <span className="text-secondary text-start">2. Physical DOOH &amp; Billboard Screens</span>
+                      <span className="fw-bold text-primary-emphasis text-end">Rs. {physicalSpend.toLocaleString()} ({physicalPct}%)</span>
+                    </div>
+                    <div className="d-flex align-items-center justify-content-between pb-2 border-bottom w-100">
+                      <span className="text-secondary text-start">3. Creator &amp; Influencer Endorsements</span>
+                      <span className="fw-bold text-primary-emphasis text-end">Rs. {influencerSpend.toLocaleString()} ({influencerPct}%)</span>
+                    </div>
+                    <div className="d-flex align-items-center justify-content-between pt-2 pb-2 text-primary fw-bold fs-6 border-bottom w-100">
+                      <span className="text-start">Total Committed Expenditures</span>
+                      <span className="text-end">Rs. {totalCommitted.toLocaleString()} ({committedPct}%)</span>
+                    </div>
+                    <div className="d-flex align-items-center justify-content-between pt-1.5 text-success fw-bold fs-6 w-100">
+                      <span className="text-start">Available Liquid Reserve</span>
+                      <span className="text-end">Rs. {remainingBudget.toLocaleString()} ({remainingPct}%)</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })()}
+        </Modal>
+      )}
     </div>
   );
 };

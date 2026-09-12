@@ -118,7 +118,7 @@ def space_to_dict(space):
         "base_price": rate_str,
         "base_price_per_day": rate_str,
         "is_active": space.is_active,
-        "status": "ACTIVE" if space.is_active else "MAINTENANCE",
+        "status": "ACTIVE" if space.is_active else "DECOMMISSIONED",
         "created_at": space.created_at.isoformat() if space.created_at else None,
         "updated_at": space.updated_at.isoformat() if space.updated_at else None,
         "category": {

@@ -240,10 +240,20 @@ export const InfluencersPage = () => {
     }
     setSubmittingHire(true);
     try {
+      const selectedPkg = hiringCreator.packages?.find((p) => p.id === hireForm.package_id) || hiringCreator.packages?.[0];
+      const targetCampaign = campaigns.find((c) => String(c.id) === String(hireForm.campaign_id));
       const res = await influencersApi.hireInfluencer({
         influencer_id: hiringCreator.id,
+        influencer_name: hiringCreator.name,
+        influencer_handle: hiringCreator.handle,
+        platform: hiringCreator.platform,
+        avatar_url: hiringCreator.avatar_url || '',
         campaign_id: parseInt(hireForm.campaign_id),
+        campaign_name: targetCampaign?.name || `Campaign #${hireForm.campaign_id}`,
         package_id: hireForm.package_id,
+        package_title: selectedPkg?.title || 'Creator Sponsorship',
+        deliverables: selectedPkg?.deliverables || 'Sponsored Video & Brand Integration',
+        agreed_fee: selectedPkg?.price || 150000,
         target_date: hireForm.target_date,
         brief_notes: hireForm.brief_notes,
       });
@@ -474,15 +484,6 @@ export const InfluencersPage = () => {
         style={{ backgroundColor: 'var(--color-bg-surface)', boxShadow: 'var(--shadow-xs)' }}
       >
         <div style={{ maxWidth: '680px', minWidth: 0 }}>
-          <div className="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
-            <span className="badge bg-primary-subtle text-primary font-semibold px-2.5 py-1 text-xs">
-              Digital Marketing Agency Hub
-            </span>
-            <span className="text-muted text-xs d-flex align-items-center gap-1">
-              <ShieldCheck size={14} className="text-success" />
-              Verified Creator Network
-            </span>
-          </div>
           <h1 className="h4 fw-bold text-primary-emphasis mb-1">
             Influencer &amp; Content Creator Marketplace
           </h1>

@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import StatusBadge from '../../../components/ui/StatusBadge';
 import EmptyState from '../../../components/ui/EmptyState';
 import Pagination from '../../../components/ui/Pagination';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import SpaceFormModal from '../components/SpaceFormModal';
 import SpaceDetailsDrawer from '../components/SpaceDetailsDrawer';
 import {
@@ -13,6 +14,7 @@ import {
   Plus,
   Eye,
   Edit,
+  Trash2,
   MapPin,
   LayoutGrid,
   List,
@@ -48,6 +50,7 @@ const STATUS_OPTIONS = [
   { label: 'All Statuses', value: '' },
   { label: 'Active & Available', value: 'ACTIVE' },
   { label: 'Under Maintenance', value: 'MAINTENANCE' },
+  { label: 'Decommissioned', value: 'DECOMMISSIONED' },
 ];
 
 const getChannelBadge = (catName = '') => {
@@ -122,6 +125,8 @@ export const SpacesPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
   const [inspectingSpace, setInspectingSpace] = useState(null);
+  const [spaceToDelete, setSpaceToDelete] = useState(null);
+  const [deletingSpace, setDeletingSpace] = useState(false);
 
   const isManagerOrAdmin =
     user?.role === 'Administrator' || user?.role === 'Space Manager';
@@ -162,9 +167,10 @@ export const SpacesPage = () => {
       selectedCity === 'All Cities' ||
       (s.location?.city || '') === selectedCity;
 
+    const spaceStatus = (s.status || (s.is_active ? 'ACTIVE' : 'DECOMMISSIONED')).toUpperCase();
     const matchesStatus =
       selectedStatus === '' ||
-      (s.status || (s.is_active ? 'ACTIVE' : 'MAINTENANCE')) === selectedStatus;
+      spaceStatus === selectedStatus;
 
     return matchesSearch && matchesCat && matchesCity && matchesStatus;
   });
@@ -187,6 +193,25 @@ export const SpacesPage = () => {
     setFeedback({ type: 'success', message: 'Advertising space updated successfully.' });
     setEditingSpace(null);
     fetchSpaces();
+  };
+
+  const handleConfirmDeleteSpace = async () => {
+    if (!spaceToDelete) return;
+    setDeletingSpace(true);
+    try {
+      await spacesApi.deleteSpace(spaceToDelete.id);
+      setFeedback({ type: 'success', message: `Advertising space '${spaceToDelete.name}' deleted successfully.` });
+      setSpaceToDelete(null);
+      fetchSpaces();
+    } catch (err) {
+      console.error('Failed to delete space', err);
+      setFeedback({
+        type: 'danger',
+        message: err.response?.data?.message || 'Failed to delete advertising space. Please try again.'
+      });
+    } finally {
+      setDeletingSpace(false);
+    }
   };
 
   return (
@@ -406,7 +431,7 @@ export const SpacesPage = () => {
                     </td>
 
                     <td>
-                      <StatusBadge status={s.status || (s.is_active ? 'active' : 'maintenance')} size="sm" />
+                      <StatusBadge status={s.status || (s.is_active ? 'active' : 'decommissioned')} size="sm" />
                     </td>
 
                     <td className="text-end">
@@ -420,14 +445,24 @@ export const SpacesPage = () => {
                           <Eye size={14} />
                         </button>
                         {isManagerOrAdmin && (
-                          <button
-                            type="button"
-                            className="btn-ui-icon"
-                            onClick={() => setEditingSpace(s)}
-                            title="Edit Space"
-                          >
-                            <Edit size={14} />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="btn-ui-icon"
+                              onClick={() => setEditingSpace(s)}
+                              title="Edit Space"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ui-icon text-danger"
+                              onClick={() => setSpaceToDelete(s)}
+                              title="Delete Space"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
                         )}
                         <Link
                           to={`/bookings?space_id=${s.id}`}
@@ -466,7 +501,7 @@ export const SpacesPage = () => {
                   >
                     <div className="d-flex justify-content-between align-items-start mb-2">
                       {getChannelBadge(s.category?.name)}
-                      <StatusBadge status={s.status || (s.is_active ? 'active' : 'maintenance')} size="sm" />
+                      <StatusBadge status={s.status || (s.is_active ? 'active' : 'decommissioned')} size="sm" />
                     </div>
                     <div className="text-white fw-bold fs-6 mt-2 text-truncate">
                       Rs. {parseFloat(s.base_rate || s.daily_rate || s.base_price_per_day || s.base_price || 0).toLocaleString()}<span className="text-white-50 text-xs font-normal"> /day</span>
@@ -484,7 +519,7 @@ export const SpacesPage = () => {
                       </p>
                     </div>
 
-                    <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+                    <div className="d-flex justify-content-between align-items-center pt-2 border-top gap-1">
                       <button
                         type="button"
                         className="btn-ui btn-ui-secondary btn-ui-sm"
@@ -493,6 +528,28 @@ export const SpacesPage = () => {
                         <Eye size={12} />
                         <span>Inspect</span>
                       </button>
+                      {isManagerOrAdmin && (
+                        <div className="d-flex align-items-center gap-1">
+                          <button
+                            type="button"
+                            className="btn-ui-icon"
+                            onClick={() => setEditingSpace(s)}
+                            title="Edit Space"
+                            style={{ width: '30px', height: '30px' }}
+                          >
+                            <Edit size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-ui-icon text-danger"
+                            onClick={() => setSpaceToDelete(s)}
+                            title="Delete Space"
+                            style={{ width: '30px', height: '30px' }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
                       <Link
                         to={`/bookings?space_id=${s.id}`}
                         className="btn-ui btn-ui-primary btn-ui-sm"
@@ -541,6 +598,19 @@ export const SpacesPage = () => {
           setInspectingSpace(null);
           setEditingSpace(sp);
         }}
+      />
+
+      {/* Confirm Delete Space Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(spaceToDelete)}
+        onClose={() => !deletingSpace && setSpaceToDelete(null)}
+        title="Delete Advertising Space?"
+        subtitle={`Are you sure you want to permanently delete space '${spaceToDelete?.name}' (${spaceToDelete?.code || 'ID: ' + spaceToDelete?.id})? This action cannot be undone.`}
+        type="danger"
+        confirmText={deletingSpace ? 'Deleting Space...' : 'Yes, Delete Space'}
+        cancelText="Cancel"
+        onConfirm={handleConfirmDeleteSpace}
+        disabled={deletingSpace}
       />
     </div>
   );

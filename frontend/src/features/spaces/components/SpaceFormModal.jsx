@@ -102,7 +102,7 @@ export const SpaceFormModal = ({
         dimensions: initialData.dimensions || '40x20 ft',
         resolution: initialData.resolution || '3840x2160 (4K UHD)',
         daily_rate: initialData.base_rate || initialData.daily_rate || '45000.00',
-        status: initialData.is_active === false ? 'INACTIVE' : 'ACTIVE',
+        status: initialData.status || (initialData.is_active === false ? 'DECOMMISSIONED' : 'ACTIVE'),
         traffic_count: initialData.traffic_count || '450,000 / day',
         description: initialData.description || '',
       });
@@ -469,7 +469,7 @@ export const SpaceFormModal = ({
               >
                 <option value="ACTIVE">Active &amp; Available</option>
                 <option value="MAINTENANCE">Under Maintenance</option>
-                <option value="INACTIVE">Decommissioned</option>
+                <option value="DECOMMISSIONED">Decommissioned</option>
               </select>
             </div>
           </div>

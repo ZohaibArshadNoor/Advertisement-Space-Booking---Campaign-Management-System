@@ -20,7 +20,8 @@ import {
   Shield,
   Activity,
   X,
-  Sparkles
+  Sparkles,
+  Globe
 } from 'lucide-react';
 
 const ROLE_BADGE_CLASSES = {
@@ -141,17 +142,30 @@ export const Sidebar = ({
               </NavLink>
             )}
 
-            {/* Advertising Spaces (All Users) */}
+            {/* Advertising Spaces (Physical DOOH & Billboards) */}
             <NavLink
               to="/spaces"
               className={({ isActive }) =>
                 `nav-item-link ${isActive ? 'active' : ''}`
               }
               onClick={() => setMobileOpen(false)}
-              title="Advertising Spaces"
+              title="Physical Advertising Spaces"
             >
               <Building2 size={18} />
-              {!collapsed && <span>Ad Spaces</span>}
+              {!collapsed && <span>Ad Spaces (OOH)</span>}
+            </NavLink>
+
+            {/* Digital Marketing Services & Packages (Online, YouTube, Meta, PPC) */}
+            <NavLink
+              to="/digital-services"
+              className={({ isActive }) =>
+                `nav-item-link ${isActive ? 'active' : ''}`
+              }
+              onClick={() => setMobileOpen(false)}
+              title="Digital Marketing Services & Packages"
+            >
+              <Globe size={18} />
+              {!collapsed && <span>Digital Services</span>}
             </NavLink>
 
             {/* Space Availability */}

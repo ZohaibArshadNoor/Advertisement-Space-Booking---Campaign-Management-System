@@ -80,6 +80,8 @@ def campaign_to_dict(campaign, include_bookings=False):
             "cpc": "11.50",
             "video_views": 320000
         },
+        "hired_creators": (getattr(campaign, "performance_metrics", None) or {}).get("hired_creators", []),
+        "influencer_spend": (getattr(campaign, "performance_metrics", None) or {}).get("influencer_spend", 0),
         "created_at": (
             campaign.created_at.isoformat()
             if campaign.created_at

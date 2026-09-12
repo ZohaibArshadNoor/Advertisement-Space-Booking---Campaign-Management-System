@@ -14,11 +14,13 @@ const STATUS_CONFIGS = {
   review: { label: 'In Review', className: 'status-review' },
   draft: { label: 'Draft', className: 'status-draft' },
   scheduled: { label: 'Scheduled', className: 'status-info' },
-  maintenance: { label: 'Maintenance', className: 'status-warning' },
+  provisioned: { label: 'Provisioned', className: 'status-info' },
+  maintenance: { label: 'Under Maintenance', className: 'status-warning' },
   partially_paid: { label: 'Partially Paid', className: 'status-warning' },
 
   // Danger / Inactive states
-  inactive: { label: 'Inactive', className: 'status-inactive' },
+  inactive: { label: 'Decommissioned', className: 'status-inactive' },
+  decommissioned: { label: 'Decommissioned', className: 'status-inactive' },
   cancelled: { label: 'Cancelled', className: 'status-cancelled' },
   rejected: { label: 'Rejected', className: 'status-rejected' },
   overdue: { label: 'Overdue', className: 'status-overdue' },

@@ -100,27 +100,60 @@ def hire_influencer():
     pkg_title = selected_pkg.get("title", "Custom Creator Sponsorship") if selected_pkg else "Creator Sponsorship"
     pkg_price = selected_pkg.get("price", 150000) if selected_pkg else 150000
 
-    # In a real system, this updates campaign brief & creator collaboration record
-    influencer.completed_campaigns += 1
+    # Increment influencer stats
+    influencer.completed_campaigns = (influencer.completed_campaigns or 0) + 1
+
+    # Build contract object
+    contract_id = f"HIRE-{datetime.utcnow().strftime('%Y%m%d')}-{influencer.id}"
+    contract = {
+        "id": contract_id,
+        "influencer_id": influencer.id,
+        "influencer_name": influencer.name,
+        "influencer_handle": influencer.handle,
+        "platform": influencer.platform,
+        "avatar_url": influencer.avatar_url or "",
+        "campaign_id": campaign.id,
+        "campaign_name": campaign.name,
+        "package_title": pkg_title,
+        "deliverables": selected_pkg.get("deliverables") if selected_pkg else "Sponsored Video & Brand Integration",
+        "agreed_fee": str(pkg_price),
+        "target_publication_date": target_date or "",
+        "brief_notes": brief_notes,
+        "status": "CONTRACT_ACTIVE",
+        "created_at": datetime.utcnow().isoformat()
+    }
+
+    # Persist contract to campaign performance_metrics JSON
+    metrics = dict(campaign.performance_metrics or {})
+    hired_creators = list(metrics.get("hired_creators", []))
+    hired_creators.append(contract)
+    metrics["hired_creators"] = hired_creators
+    metrics["influencer_spend"] = sum(float(c.get("agreed_fee", 0)) for c in hired_creators)
+    campaign.performance_metrics = metrics
+
     db.session.commit()
 
     return jsonify({
         "success": True,
         "message": f"Successfully hired {influencer.name} ({influencer.handle}) for campaign '{campaign.name}'.",
-        "contract": {
-            "influencer_name": influencer.name,
-            "influencer_handle": influencer.handle,
-            "platform": influencer.platform,
-            "campaign_id": campaign.id,
-            "campaign_name": campaign.name,
-            "package_title": pkg_title,
-            "deliverables": selected_pkg.get("deliverables") if selected_pkg else "Sponsored Video & Brand Integration",
-            "agreed_fee": str(pkg_price),
-            "target_publication_date": target_date,
-            "status": "PROPOSAL_ACCEPTED",
-            "created_at": datetime.utcnow().isoformat()
-        }
+        "contract": contract
     }), 201
+
+
+@influencers_bp.get("/campaign/<int:campaign_id>")
+def get_campaign_influencers(campaign_id):
+    """
+    Get all hired creator contracts affiliated with a specific campaign.
+    """
+    campaign = Campaign.query.get_or_404(campaign_id)
+    metrics = campaign.performance_metrics or {}
+    hired = metrics.get("hired_creators", [])
+    return jsonify({
+        "success": True,
+        "campaign_id": campaign_id,
+        "hired_creators": hired,
+        "total_influencer_spend": metrics.get("influencer_spend", 0)
+    }), 200
 
 
 @influencers_bp.post("/")

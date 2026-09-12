@@ -410,23 +410,20 @@ class AdvertisingSpaceService:
     @staticmethod
     def delete(space):
         """
-        Deletes an advertising space.
-
-        For now, deletion is allowed only if the space has
-        no rate card or availability records.
-
-        As the system grows, booking and campaign relationships
-        will also be checked before deletion.
+        Deletes an advertising space along with its rate cards and availability periods.
         """
-
-        if (
-            space.rate_cards
-            or space.availability_periods
-        ):
-            return False
-
         space_id = space.id
         space_name = space.name
+
+        # Cascade delete rate cards
+        if space.rate_cards:
+            for rc in list(space.rate_cards):
+                db.session.delete(rc)
+
+        # Cascade delete availability periods
+        if space.availability_periods:
+            for av in list(space.availability_periods):
+                db.session.delete(av)
 
         db.session.delete(space)
         db.session.commit()

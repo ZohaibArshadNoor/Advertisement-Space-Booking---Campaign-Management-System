@@ -1,151 +1,154 @@
-import { INITIAL_DIGITAL_SERVICES, DIGITAL_BASE_RATES } from './digitalServicesData';
-
-const CATALOG_KEY = 'adflow_digital_services_catalog';
-const BOOKINGS_KEY = 'adflow_booked_digital_services';
-const BASE_RATES_KEY = 'adflow_digital_base_rates';
+import apiClient from '../../services/apiClient';
 
 export const digitalServicesApi = {
-  // Get all digital base rates
+  // Get all digital base rates directly from database
   getBaseRates: async () => {
     try {
-      const stored = localStorage.getItem(BASE_RATES_KEY);
-      if (stored) {
-        return { success: true, baseRates: JSON.parse(stored) };
-      }
-      localStorage.setItem(BASE_RATES_KEY, JSON.stringify(DIGITAL_BASE_RATES));
-      return { success: true, baseRates: DIGITAL_BASE_RATES };
+      const res = await apiClient.get('/digital-services/base-rates');
+      return {
+        success: true,
+        baseRates: res.data?.baseRates || [],
+      };
     } catch (err) {
-      console.error('Failed to get base rates', err);
-      return { success: true, baseRates: DIGITAL_BASE_RATES };
+      console.error('Failed to fetch digital base rates:', err);
+      return {
+        success: false,
+        error: err.response?.data?.message || err.message,
+        baseRates: [],
+      };
     }
   },
 
-  // Admin: Update a specific platform base rate
+  // Admin: Update a specific platform base rate in database
   updateBaseRate: async (platform, newRateData) => {
     try {
-      const stored = localStorage.getItem(BASE_RATES_KEY);
-      let list = stored ? JSON.parse(stored) : [...DIGITAL_BASE_RATES];
-      list = list.map((b) => (b.platform === platform ? { ...b, ...newRateData } : b));
-      localStorage.setItem(BASE_RATES_KEY, JSON.stringify(list));
-      return { success: true, message: `Base rate for '${platform}' updated successfully.`, baseRates: list };
+      const res = await apiClient.put(
+        `/digital-services/base-rates/${encodeURIComponent(platform)}`,
+        newRateData
+      );
+      return {
+        success: true,
+        message: res.data?.message || `Base rate for '${platform}' updated successfully.`,
+        baseRates: res.data?.baseRates || [],
+      };
     } catch (err) {
-      console.error('Failed to update base rate', err);
-      throw err;
+      console.error('Failed to update base rate:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 
-  // Admin: Add a new custom platform base rate
+  // Admin: Add a new custom platform base rate to database
   addBaseRate: async (newRateData) => {
     try {
-      const stored = localStorage.getItem(BASE_RATES_KEY);
-      let list = stored ? JSON.parse(stored) : [...DIGITAL_BASE_RATES];
-      if (list.some((b) => b.platform.toLowerCase() === newRateData.platform.toLowerCase())) {
-        throw new Error(`Platform '${newRateData.platform}' already exists.`);
-      }
-      list.push(newRateData);
-      localStorage.setItem(BASE_RATES_KEY, JSON.stringify(list));
-      return { success: true, message: `New platform service '${newRateData.platform}' added successfully.`, baseRates: list };
+      const res = await apiClient.post('/digital-services/base-rates', newRateData);
+      return {
+        success: true,
+        message: res.data?.message || `New platform service '${newRateData.platform}' added successfully.`,
+        baseRates: res.data?.baseRates || [],
+      };
     } catch (err) {
-      console.error('Failed to add base rate', err);
-      throw err;
+      console.error('Failed to add base rate:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 
-  // Admin: Delete a platform base rate / custom service
+  // Admin: Delete a platform base rate from database
   deleteBaseRate: async (platform) => {
     try {
-      const stored = localStorage.getItem(BASE_RATES_KEY);
-      let list = stored ? JSON.parse(stored) : [...DIGITAL_BASE_RATES];
-      list = list.filter((b) => b.platform !== platform);
-      localStorage.setItem(BASE_RATES_KEY, JSON.stringify(list));
-      return { success: true, message: `Platform base rate '${platform}' removed.`, baseRates: list };
+      const res = await apiClient.delete(`/digital-services/base-rates/${encodeURIComponent(platform)}`);
+      return {
+        success: true,
+        message: res.data?.message || `Platform base rate '${platform}' removed.`,
+        baseRates: res.data?.baseRates || [],
+      };
     } catch (err) {
-      console.error('Failed to delete base rate', err);
-      throw err;
+      console.error('Failed to delete base rate:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 
-  // Reset base rates to system defaults
+  // Reset base rates to system defaults in database
   resetBaseRates: async () => {
     try {
-      localStorage.setItem(BASE_RATES_KEY, JSON.stringify(DIGITAL_BASE_RATES));
-      return { success: true, message: 'Base rates reset to defaults.', baseRates: DIGITAL_BASE_RATES };
+      const res = await apiClient.post('/digital-services/base-rates/reset');
+      return {
+        success: true,
+        message: res.data?.message || 'Base rates reset to defaults.',
+        baseRates: res.data?.baseRates || [],
+      };
     } catch (err) {
-      console.error('Failed to reset base rates', err);
-      throw err;
+      console.error('Failed to reset base rates:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 
-  // Get all digital services in catalog
+  // Get all digital services in catalog from database
   getCatalog: async () => {
     try {
-      const stored = localStorage.getItem(CATALOG_KEY);
-      if (stored) {
-        return { success: true, services: JSON.parse(stored) };
-      }
-      localStorage.setItem(CATALOG_KEY, JSON.stringify(INITIAL_DIGITAL_SERVICES));
-      return { success: true, services: INITIAL_DIGITAL_SERVICES };
+      const res = await apiClient.get('/digital-services/catalog');
+      return {
+        success: true,
+        services: res.data?.services || [],
+      };
     } catch (err) {
-      console.error('Failed to get catalog', err);
-      return { success: true, services: INITIAL_DIGITAL_SERVICES };
+      console.error('Failed to fetch digital services catalog:', err);
+      return {
+        success: false,
+        error: err.response?.data?.message || err.message,
+        services: [],
+      };
     }
   },
 
-  // Admin: Create / Add a new digital service to catalog
+  // Admin: Create / Add a new digital service to catalog in database
   createService: async (serviceData) => {
     try {
-      const stored = localStorage.getItem(CATALOG_KEY);
-      const list = stored ? JSON.parse(stored) : [...INITIAL_DIGITAL_SERVICES];
-      
-      const newService = {
-        ...serviceData,
-        id: `ds_${Date.now().toString().slice(-6)}`,
-        deliverables: serviceData.deliverables || [
-          'Targeted Digital Ad Distribution',
-          'Real-time Analytics & Conversion Tracking',
-          'Dedicated Campaign Optimization',
-        ],
+      const res = await apiClient.post('/digital-services/catalog', serviceData);
+      return {
+        success: true,
+        message: res.data?.message || `Digital service '${serviceData.title}' created successfully.`,
+        service: res.data?.service,
       };
-
-      list.unshift(newService);
-      localStorage.setItem(CATALOG_KEY, JSON.stringify(list));
-      return { success: true, message: `Digital service '${newService.title}' created successfully.`, service: newService };
     } catch (err) {
-      console.error('Failed to create service', err);
-      throw err;
+      console.error('Failed to create digital service:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 
-  // Admin: Delete a digital service from catalog
+  // Admin: Delete a digital service from catalog in database
   deleteService: async (id) => {
     try {
-      const stored = localStorage.getItem(CATALOG_KEY);
-      let list = stored ? JSON.parse(stored) : [...INITIAL_DIGITAL_SERVICES];
-      list = list.filter((s) => s.id !== id);
-      localStorage.setItem(CATALOG_KEY, JSON.stringify(list));
-      return { success: true, message: 'Digital service removed from catalog.' };
+      const res = await apiClient.delete(`/digital-services/catalog/${encodeURIComponent(id)}`);
+      return {
+        success: true,
+        message: res.data?.message || 'Digital service removed from catalog.',
+      };
     } catch (err) {
-      console.error('Failed to delete service', err);
-      throw err;
+      console.error('Failed to delete digital service:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 
-  // Get booked digital services
+  // Get booked digital services from database
   getBookedServices: async (campaignId = null) => {
     try {
-      const stored = localStorage.getItem(BOOKINGS_KEY);
-      let list = stored ? JSON.parse(stored) : [];
-      if (campaignId) {
-        list = list.filter((item) => String(item.campaign_id) === String(campaignId));
-      }
-      return { success: true, services: list };
+      const params = campaignId ? { campaign_id: campaignId } : {};
+      const res = await apiClient.get('/digital-services/bookings', { params });
+      return {
+        success: true,
+        services: res.data?.services || [],
+      };
     } catch (err) {
-      console.error('Failed to read booked digital services', err);
-      return { success: false, services: [] };
+      console.error('Failed to fetch booked digital services:', err);
+      return {
+        success: false,
+        error: err.response?.data?.message || err.message,
+        services: [],
+      };
     }
   },
 
-  // Book a digital service (Campaign Affiliated OR Standalone Subscription)
+  // Book a digital service in database
   bookDigitalService: async ({
     campaign_id,
     campaign_name,
@@ -163,87 +166,65 @@ export const digitalServicesApi = {
     status = 'PENDING',
     requester_name,
   }) => {
+    const bookingPayload = {
+      campaign_id: is_standalone ? null : campaign_id,
+      campaign_name: is_standalone ? 'Standalone Direct Subscription' : (campaign_name || `Campaign #${campaign_id}`),
+      service_id,
+      service_title,
+      platform,
+      category,
+      original_price: Number(original_price),
+      agreed_price: Number(agreed_price),
+      discount_applied: discount_applied || 'Standard Rate',
+      duration_days: Number(duration_days || 30),
+      start_date,
+      end_date,
+      is_standalone: Boolean(is_standalone),
+      status: status || 'PENDING',
+      requester_name: requester_name || 'Advertiser',
+    };
+
     try {
-      const stored = localStorage.getItem(BOOKINGS_KEY);
-      const list = stored ? JSON.parse(stored) : [];
-
-      const newBooking = {
-        id: `DGB-${Date.now().toString().slice(-6)}`,
-        campaign_id: is_standalone ? null : campaign_id,
-        campaign_name: is_standalone ? 'Standalone Direct Subscription' : (campaign_name || `Campaign #${campaign_id}`),
-        service_id,
-        service_title,
-        platform,
-        category,
-        original_price: Number(original_price),
-        agreed_price: Number(agreed_price),
-        discount_applied: discount_applied || 'Standard Rate',
-        duration_days: Number(duration_days || 30),
-        start_date,
-        end_date,
-        is_standalone: Boolean(is_standalone),
-        status: status || 'PENDING',
-        requester_name: requester_name || 'Advertiser',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      list.unshift(newBooking);
-      localStorage.setItem(BOOKINGS_KEY, JSON.stringify(list));
-
+      const res = await apiClient.post('/digital-services/bookings', bookingPayload);
       return {
         success: true,
-        message: is_standalone
-          ? `Successfully submitted standalone request for '${service_title}'.`
-          : `Successfully requested ${service_title} under campaign '${newBooking.campaign_name}'.`,
-        service: newBooking,
+        message: res.data?.message || `Successfully registered booking for '${service_title}'.`,
+        service: res.data?.service,
       };
     } catch (err) {
-      console.error('Failed to book digital service', err);
-      throw err;
+      console.error('Failed to book digital service:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 
-  // Update status of a booked digital service (Admin: Approve, Provision, Activate, Complete, Reject, Cancel)
-  updateBookedServiceStatus: async (id, newStatus) => {
+  // Update booking status in database
+  updateBookingStatus: async (bookingId, newStatus) => {
     try {
-      const stored = localStorage.getItem(BOOKINGS_KEY);
-      let list = stored ? JSON.parse(stored) : [];
-      let updatedItem = null;
-      list = list.map((item) => {
-        if (item.id === id) {
-          updatedItem = {
-            ...item,
-            status: newStatus,
-            updated_at: new Date().toISOString(),
-          };
-          return updatedItem;
-        }
-        return item;
+      const res = await apiClient.patch(`/digital-services/bookings/${encodeURIComponent(bookingId)}/status`, {
+        status: newStatus,
       });
-      localStorage.setItem(BOOKINGS_KEY, JSON.stringify(list));
       return {
         success: true,
-        message: `Digital service status successfully updated to '${newStatus}'.`,
-        service: updatedItem,
+        message: res.data?.message || `Booking status updated to ${newStatus}.`,
+        service: res.data?.service,
       };
     } catch (err) {
-      console.error('Failed to update booked service status', err);
-      throw err;
+      console.error('Failed to update booking status:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 
-  // Cancel / Remove a booked service
-  removeBookedService: async (id) => {
+  // Delete / cancel booking in database
+  deleteBooking: async (bookingId) => {
     try {
-      const stored = localStorage.getItem(BOOKINGS_KEY);
-      let list = stored ? JSON.parse(stored) : [];
-      list = list.filter((item) => item.id !== id);
-      localStorage.setItem(BOOKINGS_KEY, JSON.stringify(list));
-      return { success: true, message: 'Digital service reservation cancelled.' };
+      const res = await apiClient.delete(`/digital-services/bookings/${encodeURIComponent(bookingId)}`);
+      return {
+        success: true,
+        message: res.data?.message || 'Digital service booking cancelled.',
+      };
     } catch (err) {
-      console.error('Failed to remove booked digital service', err);
-      throw err;
+      console.error('Failed to delete booking:', err);
+      throw new Error(err.response?.data?.message || err.message);
     }
   },
 };

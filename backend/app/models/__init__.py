@@ -47,6 +47,11 @@ from app.models.creative import (
     MediaStatus
 )
 from app.models.influencer import Influencer
+from app.models.digital_service import (
+    DigitalService,
+    DigitalBaseRate,
+    BookedDigitalService
+)
 
 __all__ = [
     "Role",
@@ -74,5 +79,8 @@ __all__ = [
     "Creative",
     "MediaAsset",
     "MediaStatus",
-    "Influencer"
+    "Influencer",
+    "DigitalService",
+    "DigitalBaseRate",
+    "BookedDigitalService"
 ]

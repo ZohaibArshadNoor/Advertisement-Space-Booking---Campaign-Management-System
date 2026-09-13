@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { campaignsApi } from '../../campaigns/campaignsApi';
-import {
-  DIGITAL_CATEGORIES,
-  DIGITAL_BASE_RATES,
-} from '../digitalServicesData';
+import { DIGITAL_CATEGORIES } from '../digitalServicesData';
 import { digitalServicesApi } from '../digitalServicesApi';
 import Modal from '../../../components/ui/Modal';
 import EmptyState from '../../../components/ui/EmptyState';

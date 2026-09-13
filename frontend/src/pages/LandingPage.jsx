@@ -1,252 +1,343 @@
-import React, { useRef, useEffect, useState, useMemo, Suspense } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Float, Stars } from '@react-three/drei';
-import * as THREE from 'three';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import PublicNavbar from '../components/PublicNavbar';
+import { spacesApi } from '../features/spaces/spacesApi';
 import '../styles/landing.css';
 import {
   MapPin, CalendarCheck, ShieldCheck, Zap, ArrowRight,
   Sparkles, Monitor, BarChart3, Sliders, ChevronRight,
-  CheckCircle2, FileCheck, Users, Target, Move3d
+  CheckCircle2, FileCheck, Users, Target, Layers
 } from 'lucide-react';
 
+gsap.registerPlugin(ScrollTrigger);
+
+const TOTAL_FRAMES = 240;
+
+const getFramePath = (index) => {
+  const pad = String(index).padStart(3, '0');
+  const base = import.meta.env.BASE_URL || '/';
+  return `${base.replace(/\/$/, '')}/frames/ezgif-frame-${pad}.jpg`;
+};
+
 /* =========================================================================
-   AUTHENTIC 3D BILLBOARD & DIGITAL SCREEN SCENE (THREE.JS)
+   SCROLL-DRIVEN BILLBOARD VIDEO CANVAS (OPTIMIZED FOR 240 FRAMES)
    ========================================================================= */
 
-/** Generates a canvas texture with live advertising graphics */
-function useBillboardTexture() {
-  return useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
+const ScrollBillboardHero = () => {
+  const { user } = useAuth();
+  const heroPinRef = useRef(null);
+  const canvasRef = useRef(null);
+  const stage1Ref = useRef(null);
+  const stage2Ref = useRef(null);
+  const stage3Ref = useRef(null);
+
+  const imagesRef = useRef([]);
+  const lastDrawnImgRef = useRef(null);
+  const frameIndexRef = useRef(1);
+  const animFrameIdRef = useRef(null);
+
+  // Draw frame on canvas with aspect ratio cover
+  const drawImageCover = useCallback((img) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !img) return;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    // Base background gradient
-    const grad = ctx.createLinearGradient(0, 0, 1024, 512);
-    grad.addColorStop(0, '#0f172a');
-    grad.addColorStop(0.5, '#1e3a8a');
-    grad.addColorStop(1, '#0369a1');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1024, 512);
+    const width = canvas.clientWidth || window.innerWidth;
+    const height = canvas.clientHeight || window.innerHeight;
 
-    // Glowing subtle grid
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
-    ctx.lineWidth = 2;
-    for (let x = 0; x < 1024; x += 64) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, 512);
-      ctx.stroke();
-    }
-    for (let y = 0; y < 512; y += 64) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(1024, y);
-      ctx.stroke();
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
     }
 
-    // Top Badge Pill
-    ctx.fillStyle = '#2563eb';
-    ctx.beginPath();
-    ctx.roundRect(60, 50, 260, 48, 10);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('LIVE DIGITAL LED WALL', 80, 82);
+    const iw = img.naturalWidth || img.width || 1920;
+    const ih = img.naturalHeight || img.height || 1080;
 
-    // Main Ad Title
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('COMMAND PRIME SPACES', 60, 175);
+    const hRatio = width / iw;
+    const vRatio = height / ih;
+    const ratio = Math.max(hRatio, vRatio);
 
-    // Location tag
-    ctx.fillStyle = '#93c5fd';
-    ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('Lahore • Karachi • Islamabad', 60, 225);
+    const centerShiftX = (width - iw * ratio) / 2;
+    const centerShiftY = (height - ih * ratio) / 2;
 
-    // Stats Bar
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
-    ctx.beginPath();
-    ctx.roundRect(60, 280, 904, 160, 14);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(147, 197, 253, 0.4)';
-    ctx.stroke();
-
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = 'bold 38px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('850,000+ Daily Reach', 95, 350);
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '20px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('High-Footfall Urban Corridors', 95, 395);
-
-    ctx.fillStyle = '#4ade80';
-    ctx.font = 'bold 38px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('100% Conflict-Free', 560, 350);
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '20px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('Smart Real-Time Date Booking', 560, 395);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.needsUpdate = true;
-    return tex;
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, iw, ih, centerShiftX, centerShiftY, iw * ratio, ih * ratio);
+    lastDrawnImgRef.current = img;
   }, []);
-}
 
-/** 3D Realistic Billboard Model with Pylon, Screen & Spotlights */
-function BillboardModel({ isDark }) {
-  const groupRef = useRef();
-  const screenTex = useBillboardTexture();
-  const { mouse } = useThree();
-
-  // Subtle interactive parallax tilt on mouse move
-  useFrame(() => {
-    if (!groupRef.current) return;
-    const targetRotY = mouse.x * 0.45;
-    const targetRotX = -mouse.y * 0.25;
-    groupRef.current.rotation.y += (targetRotY - groupRef.current.rotation.y) * 0.06;
-    groupRef.current.rotation.x += (targetRotX - groupRef.current.rotation.x) * 0.06;
-  });
-
-  const steelColor = isDark ? '#334155' : '#475569';
-  const frameColor = isDark ? '#0f172a' : '#1e293b';
-  const lightBeams = isDark ? '#60a5fa' : '#38bdf8';
-
-  return (
-    <group ref={groupRef} position={[0, -0.35, 0]} scale={[0.9, 0.9, 0.9]}>
-      {/* ── Concrete Foundation Base ── */}
-      <mesh position={[0, -2.4, 0]}>
-        <cylinderGeometry args={[1.1, 1.3, 0.35, 32]} />
-        <meshStandardMaterial color={isDark ? '#1e293b' : '#94a3b8'} roughness={0.9} />
-      </mesh>
-
-      {/* ── Steel Pylon Support Pole ── */}
-      <mesh position={[0, -1.0, 0]}>
-        <cylinderGeometry args={[0.2, 0.22, 2.5, 32]} />
-        <meshStandardMaterial color={steelColor} metalness={0.7} roughness={0.3} />
-      </mesh>
-
-      {/* ── Back Truss Support Structure ── */}
-      <mesh position={[0, 0.7, -0.22]}>
-        <boxGeometry args={[4.2, 1.8, 0.15]} />
-        <meshStandardMaterial color={steelColor} metalness={0.6} roughness={0.4} />
-      </mesh>
-
-      {/* ── Outer Billboard Bezel Frame ── */}
-      <mesh position={[0, 0.7, 0]}>
-        <boxGeometry args={[4.8, 2.6, 0.2]} />
-        <meshStandardMaterial color={frameColor} metalness={0.8} roughness={0.2} />
-      </mesh>
-
-      {/* ── Digital LED Screen Face ── */}
-      <mesh position={[0, 0.7, 0.11]}>
-        <planeGeometry args={[4.5, 2.3]} />
-        <meshBasicMaterial map={screenTex} />
-      </mesh>
-
-      {/* ── Screen Ambient Glow Plane ── */}
-      <mesh position={[0, 0.7, 0.12]}>
-        <planeGeometry args={[4.6, 2.4]} />
-        <meshBasicMaterial
-          color={isDark ? '#38bdf8' : '#2563eb'}
-          transparent
-          opacity={isDark ? 0.1 : 0.05}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
-      {/* ── Lower Walkway / Maintenance Platform ── */}
-      <mesh position={[0, -0.65, 0.25]}>
-        <boxGeometry args={[4.6, 0.08, 0.55]} />
-        <meshStandardMaterial color={steelColor} metalness={0.7} roughness={0.4} />
-      </mesh>
-
-      {/* ── Safety Railing ── */}
-      <mesh position={[0, -0.45, 0.5]}>
-        <boxGeometry args={[4.6, 0.35, 0.04]} />
-        <meshStandardMaterial color={steelColor} wireframe transparent opacity={0.6} />
-      </mesh>
-
-      {/* ── Top Spotlight Fixtures (3 lights) ── */}
-      {[-1.6, 0, 1.6].map((xPos, idx) => (
-        <group key={idx} position={[xPos, 2.1, 0.45]}>
-          <mesh position={[0, -0.15, -0.25]} rotation={[0.4, 0, 0]}>
-            <cylinderGeometry args={[0.03, 0.03, 0.6, 12]} />
-            <meshStandardMaterial color={steelColor} metalness={0.8} />
-          </mesh>
-          <mesh rotation={[0.6, 0, 0]}>
-            <coneGeometry args={[0.16, 0.25, 16]} />
-            <meshStandardMaterial color={frameColor} metalness={0.8} />
-          </mesh>
-          <pointLight color={lightBeams} intensity={isDark ? 2.5 : 1.5} distance={4} />
-        </group>
-      ))}
-    </group>
-  );
-}
-
-/** Complete 3D Canvas Scene */
-function HeroBillboardScene({ isDark }) {
-  return (
-    <>
-      <ambientLight intensity={isDark ? 0.8 : 1.1} />
-      <directionalLight position={[6, 8, 5]} intensity={isDark ? 1.6 : 1.9} />
-      <directionalLight position={[-6, 4, -4]} intensity={0.5} />
-
-      {isDark && (
-        <Stars radius={50} depth={40} count={350} factor={3} saturation={0.5} fade speed={1} />
-      )}
-
-      <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.3}>
-        <BillboardModel isDark={isDark} />
-      </Float>
-    </>
-  );
-}
-
-/* =========================================================================
-   GSAP HOOKS
-   ========================================================================= */
-
-function useGsapReveal(selector, options = {}) {
+  // Preload all 240 images in optimized batches
   useEffect(() => {
-    const elements = document.querySelectorAll(selector);
-    if (!elements.length) return;
+    const imgs = new Array(TOTAL_FRAMES);
 
-    gsap.set(elements, { opacity: 0, y: 30 });
+    for (let i = 1; i <= TOTAL_FRAMES; i++) {
+      const img = new Image();
+      img.src = getFramePath(i);
+      img.onload = () => {
+        if (i === 1 && !lastDrawnImgRef.current) {
+          drawImageCover(img);
+        }
+      };
+      imgs[i - 1] = img;
+    }
+    imagesRef.current = imgs;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            gsap.to(entry.target, {
-              opacity: 1,
-              y: 0,
-              duration: options.duration || 0.7,
-              delay: options.stagger
-                ? Array.from(elements).indexOf(entry.target) * (options.stagger || 0.1)
-                : (options.delay || 0),
-              ease: options.ease || 'power3.out',
+    // Trigger initial render with frame 1 if cached
+    if (imgs[0]?.complete) {
+      drawImageCover(imgs[0]);
+    }
+  }, [drawImageCover]);
+
+  // Handle Window Resize
+  useEffect(() => {
+    const handleResize = () => {
+      const curImg = lastDrawnImgRef.current || imagesRef.current[0];
+      if (curImg) drawImageCover(curImg);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [drawImageCover]);
+
+  // GSAP ScrollTrigger with smooth requestAnimationFrame rendering
+  useEffect(() => {
+    if (!heroPinRef.current || !canvasRef.current) return;
+
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: heroPinRef.current,
+        start: 'top top',
+        end: '+=3400', // 3400px of smooth scroll for 240 frames
+        pin: true,
+        scrub: 0.5,
+        anticipatePin: 1,
+        onUpdate: (self) => {
+          const progress = self.progress;
+          const targetIndex = Math.min(
+            TOTAL_FRAMES,
+            Math.max(1, Math.round(progress * (TOTAL_FRAMES - 1)) + 1)
+          );
+
+          if (targetIndex !== frameIndexRef.current) {
+            frameIndexRef.current = targetIndex;
+
+            if (animFrameIdRef.current) {
+              cancelAnimationFrame(animFrameIdRef.current);
+            }
+
+            animFrameIdRef.current = requestAnimationFrame(() => {
+              let targetImg = imagesRef.current[targetIndex - 1];
+              if (!targetImg || !targetImg.complete || targetImg.naturalWidth === 0) {
+                // Fallback to closest loaded frame
+                for (let offset = 1; offset < 15; offset++) {
+                  const prev = imagesRef.current[targetIndex - 1 - offset];
+                  if (prev && prev.complete && prev.naturalWidth > 0) {
+                    targetImg = prev;
+                    break;
+                  }
+                  const next = imagesRef.current[targetIndex - 1 + offset];
+                  if (next && next.complete && next.naturalWidth > 0) {
+                    targetImg = next;
+                    break;
+                  }
+                }
+              }
+
+              if (targetImg && targetImg.complete && targetImg.naturalWidth > 0) {
+                drawImageCover(targetImg);
+              }
             });
-            entry.target.classList.add('is-visible');
-            observer.unobserve(entry.target);
           }
-        });
-      },
-      { threshold: 0.15 }
-    );
 
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [selector, options.duration, options.stagger, options.delay, options.ease]);
-}
+          // Stage 1 (Progress 0.0 -> 0.20)
+          if (stage1Ref.current) {
+            if (progress <= 0.20) {
+              const op = Math.max(0, 1 - progress * 5.0);
+              gsap.set(stage1Ref.current, {
+                opacity: op,
+                y: -progress * 70,
+                pointerEvents: op > 0.3 ? 'auto' : 'none',
+              });
+            } else {
+              gsap.set(stage1Ref.current, { opacity: 0, pointerEvents: 'none' });
+            }
+          }
+
+          // Stage 2 (Progress 0.25 -> 0.65)
+          if (stage2Ref.current) {
+            if (progress >= 0.25 && progress <= 0.65) {
+              const pIn = Math.min(1, (progress - 0.25) / 0.1);
+              const pOut = Math.max(0, 1 - (progress - 0.55) / 0.1);
+              const op = Math.min(pIn, pOut);
+              gsap.set(stage2Ref.current, {
+                opacity: op,
+                y: (1 - op) * 20,
+                pointerEvents: op > 0.4 ? 'auto' : 'none',
+              });
+            } else {
+              gsap.set(stage2Ref.current, { opacity: 0, pointerEvents: 'none' });
+            }
+          }
+
+          // Stage 3 (Progress 0.68 -> 1.0)
+          if (stage3Ref.current) {
+            if (progress >= 0.68) {
+              const op = Math.min(1, (progress - 0.68) / 0.14);
+              gsap.set(stage3Ref.current, {
+                opacity: op,
+                y: (1 - op) * 20,
+                pointerEvents: op > 0.4 ? 'auto' : 'none',
+              });
+            } else {
+              gsap.set(stage3Ref.current, { opacity: 0, pointerEvents: 'none' });
+            }
+          }
+        },
+      });
+    }, heroPinRef);
+
+    return () => {
+      if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
+      ctx.revert();
+    };
+  }, [drawImageCover]);
+
+  return (
+    <div className="landing-hero-pin-wrapper" ref={heroPinRef}>
+      {/* Background Canvas */}
+      <canvas ref={canvasRef} className="landing-scroll-canvas" />
+
+      {/* Dark Vignette Overlay for High-Contrast Text Readability */}
+      <div className="landing-scroll-overlay" />
+
+      {/* ── STAGE 1: Wide City View ── */}
+      <div className="landing-stage landing-stage--1" ref={stage1Ref}>
+        <div className="landing-stage__inner">
+          <div className="landing-beacon">
+            <span className="landing-beacon__dot" />
+            <span>Smart Outdoor &amp; Digital Billboard Network</span>
+          </div>
+
+          <h1 className="landing-hero__title">
+            Command Prime Billboards &amp; LED Screens{' '}
+            <span className="landing-gradient-text">With Zero Conflicts.</span>
+          </h1>
+
+          <p className="landing-hero__subtitle">
+            Discover roadside unipoles, digital LED walls, and prime urban spaces across Lahore,
+            Karachi, and Islamabad with verified footfall and real-time availability.
+          </p>
+
+          <div className="landing-hero__actions">
+            {user ? (
+              <Link to="/dashboard" className="landing-btn-primary">
+                <span>Enter Dashboard</span>
+                <ArrowRight size={17} />
+              </Link>
+            ) : (
+              <>
+                <Link to="/register" className="landing-btn-primary">
+                  <span>Start Campaign</span>
+                  <Zap size={17} />
+                </Link>
+                <Link to="/login" className="landing-btn-secondary">
+                  <span>Sign In</span>
+                  <ChevronRight size={17} />
+                </Link>
+              </>
+            )}
+            <Link to="/spaces" className="landing-btn-secondary">
+              <MapPin size={17} style={{ color: 'var(--brand-primary)' }} />
+              <span>Explore Spaces</span>
+            </Link>
+          </div>
+
+          {/* Stat Counters */}
+          <div className="landing-stats">
+            <div className="landing-stat-box">
+              <p className="landing-stat-box__value">1.2M+</p>
+              <p className="landing-stat-box__label">Daily City Reach</p>
+            </div>
+            <div className="landing-stat-box">
+              <p className="landing-stat-box__value" style={{ color: 'var(--brand-primary)' }}>100%</p>
+              <p className="landing-stat-box__label">Booking Accuracy</p>
+            </div>
+            <div className="landing-stat-box">
+              <p className="landing-stat-box__value" style={{ color: '#4ade80' }}>0 Conflicts</p>
+              <p className="landing-stat-box__label">Double-Booking Rate</p>
+            </div>
+            <div className="landing-stat-box">
+              <p className="landing-stat-box__value" style={{ color: '#fbbf24' }}>50+</p>
+              <p className="landing-stat-box__label">Prime Spaces</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── STAGE 2: Mid-Flight (Conflict-Free Booking) ── */}
+      <div className="landing-stage landing-stage--2" ref={stage2Ref} style={{ opacity: 0 }}>
+        <div className="landing-stage-card">
+          <span className="landing-tag">Smart Availability Engine</span>
+          <h2 className="landing-stage-card__title">
+            100% Conflict-Free Date Reservations
+          </h2>
+          <p className="landing-stage-card__text">
+            Our real-time booking calendar locks exact campaign dates so advertisers never face double-bookings or scheduling clashes.
+          </p>
+          <div className="landing-stage-card__features">
+            <div className="landing-stage-card__feat-item">
+              <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0 }} />
+              <span>Pessimistic Date-Range Locking</span>
+            </div>
+            <div className="landing-stage-card__feat-item">
+              <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0 }} />
+              <span>Artwork Format &amp; Quality Review</span>
+            </div>
+            <div className="landing-stage-card__feat-item">
+              <CheckCircle2 size={18} style={{ color: '#4ade80', flexShrink: 0 }} />
+              <span>Transparent City-Wide Rate Cards</span>
+            </div>
+          </div>
+          <div style={{ marginTop: 24 }}>
+            <Link to="/availability" className="landing-btn-primary" style={{ padding: '10px 22px', fontSize: '0.88rem' }}>
+              <span>Check Space Availability</span>
+              <CalendarCheck size={16} />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ── STAGE 3: Close-Up (Integrated Multi-Channel Flights) ── */}
+      <div className="landing-stage landing-stage--3" ref={stage3Ref} style={{ opacity: 0 }}>
+        <div className="landing-stage-card landing-stage-card--center">
+          <span className="landing-tag">Dual-Channel Advertising</span>
+          <h2 className="landing-stage-card__title">
+            Combine Billboards With Digital Ad Flights
+          </h2>
+          <p className="landing-stage-card__text">
+            Pair your high-visibility roadside billboards with synchronized YouTube, Meta, and Google search ad packages for maximum brand recall.
+          </p>
+          <div className="landing-stage-card__cta-row">
+            <Link to="/spaces" className="landing-btn-primary">
+              <span>Browse Billboard Catalog</span>
+              <ArrowRight size={16} />
+            </Link>
+            <Link to="/register" className="landing-btn-secondary">
+              <span>Create Advertiser Account</span>
+              <Zap size={16} />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 /* =========================================================================
-   DATA — SIMPLE & DEFENSIBLE
+   PLATFORM FEATURES & WORKFLOW STEPS
    ========================================================================= */
 
 const FEATURES = [
@@ -282,45 +373,6 @@ const FEATURES = [
   },
 ];
 
-const SPACES = [
-  {
-    title: 'Mall Road 3D Anamorphic LED',
-    location: 'Lahore, Pakistan',
-    type: 'Digital LED Screen',
-    impressions: '450,000+ / day',
-    rate: 'Rs. 120,000 / day',
-    tag: 'High Footfall Corridor',
-    gradient: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)',
-  },
-  {
-    title: 'Shahrah-e-Faisal Highway Unipole',
-    location: 'Karachi, Pakistan',
-    type: 'Highway Unipole Billboard',
-    impressions: '720,000+ / day',
-    rate: 'Rs. 185,000 / day',
-    tag: 'Major Traffic Artery',
-    gradient: 'linear-gradient(135deg, #065f46 0%, #0f172a 100%)',
-  },
-  {
-    title: 'Blue Area Commercial Totem',
-    location: 'Islamabad, Pakistan',
-    type: 'Smart Digital Kiosk',
-    impressions: '280,000+ / day',
-    rate: 'Rs. 85,000 / day',
-    tag: 'Business District',
-    gradient: 'linear-gradient(135deg, #581c87 0%, #0f172a 100%)',
-  },
-  {
-    title: 'Gulberg Main Boulevard Display',
-    location: 'Lahore, Pakistan',
-    type: 'Curved LED Wall',
-    impressions: '520,000+ / day',
-    rate: 'Rs. 140,000 / day',
-    tag: 'Luxury Retail Hub',
-    gradient: 'linear-gradient(135deg, #831843 0%, #0f172a 100%)',
-  },
-];
-
 const BRANDS = [
   'PRIME BILLBOARDS',
   'URBAN LED NETWORK',
@@ -349,30 +401,47 @@ const STEPS = [
   },
 ];
 
+const GRADIENTS = [
+  'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)',
+  'linear-gradient(135deg, #065f46 0%, #0f172a 100%)',
+  'linear-gradient(135deg, #581c87 0%, #0f172a 100%)',
+  'linear-gradient(135deg, #831843 0%, #0f172a 100%)',
+  'linear-gradient(135deg, #0f766e 0%, #0f172a 100%)',
+  'linear-gradient(135deg, #1e293b 0%, #0b0f19 100%)',
+];
+
 /* =========================================================================
-   MAIN COMPONENT
+   MAIN LANDING PAGE COMPONENT
    ========================================================================= */
 
 const LandingPage = () => {
   const { user } = useAuth();
-  const { isDark } = useTheme();
-  const heroRef = useRef(null);
 
-  // GSAP entrance for hero content
+  // Dynamic spaces state from database
+  const [dbSpaces, setDbSpaces] = useState([]);
+  const [loadingSpaces, setLoadingSpaces] = useState(true);
+
+  // Fetch spaces from database on mount
   useEffect(() => {
-    if (!heroRef.current) return;
-    const els = heroRef.current.querySelectorAll('.gsap-hero-item');
-    gsap.fromTo(
-      els,
-      { opacity: 0, y: 30 },
-      { opacity: 1, y: 0, duration: 0.7, stagger: 0.1, ease: 'power3.out', delay: 0.2 }
-    );
-  }, []);
+    let isMounted = true;
+    spacesApi
+      .getSpaces({ per_page: 6, is_active: true })
+      .then((data) => {
+        if (isMounted && data?.spaces) {
+          setDbSpaces(data.spaces);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load database spaces on landing:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingSpaces(false);
+      });
 
-  // GSAP scroll reveals
-  useGsapReveal('.landing-feature-card', { stagger: 0.08, duration: 0.6 });
-  useGsapReveal('.landing-inv-card', { stagger: 0.1, duration: 0.65 });
-  useGsapReveal('.landing-step', { stagger: 0.12, duration: 0.6 });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Simple Estimator State
   const [budget, setBudget] = useState(250000);
@@ -381,44 +450,6 @@ const LandingPage = () => {
   const impressions = Math.round((budget / 100) * 85 * (days / 10));
   const footfall = Math.round(impressions * 0.45);
   const cpm = ((budget / impressions) * 1000).toFixed(2);
-
-  // Stat counter animation
-  const [statsVisible, setStatsVisible] = useState(false);
-  const statsRef = useRef(null);
-
-  useEffect(() => {
-    if (!statsRef.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setStatsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.3 }
-    );
-    observer.observe(statsRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!statsVisible || !statsRef.current) return;
-    const counters = statsRef.current.querySelectorAll('[data-count]');
-    counters.forEach((el) => {
-      const target = parseFloat(el.dataset.count);
-      const obj = { val: 0 };
-      gsap.to(obj, {
-        val: target,
-        duration: 1.8,
-        ease: 'power2.out',
-        onUpdate: () => {
-          el.textContent = el.dataset.suffix
-            ? obj.val.toFixed(el.dataset.decimals || 0) + el.dataset.suffix
-            : obj.val.toLocaleString(undefined, { maximumFractionDigits: 0 }) + (el.dataset.append || '');
-        },
-      });
-    });
-  }, [statsVisible]);
 
   return (
     <div className="landing-page">
@@ -430,94 +461,8 @@ const LandingPage = () => {
       <div className="landing-glow landing-glow--right" />
       <div className="landing-glow landing-glow--left" />
 
-      {/* ─── 2-COLUMN SPLIT HERO SECTION ─────────────────────────────── */}
-      <section className="landing-hero">
-        <div className="landing-hero__container">
-          <div className="landing-hero__grid">
-            {/* ── LEFT COLUMN: Text Content & Actions ── */}
-            <div className="landing-hero__content" ref={heroRef}>
-              <div className="landing-beacon gsap-hero-item">
-                <span className="landing-beacon__dot" />
-                <span>Smart Outdoor &amp; Digital Advertising Platform</span>
-              </div>
-
-              <h1 className="landing-hero__title gsap-hero-item">
-                Book Premier Billboards &amp; Digital Screens{' '}
-                <span className="landing-gradient-text">With Zero Conflicts.</span>
-              </h1>
-
-              <p className="landing-hero__subtitle gsap-hero-item">
-                Discover roadside billboards, highway unipoles, and high-impact digital LED screens
-                across top cities. Reserve dates instantly and manage full advertising campaigns in one place.
-              </p>
-
-              <div className="landing-hero__actions gsap-hero-item">
-                {user ? (
-                  <Link to="/dashboard" className="landing-btn-primary">
-                    <span>Enter Dashboard</span>
-                    <ArrowRight size={17} />
-                  </Link>
-                ) : (
-                  <>
-                    <Link to="/register" className="landing-btn-primary">
-                      <span>Start Campaign</span>
-                      <Zap size={17} />
-                    </Link>
-                    <Link to="/login" className="landing-btn-secondary">
-                      <span>Sign In</span>
-                      <ChevronRight size={17} />
-                    </Link>
-                  </>
-                )}
-                <Link to="/spaces" className="landing-btn-secondary">
-                  <MapPin size={17} style={{ color: 'var(--brand-primary)' }} />
-                  <span>Explore Spaces</span>
-                </Link>
-              </div>
-
-              {/* Stat counters */}
-              <div className="landing-stats gsap-hero-item" ref={statsRef}>
-                <div className="landing-stat-box">
-                  <p className="landing-stat-box__value" style={{ color: 'var(--landing-text)' }} data-count="1.2" data-suffix="M+" data-decimals="1">0</p>
-                  <p className="landing-stat-box__label">Daily City Reach</p>
-                </div>
-                <div className="landing-stat-box">
-                  <p className="landing-stat-box__value" style={{ color: 'var(--brand-primary)' }} data-count="100" data-suffix="%" data-decimals="0">0</p>
-                  <p className="landing-stat-box__label">Booking Accuracy</p>
-                </div>
-                <div className="landing-stat-box">
-                  <p className="landing-stat-box__value" style={{ color: '#16a34a' }} data-count="0" data-suffix=" Conflicts" data-decimals="0">0</p>
-                  <p className="landing-stat-box__label">Double-Booking Rate</p>
-                </div>
-                <div className="landing-stat-box">
-                  <p className="landing-stat-box__value" style={{ color: '#d97706' }} data-count="50" data-append="+">0</p>
-                  <p className="landing-stat-box__label">Prime Spaces</p>
-                </div>
-              </div>
-            </div>
-
-            {/* ── RIGHT COLUMN: Dedicated 3D Billboard Canvas ── */}
-            <div className="landing-hero__visual gsap-hero-item">
-              <div className="landing-canvas-card">
-                <Suspense fallback={<div className="landing-canvas-loading">Loading 3D Billboard...</div>}>
-                  <Canvas
-                    camera={{ position: [0, 0.3, 4.8], fov: 46 }}
-                    dpr={[1, 1.5]}
-                    gl={{ antialias: true, alpha: true }}
-                    style={{ background: 'transparent' }}
-                  >
-                    <HeroBillboardScene isDark={isDark} />
-                  </Canvas>
-                </Suspense>
-                <div className="landing-canvas-badge">
-                  <Move3d size={14} style={{ color: '#38bdf8' }} />
-                  <span>Interactive 3D Billboard • Drag to Rotate</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ─── PINNED SCROLL-DRIVEN 3D BILLBOARD HERO ───────────────────── */}
+      <ScrollBillboardHero />
 
       {/* ─── BRAND TICKER ─────────────────────────────────────────────── */}
       <div className="landing-marquee">
@@ -553,47 +498,85 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ─── INVENTORY SHOWCASE ───────────────────────────────────────── */}
+      {/* ─── INVENTORY SHOWCASE (DYNAMIC FROM DATABASE) ────────────────── */}
       <section id="inventory" className="landing-section" style={{ background: 'var(--landing-grid-sec-bg)' }}>
         <div className="landing-section__inner" style={{ textAlign: 'center' }}>
-          <span className="landing-tag">Featured Inventory</span>
+          <span className="landing-tag">Live Database Inventory</span>
           <h2 className="landing-headline">Prime Advertising Spaces in Top Cities</h2>
           <p className="landing-section__desc">
-            Explore premium roadside unipoles, digital LED screens, and mall displays with verified footfall.
+            Explore active roadside unipoles, digital LED screens, and mall displays available in our network.
           </p>
-          <div className="landing-inventory-grid">
-            {SPACES.map((s, i) => (
-              <div key={i} className="landing-inv-card">
-                <div className="landing-inv-card__inner">
-                  <div className="landing-inv-card__visual" style={{ background: s.gradient }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <span className="landing-inv-card__badge">{s.tag}</span>
-                      <Monitor size={20} style={{ color: 'rgba(255,255,255,0.7)' }} />
-                    </div>
-                    <div>
-                      <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem' }}>{s.type}</span>
-                      <p style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.25rem', margin: '2px 0 0' }}>{s.impressions}</p>
-                    </div>
-                  </div>
-                  <div className="landing-inv-card__body">
-                    <div>
-                      <h4 className="landing-inv-card__title">{s.title}</h4>
-                      <p className="landing-inv-card__location">
-                        <MapPin size={13} style={{ color: 'var(--brand-primary)' }} />
-                        {s.location}
-                      </p>
-                    </div>
-                    <div className="landing-inv-card__footer">
-                      <span className="landing-inv-card__price">{s.rate}</span>
-                      <Link to="/spaces" className="landing-inv-card__link">
-                        View Space <ChevronRight size={12} />
-                      </Link>
+
+          {loadingSpaces ? (
+            <div className="landing-inventory-grid">
+              {[1, 2, 3, 4].map((n) => (
+                <div key={n} className="landing-inv-card" style={{ opacity: 0.6 }}>
+                  <div className="landing-inv-card__inner">
+                    <div className="landing-inv-card__visual" style={{ background: '#1e293b', animation: 'pulse 1.5s infinite' }} />
+                    <div className="landing-inv-card__body">
+                      <div style={{ height: 18, background: '#334155', borderRadius: 4, marginBottom: 8 }} />
+                      <div style={{ height: 14, background: '#1e293b', borderRadius: 4, width: '60%' }} />
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : dbSpaces.length > 0 ? (
+            <div className="landing-inventory-grid">
+              {dbSpaces.map((s, i) => {
+                const categoryName = s.category?.name || 'Billboard Space';
+                const locationName = s.location?.name
+                  ? `${s.location.name}, ${s.location.city || ''}`
+                  : (s.location?.city || 'Pakistan');
+                const rateNum = Number(s.base_rate || s.daily_rate || s.base_price || 0);
+                const rateText = rateNum > 0 ? `Rs. ${rateNum.toLocaleString()} / day` : 'Custom Quote';
+                const gradient = GRADIENTS[i % GRADIENTS.length];
+
+                return (
+                  <div key={s.id || i} className="landing-inv-card">
+                    <div className="landing-inv-card__inner">
+                      <div className="landing-inv-card__visual" style={{ background: gradient }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span className="landing-inv-card__badge">{categoryName}</span>
+                          <Monitor size={20} style={{ color: 'rgba(255,255,255,0.75)' }} />
+                        </div>
+                        <div>
+                          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem' }}>
+                            {s.dimensions || 'High-Impact Format'}
+                          </span>
+                          <p style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.2rem', margin: '2px 0 0' }}>
+                            {s.code || `SPACE-#${s.id}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="landing-inv-card__body">
+                        <div>
+                          <h4 className="landing-inv-card__title">{s.name}</h4>
+                          <p className="landing-inv-card__location">
+                            <MapPin size={13} style={{ color: 'var(--brand-primary)', flexShrink: 0 }} />
+                            <span>{locationName}</span>
+                          </p>
+                        </div>
+                        <div className="landing-inv-card__footer">
+                          <span className="landing-inv-card__price">{rateText}</span>
+                          <Link to="/spaces" className="landing-inv-card__link">
+                            View Space <ChevronRight size={12} />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ padding: '30px 20px', borderRadius: 16, background: 'var(--landing-card-bg)', border: '1px solid var(--landing-card-border)', maxWidth: 500, margin: '0 auto' }}>
+              <p style={{ margin: 0, color: 'var(--landing-text-sub)' }}>
+                No spaces currently listed in database. Browse the full inventory below.
+              </p>
+            </div>
+          )}
+
           <div style={{ marginTop: 35 }}>
             <Link to="/spaces" className="landing-btn-secondary">
               <span>View All Billboard &amp; LED Inventory</span>

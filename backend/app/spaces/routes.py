@@ -1074,14 +1074,6 @@ def delete_space_category(category_id):
     
     
 @spaces_bp.get("/", strict_slashes=False)
-@roles_required(
-    "Administrator",
-    "Sales Executive",
-    "Space Manager",
-    "Creative Reviewer",
-    "Finance Officer",
-    "Advertiser"
-)
 def get_advertising_spaces():
     """
     Return all advertising spaces with filtering and pagination.

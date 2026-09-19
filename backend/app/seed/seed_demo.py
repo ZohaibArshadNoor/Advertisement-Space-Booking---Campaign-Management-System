@@ -12,7 +12,9 @@ from app.models.booking import Booking, BookingStatus
 from app.models.payment import Invoice, InvoiceStatus, Payment, PaymentStatus, PaymentMethod
 from app.models.creative import Creative, MediaStatus
 from app.models.notification import Notification, NotificationType
-from app.models.influencer import Influencer
+from app.models.influencer import Influencer, HiredInfluencer
+from app.models.digital_service import DigitalService, DigitalBaseRate, BookedDigitalService
+from app.digital_services.routes import DEFAULT_BASE_RATES, DEFAULT_SERVICES
 
 
 def seed_demo_data():
@@ -55,7 +57,7 @@ def seed_demo_data():
         )
         db.session.add(contact)
 
-    # 1.2 Seed Users across all 6 roles
+    # 1.2 Seed Users across all roles (including Influencer / Creator)
     users_data = [
         {"email": "admin@test.com", "name": "System Administrator", "role": "Administrator"},
         {"email": "advertiser@test.com", "name": "Ali Hassan (Jazz Marketing)", "role": "Advertiser", "advertiser_id": advertiser_org.id},
@@ -63,6 +65,7 @@ def seed_demo_data():
         {"email": "finance@test.com", "name": "Farhan Siddiqui", "role": "Finance Officer"},
         {"email": "sales@test.com", "name": "Sara Khan", "role": "Sales Executive"},
         {"email": "reviewer@test.com", "name": "Zainab Malik", "role": "Creative Reviewer"},
+        {"email": "influencer@test.com", "name": "Taimoor Salahuddin (Mooroo)", "role": "Influencer"},
     ]
 
     users_map = {}
@@ -694,8 +697,52 @@ def seed_demo_data():
             inf = Influencer(**inf_data)
             db.session.add(inf)
 
+    # -------------------------------------------------------------------------
+    # 8. DIGITAL BASE RATES & CATALOG SERVICES
+    # -------------------------------------------------------------------------
+    for r in DEFAULT_BASE_RATES:
+        rate = DigitalBaseRate.query.get(r["platform"])
+        if not rate:
+            rate = DigitalBaseRate(
+                platform=r["platform"],
+                category=r["category"],
+                pricing_model=r["pricing_model"],
+                base_rate_per_unit=r["base_rate_per_unit"],
+                unit_name=r["unit_name"],
+                min_units=r["min_units"],
+                icon_name=r["icon_name"],
+                desc=r["desc"],
+            )
+            db.session.add(rate)
+
+    for s in DEFAULT_SERVICES:
+        srv = DigitalService.query.get(s["id"])
+        if not srv:
+            srv = DigitalService(
+                id=s["id"],
+                title=s["title"],
+                category=s["category"],
+                platform=s["platform"],
+                tagline=s["tagline"],
+                duration_days=s["duration_days"],
+                original_price=s["original_price"],
+                discounted_price=s["discounted_price"],
+                discount_percent=s["discount_percent"],
+                discount_label=s["discount_label"],
+                discount_type=s["discount_type"],
+                estimated_reach=s["estimated_reach"],
+                cpm=s["cpm"],
+                icon_name=s["icon_name"],
+                color_theme=s["color_theme"],
+                deliverables=s["deliverables"],
+                specs=s.get("specs"),
+                is_active=True,
+            )
+            db.session.add(srv)
+
     db.session.commit()
     print("[SEED] Demo data seeded successfully!")
     print("\n[AUTH] Ready Test Accounts (Password: 'password123'):")
     for role_name, user_obj in users_map.items():
         print(f"  * {role_name:18} -> {user_obj.email}")
+

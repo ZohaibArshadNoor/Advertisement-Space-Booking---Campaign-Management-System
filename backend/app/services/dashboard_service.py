@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.space import AdvertisingSpace, SpaceAvailability
 from app.models.booking import Booking, BookingStatus
@@ -13,11 +14,12 @@ class DashboardService:
     """
     Calculates unified identity context, accessible modules,
     and real-time operational analytics for all 6 system roles.
+    Optimized for high-concurrency and remote cloud database latencies.
     """
 
     @staticmethod
     def get_summary_for_user(user: User) -> dict:
-        role_name = user.role.name
+        role_name = user.role.name if user.role else "Advertiser"
         today = date.today()
 
         # =============================================================
@@ -37,7 +39,9 @@ class DashboardService:
             } if user.advertiser else None
         }
 
-        # Global Inventory Baseline
+        # -------------------------------------------------------------
+        # Inventory Baseline (Shared by all roles)
+        # -------------------------------------------------------------
         total_spaces = AdvertisingSpace.query.filter_by(is_active=True).count()
         occupied_spaces = SpaceAvailability.query.filter(
             SpaceAvailability.is_booked.is_(True),
@@ -46,53 +50,32 @@ class DashboardService:
         ).distinct(SpaceAvailability.space_id).count()
         available_spaces = max(0, total_spaces - occupied_spaces)
 
-        # Global Bookings Baseline
-        total_bookings = Booking.query.count()
-        active_bookings = Booking.query.filter(
-            Booking.status == BookingStatus.CONFIRMED,
-            Booking.start_date <= today,
-            Booking.end_date >= today
-        ).count()
-        pending_bookings = Booking.query.filter_by(status=BookingStatus.PENDING).count()
-
-        # Global Campaigns Baseline
-        total_campaigns = Campaign.query.count()
-        active_campaigns = Campaign.query.filter_by(status=CampaignStatus.ACTIVE).count()
-
-        # Global Financials Baseline
-        all_invoices = Invoice.query.filter(Invoice.status != InvoiceStatus.CANCELLED).all()
-        global_invoiced = sum((Decimal(str(inv.total_amount)) for inv in all_invoices), Decimal("0.00"))
-        global_collected = sum((Decimal(str(inv.amount_paid)) for inv in all_invoices), Decimal("0.00"))
-        global_outstanding = max(Decimal("0.00"), global_invoiced - global_collected)
-        pending_invoices_count = Invoice.query.filter(
-            Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE])
-        ).count()
-
-        # Global Creatives Baseline
-        pending_creatives = Creative.query.filter_by(status=MediaStatus.PENDING).count() if hasattr(Creative, 'status') else 0
-        approved_creatives = Creative.query.filter_by(status=MediaStatus.APPROVED).count() if hasattr(Creative, 'status') else 0
-
         # =============================================================
         # 2. ROLE-SPECIFIC MODULES, ACTIONS & METRICS
         # =============================================================
 
         # -------------------------------------------------------------
-        # A. ADVERTISER
+        # A. ADVERTISER (Role-Scoped Single-Pass Queries)
         # -------------------------------------------------------------
         if role_name == "Advertiser":
             advertiser_id = user.advertiser_id
             user_id = user.id
 
-            # Personal Campaigns
-            my_campaigns = Campaign.query.filter_by(user_id=user_id)
-            adv_total_campaigns = my_campaigns.count()
-            adv_active_campaigns = my_campaigns.filter_by(status=CampaignStatus.ACTIVE).count()
+            # 1. Campaigns stats (single aggregate query)
+            adv_c_stats = db.session.query(
+                db.func.count(Campaign.id),
+                db.func.count(db.case((Campaign.status == CampaignStatus.ACTIVE, 1)))
+            ).filter(Campaign.user_id == user_id).first()
+            adv_total_campaigns = adv_c_stats[0] if adv_c_stats else 0
+            adv_active_campaigns = adv_c_stats[1] if adv_c_stats else 0
 
-            # Personal Bookings & Flight Progress
-            my_bookings_query = Booking.query.filter_by(user_id=user_id)
-            adv_total_bookings = my_bookings_query.count()
-            all_user_bookings = my_bookings_query.order_by(Booking.created_at.desc()).all()
+            # 2. Bookings & Flight breakdown (single eager-loaded query to avoid N+1)
+            all_user_bookings = Booking.query.options(
+                joinedload(Booking.space).joinedload(AdvertisingSpace.location),
+                joinedload(Booking.campaign)
+            ).filter_by(user_id=user_id).order_by(Booking.created_at.desc()).all()
 
+            adv_total_bookings = len(all_user_bookings)
             adv_live_bookings = 0
             adv_scheduled_bookings = 0
             adv_pending_bookings = 0
@@ -130,23 +113,49 @@ class DashboardService:
                         "total_price": str(b.total_price)
                     })
 
-            # Personal Creatives Breakdown
-            my_creatives = Creative.query.join(Campaign).filter(Campaign.user_id == user_id).all()
-            adv_total_creatives = len(my_creatives)
-            adv_approved_creatives = len([c for c in my_creatives if c.status == MediaStatus.APPROVED])
-            adv_pending_creatives = len([c for c in my_creatives if c.status == MediaStatus.PENDING])
+            # 3. Creatives breakdown (single aggregate query)
+            cr_adv_stats = db.session.query(
+                db.func.count(Creative.id),
+                db.func.count(db.case((Creative.status == MediaStatus.APPROVED, 1))),
+                db.func.count(db.case((Creative.status == MediaStatus.PENDING, 1)))
+            ).join(Campaign, Creative.campaign_id == Campaign.id).filter(Campaign.user_id == user_id).first()
 
-            # Personal Invoices & Balances (Checking user_id or advertiser_id)
-            adv_invoices = Invoice.query.join(Invoice.campaign).filter(
+            adv_total_creatives = cr_adv_stats[0] if cr_adv_stats else 0
+            adv_approved_creatives = cr_adv_stats[1] if cr_adv_stats else 0
+            adv_pending_creatives = cr_adv_stats[2] if cr_adv_stats else 0
+
+            # 4. Invoices & Balances (SQL queries)
+            adv_invoiced = db.session.query(
+                db.func.coalesce(db.func.sum(Invoice.total_amount), Decimal("0.00"))
+            ).outerjoin(Campaign, Invoice.campaign_id == Campaign.id).filter(
                 db.or_(
                     Invoice.advertiser_id == advertiser_id,
                     Campaign.user_id == user_id
-                )
-            ).filter(Invoice.status != InvoiceStatus.CANCELLED).all()
+                ),
+                Invoice.status != InvoiceStatus.CANCELLED
+            ).scalar() or Decimal("0.00")
 
-            adv_invoiced = sum((Decimal(str(inv.total_amount)) for inv in adv_invoices), Decimal("0.00"))
-            adv_paid = sum((Decimal(str(inv.amount_paid)) for inv in adv_invoices), Decimal("0.00"))
+            adv_paid = db.session.query(
+                db.func.coalesce(db.func.sum(Payment.amount), Decimal("0.00"))
+            ).join(Invoice, Payment.invoice_id == Invoice.id).outerjoin(Campaign, Invoice.campaign_id == Campaign.id).filter(
+                db.or_(
+                    Invoice.advertiser_id == advertiser_id,
+                    Campaign.user_id == user_id
+                ),
+                Payment.status == PaymentStatus.COMPLETED
+            ).scalar() or Decimal("0.00")
+
             adv_outstanding = max(Decimal("0.00"), adv_invoiced - adv_paid)
+
+            unsettled_invoices_count = db.session.query(
+                db.func.count(Invoice.id)
+            ).outerjoin(Campaign, Invoice.campaign_id == Campaign.id).filter(
+                db.or_(
+                    Invoice.advertiser_id == advertiser_id,
+                    Campaign.user_id == user_id
+                ),
+                Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE])
+            ).scalar() or 0
 
             fulfillment_rate = round(
                 ((adv_live_bookings + adv_completed_bookings) / adv_total_bookings * 100)
@@ -214,15 +223,62 @@ class DashboardService:
                         "total_paid": str(adv_paid),
                         "total_collected": str(adv_paid),
                         "outstanding_balance": str(adv_outstanding),
-                        "unsettled_invoices_count": len([i for i in adv_invoices if i.status != InvoiceStatus.PAID])
+                        "unsettled_invoices_count": unsettled_invoices_count
                     }
                 }
             }
 
         # -------------------------------------------------------------
+        # GLOBAL METRICS (For Staff, Reviewer, Manager & Admin Roles)
+        # Computed using consolidated high-speed SQL aggregates
+        # -------------------------------------------------------------
+
+        # 1. Global Bookings Baseline (1 query)
+        b_stats = db.session.query(
+            db.func.count(Booking.id),
+            db.func.count(db.case((db.and_(Booking.status == BookingStatus.CONFIRMED, Booking.start_date <= today, Booking.end_date >= today), 1))),
+            db.func.count(db.case((Booking.status == BookingStatus.PENDING, 1)))
+        ).first()
+        total_bookings = b_stats[0] if b_stats else 0
+        active_bookings = b_stats[1] if b_stats else 0
+        pending_bookings = b_stats[2] if b_stats else 0
+
+        # 2. Global Campaigns Baseline (1 query)
+        c_stats = db.session.query(
+            db.func.count(Campaign.id),
+            db.func.count(db.case((Campaign.status == CampaignStatus.ACTIVE, 1)))
+        ).first()
+        total_campaigns = c_stats[0] if c_stats else 0
+        active_campaigns = c_stats[1] if c_stats else 0
+
+        # 3. Global Financials Baseline (SQL queries)
+        global_invoiced = db.session.query(
+            db.func.coalesce(db.func.sum(Invoice.total_amount), Decimal("0.00"))
+        ).filter(Invoice.status != InvoiceStatus.CANCELLED).scalar() or Decimal("0.00")
+
+        global_collected = db.session.query(
+            db.func.coalesce(db.func.sum(Payment.amount), Decimal("0.00"))
+        ).filter(Payment.status == PaymentStatus.COMPLETED).scalar() or Decimal("0.00")
+
+        global_outstanding = max(Decimal("0.00"), global_invoiced - global_collected)
+
+        pending_invoices_count = db.session.query(
+            db.func.count(Invoice.id)
+        ).filter(Invoice.status.in_([InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.OVERDUE])).scalar() or 0
+
+
+        # 4. Global Creatives Baseline (1 query)
+        cr_stats = db.session.query(
+            db.func.count(db.case((Creative.status == MediaStatus.PENDING, 1))),
+            db.func.count(db.case((Creative.status == MediaStatus.APPROVED, 1)))
+        ).first() if hasattr(Creative, 'status') else (0, 0)
+        pending_creatives = cr_stats[0] if cr_stats else 0
+        approved_creatives = cr_stats[1] if cr_stats else 0
+
+        # -------------------------------------------------------------
         # B. SPACE MANAGER
         # -------------------------------------------------------------
-        elif role_name == "Space Manager":
+        if role_name == "Space Manager":
             return {
                 "profile": profile_data,
                 "accessible_modules": [

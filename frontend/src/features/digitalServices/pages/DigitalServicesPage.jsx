@@ -68,7 +68,7 @@ export const DigitalServicesPage = () => {
   const [bookedStatusFilter, setBookedStatusFilter] = useState('ALL');
 
   // Base Rates State (Dynamic & Editable by Admin)
-  const [baseRates, setBaseRates] = useState(DIGITAL_BASE_RATES);
+  const [baseRates, setBaseRates] = useState([]);
   const [editingBaseRate, setEditingBaseRate] = useState(null);
   const [editRateForm, setEditRateForm] = useState({
     platform: '',
@@ -319,7 +319,7 @@ export const DigitalServicesPage = () => {
   const fetchBaseRates = async () => {
     try {
       const res = await digitalServicesApi.getBaseRates();
-      setBaseRates(res.baseRates || DIGITAL_BASE_RATES);
+      setBaseRates(res.baseRates || []);
     } catch (err) {
       console.error('Failed to load base rates', err);
     }
@@ -655,7 +655,7 @@ export const DigitalServicesPage = () => {
 
   const selectedCampaignObj = campaigns.find((c) => String(c.id) === String(selectedCampaignId));
   const customSelectedCampaignObj = campaigns.find((c) => String(c.id) === String(customCalc.campaignId));
-  const selectedBaseRate = DIGITAL_BASE_RATES.find((b) => b.platform === customCalc.platform);
+  const selectedBaseRate = (baseRates || []).find((b) => b.platform === customCalc.platform);
 
   const filteredBookedServices = bookedServices.filter((bk) => {
     if (bookedStatusFilter === 'ALL') return true;

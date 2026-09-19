@@ -253,9 +253,19 @@ export const DashboardPage = () => {
       </div>
 
       {error && (
-        <div className="alert-ui alert-danger mb-4">
-          <AlertCircle size={16} className="flex-shrink-0" />
-          <div className="flex-grow-1 text-xs">{error}</div>
+        <div className="alert-ui alert-danger mb-4 d-flex align-items-center justify-content-between gap-2">
+          <div className="d-flex align-items-center gap-2">
+            <AlertCircle size={16} className="flex-shrink-0" />
+            <div className="flex-grow-1 text-xs">{error}</div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-danger py-1 px-2.5 text-xs flex-shrink-0 d-inline-flex align-items-center gap-1"
+            onClick={fetchDashboard}
+          >
+            <RefreshCw size={12} />
+            <span>Retry</span>
+          </button>
         </div>
       )}
 

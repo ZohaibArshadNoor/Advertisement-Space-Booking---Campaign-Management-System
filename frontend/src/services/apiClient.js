@@ -6,7 +6,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 30000, // 30 seconds timeout to accommodate remote cloud database latency
 });
 
 // 2. Request Interceptor: Automatically attach the JWT token to every outgoing request

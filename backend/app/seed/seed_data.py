@@ -59,6 +59,14 @@ ROLES = [
             "audit.view": True,
         },
     },
+    {
+        "name": "Influencer",
+        "permissions": {
+            "influencer.portal": True,
+            "influencer.view_own": True,
+            "influencer.submit_deliverables": True,
+        },
+    },
 ]
 
 
@@ -91,4 +99,25 @@ def seed_roles():
         db.session.add(role)
 
     # Save all new roles to PostgreSQL.
+    db.session.commit()
+    ensure_schema_migrations()
+
+
+def ensure_schema_migrations():
+    """
+    Ensures that newly added columns exist in the PostgreSQL database if the table was created previously.
+    """
+    from sqlalchemy import text
+    statements = [
+        "ALTER TABLE hired_influencers ADD COLUMN IF NOT EXISTS submission_url VARCHAR(500);",
+        "ALTER TABLE hired_influencers ADD COLUMN IF NOT EXISTS submission_notes TEXT;",
+        "ALTER TABLE hired_influencers ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP WITHOUT TIME ZONE;",
+        "ALTER TABLE hired_influencers ADD COLUMN IF NOT EXISTS revision_notes TEXT;",
+        "ALTER TABLE hired_influencers ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITHOUT TIME ZONE;",
+    ]
+    for s in statements:
+        try:
+            db.session.execute(text(s))
+        except Exception:
+            pass
     db.session.commit()

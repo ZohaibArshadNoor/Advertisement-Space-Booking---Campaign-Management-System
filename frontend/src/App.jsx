@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './layouts/AppShell';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Auth Pages
 import LoginPage from './pages/LoginPage';
@@ -38,46 +39,48 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/unauthorized" element={<ForbiddenPage />} />
+          <ErrorBoundary>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/unauthorized" element={<ForbiddenPage />} />
 
-            {/* Authenticated Application Shell */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppShell />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/spaces" element={<SpacesPage />} />
-                <Route path="/digital-services" element={<DigitalServicesPage />} />
-                <Route path="/availability" element={<AvailabilityPage />} />
-                <Route path="/campaigns" element={<Campaigns />} />
-                <Route path="/influencers" element={<InfluencersPage />} />
-                <Route path="/bookings" element={<BookingsPage />} />
-                <Route path="/creatives" element={<CreativesPage />} />
-                <Route path="/payments" element={<PaymentsPage />} />
-                <Route path="/invoices" element={<Navigate to="/payments" replace />} />
-                <Route path="/billing" element={<Navigate to="/payments" replace />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
+              {/* Authenticated Application Shell */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppShell />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/spaces" element={<SpacesPage />} />
+                  <Route path="/digital-services" element={<DigitalServicesPage />} />
+                  <Route path="/availability" element={<AvailabilityPage />} />
+                  <Route path="/campaigns" element={<Campaigns />} />
+                  <Route path="/influencers" element={<InfluencersPage />} />
+                  <Route path="/bookings" element={<BookingsPage />} />
+                  <Route path="/creatives" element={<CreativesPage />} />
+                  <Route path="/payments" element={<PaymentsPage />} />
+                  <Route path="/invoices" element={<Navigate to="/payments" replace />} />
+                  <Route path="/billing" element={<Navigate to="/payments" replace />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
 
-                {/* Administrator Dedicated Routes */}
-                <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
-                  <Route path="/users" element={<UsersPage />} />
-                  <Route path="/audit" element={<AuditLogsPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/admin" element={<Navigate to="/users" replace />} />
+                  {/* Administrator Dedicated Routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
+                    <Route path="/users" element={<UsersPage />} />
+                    <Route path="/audit" element={<AuditLogsPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/admin" element={<Navigate to="/users" replace />} />
+                  </Route>
                 </Route>
               </Route>
-            </Route>
 
-            {/* 404 Fallback */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+              {/* 404 Fallback */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

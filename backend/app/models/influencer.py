@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 from decimal import Decimal
 from app.extensions import db
 
@@ -57,3 +57,59 @@ class Influencer(db.Model):
             "completed_campaigns": self.completed_campaigns,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class HiredInfluencer(db.Model):
+    """
+    Contract record for an influencer hired/booked for a campaign or brand activation.
+    """
+    __tablename__ = "hired_influencers"
+
+    id = db.Column(db.String(64), primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True)
+    campaign_name = db.Column(db.String(200), nullable=True)
+    influencer_id = db.Column(db.Integer, db.ForeignKey("influencers.id", ondelete="CASCADE"), nullable=False)
+    influencer_name = db.Column(db.String(120), nullable=False)
+    influencer_handle = db.Column(db.String(100), nullable=False)
+    platform = db.Column(db.String(50), nullable=False)
+    avatar_url = db.Column(db.String(255), nullable=True)
+    package_title = db.Column(db.String(150), nullable=True)
+    deliverables = db.Column(db.Text, nullable=True)
+    agreed_fee = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal("0.00"))
+    target_date = db.Column(db.String(50), nullable=True)
+    brief_notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(50), default="PENDING_ACCEPTANCE")  # PENDING_ACCEPTANCE, IN_PRODUCTION, SUBMITTED_FOR_REVIEW, REVISION_REQUESTED, COMPLETED, DECLINED, CANCELLED
+    submission_url = db.Column(db.String(500), nullable=True)
+    submission_notes = db.Column(db.Text, nullable=True)
+    submitted_at = db.Column(db.DateTime, nullable=True)
+    revision_notes = db.Column(db.Text, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "campaign_id": self.campaign_id,
+            "campaign_name": self.campaign_name,
+            "influencer_id": self.influencer_id,
+            "influencer_name": self.influencer_name,
+            "influencer_handle": self.influencer_handle,
+            "platform": self.platform,
+            "avatar_url": self.avatar_url,
+            "package_title": self.package_title,
+            "deliverables": self.deliverables,
+            "agreed_fee": float(self.agreed_fee) if self.agreed_fee is not None else 0.0,
+            "target_date": self.target_date,
+            "brief_notes": self.brief_notes,
+            "status": self.status,
+            "submission_url": self.submission_url,
+            "submission_notes": self.submission_notes,
+            "submitted_at": self.submitted_at.isoformat() if self.submitted_at else None,
+            "revision_notes": self.revision_notes,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+

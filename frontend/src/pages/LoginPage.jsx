@@ -21,11 +21,12 @@ import {
 
 const DEMO_ACCOUNTS = [
   { role: 'Administrator', email: 'admin@test.com', name: 'System Administrator', desc: 'Full system & user access' },
+  { role: 'Advertiser', email: 'advertiser@test.com', name: 'Ali Hassan (Jazz Marketing)', desc: 'Browse, book & commission' },
+  { role: 'Influencer', email: 'influencer@test.com', name: 'Taimoor Salahuddin (Mooroo)', desc: 'Accept deals & upload deliverables' },
   { role: 'Space Manager', email: 'spaces@test.com', name: 'Space Manager', desc: 'Manage inventory & schedules' },
   { role: 'Sales Executive', email: 'sales@test.com', name: 'Sales Executive', desc: 'Pipeline, bookings & quotes' },
   { role: 'Creative Reviewer', email: 'reviewer@test.com', name: 'Creative Reviewer', desc: 'Approve & reject media' },
   { role: 'Finance Officer', email: 'finance@test.com', name: 'Finance Officer', desc: 'Invoices, payments & ledgers' },
-  { role: 'Advertiser', email: 'advertiser@test.com', name: 'Ali Hassan (Jazz Marketing)', desc: 'Browse, book & launch' },
 ];
 
 export const LoginPage = () => {

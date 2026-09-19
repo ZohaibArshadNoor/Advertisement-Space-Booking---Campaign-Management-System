@@ -34,7 +34,14 @@ import {
   Radio,
   BarChart3,
   Copy,
-  ExternalLink as LinkIcon
+  RefreshCw,
+  Clock,
+  CheckCheck,
+  ExternalLink as LinkIcon,
+  PhoneCall,
+  Settings2,
+  RotateCcw,
+  CheckCircle
 } from 'lucide-react';
 
 const PLATFORMS = ['All Platforms', 'YouTube', 'Instagram', 'TikTok', 'LinkedIn'];
@@ -114,6 +121,10 @@ export const InfluencersPage = () => {
   const [influencers, setInfluencers] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('directory'); // 'directory' | 'hired'
+  const [hiredList, setHiredList] = useState([]);
+  const [loadingHired, setLoadingHired] = useState(false);
+  const [hiredStatusFilter, setHiredStatusFilter] = useState('ALL');
 
   const [toast, setToast] = useState(null);
 
@@ -135,6 +146,17 @@ export const InfluencersPage = () => {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [deletingCreator, setDeletingCreator] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
+
+  // Agency Status & Live Link Modal State (Admin / Space Manager)
+  const [updatingContract, setUpdatingContract] = useState(null);
+  const [agencyForm, setAgencyForm] = useState({
+    status: 'IN_OUTREACH',
+    submission_url: '',
+    submission_notes: '',
+    brief_notes: ''
+  });
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [agencyError, setAgencyError] = useState('');
 
   const [creatorForm, setCreatorForm] = useState({
     name: '',
@@ -180,7 +202,7 @@ export const InfluencersPage = () => {
       setInfluencers(data.influencers || []);
     } catch (err) {
       console.error('Failed to load influencers', err);
-      showToast('Failed to load creator directory from server.', 'danger', 'Network Error');
+      showToast('Failed to load creator roster from server.', 'danger', 'Network Error');
     } finally {
       setLoading(false);
     }
@@ -199,12 +221,90 @@ export const InfluencersPage = () => {
     }
   };
 
+  const fetchHiredCreators = async () => {
+    setLoadingHired(true);
+    try {
+      const res = await influencersApi.getHiredCreators();
+      setHiredList(res.hired || []);
+    } catch (err) {
+      console.error('Failed to load hired creators', err);
+    } finally {
+      setLoadingHired(false);
+    }
+  };
+
+  const handleQuickStatusUpdate = async (id, newStatus, message) => {
+    try {
+      await influencersApi.updateHireStatus(id, { status: newStatus });
+      showToast(message || `Status updated to ${newStatus}.`, 'success', 'Status Updated');
+      fetchHiredCreators();
+    } catch (err) {
+      showToast(err.message || 'Failed to update status.', 'danger', 'Error');
+    }
+  };
+
+  const handleCancelHiredContract = async (id) => {
+    if (!window.confirm('Are you sure you want to cancel this sponsorship request?')) return;
+    try {
+      await influencersApi.updateHireStatus(id, 'CANCELLED');
+      showToast('Sponsorship request has been marked as CANCELLED.', 'info', 'Request Cancelled');
+      fetchHiredCreators();
+    } catch (err) {
+      showToast(err.message || 'Failed to cancel request.', 'danger', 'Error');
+    }
+  };
+
+  const handlePermanentDeleteContract = async (id) => {
+    if (!window.confirm('Are you sure you want to permanently delete this contract record? This action cannot be undone.')) return;
+    try {
+      await influencersApi.removeHiredCreator(id);
+      showToast('Contract record permanently removed.', 'info', 'Record Deleted');
+      fetchHiredCreators();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete contract.', 'danger', 'Error');
+    }
+  };
+
+  const handleOpenAgencyModal = (contract, defaultStatus = null) => {
+    setAgencyError('');
+    setUpdatingContract(contract);
+    setAgencyForm({
+      status: defaultStatus || contract.status || 'IN_OUTREACH',
+      submission_url: contract.submission_url || '',
+      submission_notes: contract.submission_notes || '',
+      brief_notes: contract.brief_notes || ''
+    });
+  };
+
+  const handleSaveAgencyStatus = async (e) => {
+    e.preventDefault();
+    if (!updatingContract) return;
+    setIsUpdatingStatus(true);
+    setAgencyError('');
+    try {
+      await influencersApi.updateHireStatus(updatingContract.id, {
+        status: agencyForm.status,
+        submission_url: agencyForm.submission_url.trim(),
+        submission_notes: agencyForm.submission_notes.trim(),
+        brief_notes: agencyForm.brief_notes.trim()
+      });
+      showToast(`Contract status updated to '${agencyForm.status}'.`, 'success', 'Agency Status Saved');
+      setUpdatingContract(null);
+      fetchHiredCreators();
+    } catch (err) {
+      setAgencyError(err.message || 'Failed to update agency status.');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   useEffect(() => {
     fetchInfluencers();
   }, [selectedPlatform, selectedNiche, selectedTier]);
 
   useEffect(() => {
     fetchCampaigns();
+    fetchHiredCreators();
   }, []);
 
   const handleSearchSubmit = (e) => {
@@ -257,9 +357,11 @@ export const InfluencersPage = () => {
         target_date: hireForm.target_date,
         brief_notes: hireForm.brief_notes,
       });
-      showToast(res.message || `Successfully sent sponsorship brief to ${hiringCreator.name}!`, 'success', 'Commission Submitted');
+      showToast(res.message || `Successfully sent sponsorship brief for ${hiringCreator.name}! Agency team will initiate outreach.`, 'success', 'Request Submitted');
       setHiringCreator(null);
+      setActiveTab('hired');
       fetchInfluencers();
+      fetchHiredCreators();
     } catch (err) {
       setHireError(err.response?.data?.message || 'Failed to submit creator proposal.');
     } finally {
@@ -332,43 +434,43 @@ export const InfluencersPage = () => {
       return;
     }
 
-    const packages = [
-      {
-        id: 'pkg_1',
-        title: creatorForm.pkg1_title || 'Primary Sponsorship Package',
-        deliverables: creatorForm.pkg1_deliverables || 'Standard brand integration',
-        price: parseInt(creatorForm.pkg1_price) || 100000,
-      },
-    ];
-    if (creatorForm.pkg2_title && creatorForm.pkg2_title.trim()) {
-      packages.push({
-        id: 'pkg_2',
-        title: creatorForm.pkg2_title,
-        deliverables: creatorForm.pkg2_deliverables || 'Secondary brand integration',
-        price: parseInt(creatorForm.pkg2_price) || 60000,
-      });
-    }
-
     const payload = {
       name: creatorForm.name.trim(),
-      handle: creatorForm.handle.trim().startsWith('@') ? creatorForm.handle.trim() : `@${creatorForm.handle.trim()}`,
+      handle: creatorForm.handle.trim(),
       platform: creatorForm.platform,
       niche: creatorForm.niche,
       tier: creatorForm.tier,
       bio: creatorForm.bio.trim(),
       avatar_url: creatorForm.avatar_url.trim(),
-      followers_count: parseInt(creatorForm.followers_count) || 0,
-      avg_views: parseInt(creatorForm.avg_views) || 0,
-      engagement_rate: creatorForm.engagement_rate,
-      packages: packages,
-      is_verified: creatorForm.is_verified,
-      is_available: creatorForm.is_available,
+      followers_count: parseInt(creatorForm.followers_count) || 100000,
+      avg_views: parseInt(creatorForm.avg_views) || 25000,
+      engagement_rate: parseFloat(creatorForm.engagement_rate) || 5.0,
+      packages: [
+        {
+          id: `pkg_${Date.now()}_1`,
+          title: creatorForm.pkg1_title.trim() || 'Primary Sponsorship',
+          deliverables: creatorForm.pkg1_deliverables.trim() || 'Full Brand Integration',
+          price: parseInt(creatorForm.pkg1_price) || 150000,
+        },
+        ...(creatorForm.pkg2_title
+          ? [
+              {
+                id: `pkg_${Date.now()}_2`,
+                title: creatorForm.pkg2_title.trim(),
+                deliverables: creatorForm.pkg2_deliverables.trim() || 'Secondary Deliverable',
+                price: parseInt(creatorForm.pkg2_price) || 80000,
+              },
+            ]
+          : []),
+      ],
+      is_verified: Boolean(creatorForm.is_verified),
+      is_available: Boolean(creatorForm.is_available),
     };
 
     try {
       if (isCreatingNew) {
         await influencersApi.createInfluencer(payload);
-        showToast(`Creator '${creatorForm.name}' registered to marketplace roster.`, 'success', 'Creator Added');
+        showToast(`Creator '${creatorForm.name}' added to marketplace roster.`, 'success', 'Creator Added');
       } else {
         await influencersApi.updateInfluencer(editingCreator.id, payload);
         showToast(`Creator '${creatorForm.name}' profile updated successfully.`, 'success', 'Changes Saved');
@@ -446,8 +548,67 @@ export const InfluencersPage = () => {
     }
   };
 
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'REQUEST_RECEIVED':
+      case 'PENDING_ACCEPTANCE':
+      case 'CONTRACT_ACTIVE':
+        return (
+          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#2563eb', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+            <Clock size={12} className="flex-shrink-0" />
+            <span className="fw-semibold">REQUEST RECEIVED</span>
+          </span>
+        );
+      case 'IN_OUTREACH':
+      case 'CONTACTED':
+        return (
+          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(14, 165, 233, 0.12)', color: '#0284c7', border: '1px solid rgba(14, 165, 233, 0.3)' }}>
+            <PhoneCall size={12} className="flex-shrink-0" />
+            <span className="fw-semibold">AGENCY OUTREACH</span>
+          </span>
+        );
+      case 'IN_PRODUCTION':
+      case 'IN_PROGRESS':
+        return (
+          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+            <Clock size={12} className="flex-shrink-0" />
+            <span className="fw-semibold">IN PRODUCTION</span>
+          </span>
+        );
+      case 'SUBMITTED_FOR_REVIEW':
+      case 'COMPLETED':
+        return (
+          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#16a34a', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+            <CheckCircle2 size={12} className="flex-shrink-0" />
+            <span className="fw-semibold">DELIVERED &amp; BROADCASTED</span>
+          </span>
+        );
+      case 'DECLINED':
+        return (
+          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(100, 116, 139, 0.12)', color: '#64748b', border: '1px solid rgba(100, 116, 139, 0.3)' }}>
+            <X size={12} className="flex-shrink-0" />
+            <span className="fw-semibold">CREATOR UNAVAILABLE</span>
+          </span>
+        );
+      case 'CANCELLED':
+        return (
+          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#dc2626', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            <X size={12} className="flex-shrink-0" />
+            <span className="fw-semibold">CANCELLED</span>
+          </span>
+        );
+      default:
+        return (
+          <span className="badge d-inline-flex align-items-center gap-1 px-2.5 py-1 text-xs" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#2563eb', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+            <Clock size={12} className="flex-shrink-0" />
+            <span className="fw-semibold">{status}</span>
+          </span>
+        );
+    }
+  };
+
   return (
-    <div className="page-container">
+    <div className="w-100" style={{ boxSizing: 'border-box' }}>
       {toast && (
         <div
           className="position-fixed bottom-0 end-0 p-3"
@@ -479,16 +640,17 @@ export const InfluencersPage = () => {
         </div>
       )}
 
+      {/* Header Banner */}
       <div
-        className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 p-4 rounded-3 border"
-        style={{ backgroundColor: 'var(--color-bg-surface)', boxShadow: 'var(--shadow-xs)' }}
+        className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 p-4 rounded-3 border w-100"
+        style={{ backgroundColor: 'var(--color-bg-surface)', boxShadow: 'var(--shadow-xs)', boxSizing: 'border-box' }}
       >
         <div style={{ maxWidth: '680px', minWidth: 0 }}>
           <h1 className="h4 fw-bold text-primary-emphasis mb-1">
-            Influencer &amp; Content Creator Marketplace
+            Influencer &amp; Creator Sponsorship Marketplace
           </h1>
           <p className="text-muted mb-0" style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>
-            Discover vetted YouTube reviewers, Instagram lifestyle creators, and TikTok influencers. Inspect media kits, rate cards, and commission video sponsorships directly for your marketing campaigns.
+            Discover vetted digital creators across YouTube, Instagram, and TikTok. Submit sponsorship briefs directly to your campaign, and our agency team manages creator outreach, delivery tracking, and live broadcast verification behind the scenes.
           </p>
         </div>
 
@@ -496,12 +658,12 @@ export const InfluencersPage = () => {
           <div className="d-flex align-items-center gap-3 bg-light-subtle px-3 py-2 rounded-2 border">
             <div>
               <div className="fw-bold fs-6 text-primary text-center">{influencers.length}</div>
-              <div className="text-muted text-center" style={{ fontSize: '0.7rem' }}>Creators</div>
+              <div className="text-muted text-center" style={{ fontSize: '0.7rem' }}>Vetted Creators</div>
             </div>
             <div className="vr opacity-25" />
             <div>
-              <div className="fw-bold fs-6 text-success text-center">100%</div>
-              <div className="text-muted text-center" style={{ fontSize: '0.7rem' }}>Brand Safe</div>
+              <div className="fw-bold fs-6 text-success text-center">Agency-Managed</div>
+              <div className="text-muted text-center" style={{ fontSize: '0.7rem' }}>Full Concierge</div>
             </div>
           </div>
 
@@ -518,225 +680,747 @@ export const InfluencersPage = () => {
         </div>
       </div>
 
-      <div className="toolbar-ui p-3 rounded-3 border mb-4" style={{ backgroundColor: 'var(--color-bg-surface)' }}>
-        <form onSubmit={handleSearchSubmit} className="toolbar-search mb-2 mb-md-0">
-          <Search size={15} className="toolbar-search-icon" />
-          <input
-            type="text"
-            className="form-input-ui"
-            style={{ paddingLeft: '2.2rem', height: '38px' }}
-            placeholder="Search creator name, @handle, or niche..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </form>
-
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <div className="btn-group btn-group-sm" role="group">
-            {PLATFORMS.map((plat) => (
-              <button
-                key={plat}
-                type="button"
-                className={`btn btn-sm ${selectedPlatform === plat ? 'btn-primary' : 'btn-outline-secondary'}`}
-                style={{ fontSize: '0.72rem', padding: '0.35rem 0.65rem' }}
-                onClick={() => setSelectedPlatform(plat)}
-              >
-                {plat}
-              </button>
-            ))}
-          </div>
-
-          <select
-            className="form-select-ui"
-            style={{ width: 'auto', height: '38px', fontSize: '0.75rem' }}
-            value={selectedNiche}
-            onChange={(e) => setSelectedNiche(e.target.value)}
-          >
-            {NICHES.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-
-          <select
-            className="form-select-ui"
-            style={{ width: 'auto', height: '38px', fontSize: '0.75rem' }}
-            value={selectedTier}
-            onChange={(e) => setSelectedTier(e.target.value)}
-          >
-            {TIERS.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
+      {/* Tab Switcher: 2 Clean Tabs */}
+      <div className="d-flex align-items-center gap-2 mb-4 border-bottom pb-2 flex-wrap w-100">
+        <button
+          type="button"
+          className={`btn btn-sm d-inline-flex align-items-center gap-1.5 px-3 py-2 rounded-2 fw-medium ${activeTab === 'directory' ? 'btn-primary shadow-xs' : 'btn-light text-muted'}`}
+          style={{ fontSize: '0.82rem' }}
+          onClick={() => setActiveTab('directory')}
+        >
+          <Users size={15} />
+          <span>Creator Marketplace ({influencers.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm d-inline-flex align-items-center gap-1.5 px-3 py-2 rounded-2 fw-medium ${activeTab === 'hired' ? 'btn-primary shadow-xs' : 'btn-light text-muted'}`}
+          style={{ fontSize: '0.82rem' }}
+          onClick={() => { setActiveTab('hired'); fetchHiredCreators(); }}
+        >
+          <Briefcase size={15} />
+          <span>Brand Sponsorships &amp; Approvals ({hiredList.length})</span>
+        </button>
       </div>
 
-      {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary spinner-border-sm" role="status" />
-          <p className="text-muted small mt-2">Loading verified creator roster...</p>
-        </div>
-      ) : influencers.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="No influencers match your criteria"
-          description="Try clearing search keywords or selecting 'All Platforms'."
-        />
-      ) : (
-        <div className="row g-4">
-          {influencers.map((inf) => (
-            <div key={inf.id} className="col-12 col-md-6 col-xxl-4">
-              <div className="ui-card-standard h-100 d-flex flex-column justify-content-between">
-                <div>
-                  <div className="d-flex align-items-start justify-content-between gap-2 mb-3">
-                    <div className="d-flex align-items-start gap-2.5" style={{ minWidth: 0, flex: '1 1 auto' }}>
-                      <CreatorAvatar name={inf.name} avatarUrl={inf.avatar_url} size={48} />
-                      <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-                        <div className="d-flex align-items-center gap-1.5 mb-0.5" style={{ minWidth: 0 }}>
-                          <h3
-                            className="fw-bold text-primary-emphasis mb-0 text-truncate fs-6"
-                            title={inf.name}
-                          >
-                            {inf.name}
-                          </h3>
-                          {inf.is_verified && (
-                            <CheckCircle2
-                              size={15}
-                              className="text-primary flex-shrink-0"
-                              title="Verified Partner"
-                            />
-                          )}
-                        </div>
-                        <div
-                          className="text-muted font-monospace text-xs text-truncate mb-1.5"
-                          title={inf.handle}
-                        >
-                          {inf.handle}
-                        </div>
-                        <div className="d-flex align-items-center gap-1 flex-wrap">
-                          <span className="badge bg-primary-subtle text-primary font-medium px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
-                            {inf.niche}
-                          </span>
-                          <span className="badge bg-secondary-subtle text-secondary font-medium px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
-                            {inf.tier}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+      {/* TAB 1: CREATOR MARKETPLACE */}
+      {activeTab === 'directory' && (
+        <div className="w-100">
+          <div className="toolbar-ui p-3 rounded-3 border mb-4 w-100" style={{ backgroundColor: 'var(--color-bg-surface)', boxSizing: 'border-box' }}>
+            <form onSubmit={handleSearchSubmit} className="toolbar-search mb-2 mb-md-0">
+              <Search size={15} className="toolbar-search-icon" />
+              <input
+                type="text"
+                className="form-input-ui"
+                style={{ paddingLeft: '2.2rem', height: '38px' }}
+                placeholder="Search creator name, @handle, or niche..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </form>
 
-                    <div className="d-flex flex-column align-items-end gap-1.5 flex-shrink-0">
-                      {getPlatformBadge(inf.platform)}
-
-                      {isAdminOrManager && (
-                        <div className="d-flex align-items-center gap-1">
-                          <button
-                            type="button"
-                            className="btn-ui-icon p-1 text-muted"
-                            title="Edit Creator Details"
-                            onClick={() => handleOpenEditModal(inf)}
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          {isSuperAdmin && (
-                            <button
-                              type="button"
-                              className="btn-ui-icon p-1 text-danger"
-                              title="Delete Creator"
-                              onClick={() => setDeletingCreator(inf)}
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <p
-                    className="text-muted mb-3"
-                    style={{
-                      fontSize: '0.75rem',
-                      lineHeight: '1.45',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {inf.bio || 'Verified content creator available for dedicated sponsorships and brand activations.'}
-                  </p>
-
-                  <div className="ui-metrics-strip mb-3">
-                    <div className="ui-metric-col">
-                      <div className="ui-metric-value text-primary-emphasis">
-                        {formatNumber(inf.followers_count)}
-                      </div>
-                      <div className="ui-metric-label">Followers</div>
-                    </div>
-                    <div className="ui-metric-col">
-                      <div className="ui-metric-value text-primary-emphasis">
-                        {formatNumber(inf.avg_views)}
-                      </div>
-                      <div className="ui-metric-label">Avg Views</div>
-                    </div>
-                    <div className="ui-metric-col">
-                      <div className="ui-metric-value text-success">
-                        {inf.engagement_rate}%
-                      </div>
-                      <div className="ui-metric-label">Engagement</div>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <div className="text-muted text-xs mb-1.5 fw-semibold d-flex align-items-center justify-content-between" style={{ fontSize: '0.68rem' }}>
-                      <span>SPONSORSHIP PACKAGES</span>
-                      <span className="text-primary">{inf.packages?.length || 0} Available</span>
-                    </div>
-                    <div className="d-flex flex-column gap-1.5">
-                      {(inf.packages || []).slice(0, 2).map((pkg) => (
-                        <div key={pkg.id} className="ui-package-tile">
-                          <span
-                            className="text-truncate text-dark-emphasis fw-medium"
-                            style={{ fontSize: '0.72rem', minWidth: 0, flex: '1 1 auto' }}
-                            title={pkg.title}
-                          >
-                            {pkg.title}
-                          </span>
-                          <span
-                            className="badge bg-primary-subtle text-primary font-monospace fw-bold flex-shrink-0 px-2 py-1"
-                            style={{ whiteSpace: 'nowrap', fontSize: '0.7rem' }}
-                          >
-                            {formatPrice(pkg.price)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="d-flex align-items-center justify-content-between pt-3 border-top gap-2 mt-1">
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              <div className="btn-group btn-group-sm" role="group">
+                {PLATFORMS.map((plat) => (
                   <button
+                    key={plat}
                     type="button"
-                    className="btn-ui btn-ui-secondary btn-ui-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1.5 py-2"
-                    onClick={() => setInspectingCreator(inf)}
+                    className={`btn btn-sm ${selectedPlatform === plat ? 'btn-primary' : 'btn-outline-secondary'}`}
+                    style={{ fontSize: '0.72rem', padding: '0.35rem 0.65rem' }}
+                    onClick={() => setSelectedPlatform(plat)}
                   >
-                    <Eye size={13} />
-                    <span>Media Kit</span>
+                    {plat}
                   </button>
-                  <button
-                    type="button"
-                    className="btn-ui btn-ui-primary btn-ui-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1.5 py-2"
-                    onClick={() => handleOpenHireModal(inf)}
-                  >
-                    <Send size={13} />
-                    <span>Hire Creator</span>
-                  </button>
-                </div>
+                ))}
               </div>
+
+              <select
+                className="form-select-ui"
+                style={{ width: 'auto', height: '38px', fontSize: '0.75rem' }}
+                value={selectedNiche}
+                onChange={(e) => setSelectedNiche(e.target.value)}
+              >
+                {NICHES.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+
+              <select
+                className="form-select-ui"
+                style={{ width: 'auto', height: '38px', fontSize: '0.75rem' }}
+                value={selectedTier}
+                onChange={(e) => setSelectedTier(e.target.value)}
+              >
+                {TIERS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
             </div>
-          ))}
+          </div>
+
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary spinner-border-sm" role="status" />
+              <p className="text-muted small mt-2">Loading verified creator roster...</p>
+            </div>
+          ) : influencers.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="No influencers match your criteria"
+              description="Try clearing search keywords or selecting 'All Platforms'."
+            />
+          ) : (
+            <div className="row g-4 w-100 m-0">
+              {influencers.map((inf) => (
+                <div key={inf.id} className="col-12 col-md-6 col-xxl-4 p-2">
+                  <div className="ui-card-standard h-100 d-flex flex-column justify-content-between p-4 rounded-3 border" style={{ backgroundColor: 'var(--color-bg-surface)', boxSizing: 'border-box' }}>
+                    <div>
+                      <div className="d-flex align-items-start justify-content-between gap-2 mb-3">
+                        <div className="d-flex align-items-start gap-2.5" style={{ minWidth: 0, flex: '1 1 auto' }}>
+                          <CreatorAvatar name={inf.name} avatarUrl={inf.avatar_url} size={48} />
+                          <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+                            <div className="d-flex align-items-center gap-1.5 mb-0.5" style={{ minWidth: 0 }}>
+                              <h3
+                                className="fw-bold text-primary-emphasis mb-0 text-truncate fs-6"
+                                title={inf.name}
+                              >
+                                {inf.name}
+                              </h3>
+                              {inf.is_verified && (
+                                <CheckCircle2
+                                  size={15}
+                                  className="text-primary flex-shrink-0"
+                                  title="Verified Partner"
+                                />
+                              )}
+                            </div>
+                            <div
+                              className="text-muted font-monospace text-xs text-truncate mb-1.5"
+                              title={inf.handle}
+                            >
+                              {inf.handle}
+                            </div>
+                            <div className="d-flex align-items-center gap-1 flex-wrap">
+                              <span className="badge bg-primary-subtle text-primary font-medium px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
+                                {inf.niche}
+                              </span>
+                              <span className="badge bg-secondary-subtle text-secondary font-medium px-2 py-0.5" style={{ fontSize: '0.68rem' }}>
+                                {inf.tier}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="d-flex flex-column align-items-end gap-1.5 flex-shrink-0">
+                          {getPlatformBadge(inf.platform)}
+
+                          {isAdminOrManager && (
+                            <div className="d-flex align-items-center gap-1">
+                              <button
+                                type="button"
+                                className="btn-ui-icon p-1 text-muted"
+                                title="Edit Creator Details"
+                                onClick={() => handleOpenEditModal(inf)}
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              {isSuperAdmin && (
+                                <button
+                                  type="button"
+                                  className="btn-ui-icon p-1 text-danger"
+                                  title="Delete Creator"
+                                  onClick={() => setDeletingCreator(inf)}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <p
+                        className="text-muted mb-3"
+                        style={{
+                          fontSize: '0.75rem',
+                          lineHeight: '1.45',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {inf.bio || 'Verified content creator available for dedicated sponsorships and brand activations.'}
+                      </p>
+
+                      <div className="ui-metrics-strip mb-3">
+                        <div className="ui-metric-col">
+                          <div className="ui-metric-value text-primary-emphasis">
+                            {formatNumber(inf.followers_count)}
+                          </div>
+                          <div className="ui-metric-label">Followers</div>
+                        </div>
+                        <div className="ui-metric-col">
+                          <div className="ui-metric-value text-primary-emphasis">
+                            {formatNumber(inf.avg_views)}
+                          </div>
+                          <div className="ui-metric-label">Avg Views</div>
+                        </div>
+                        <div className="ui-metric-col">
+                          <div className="ui-metric-value text-success">
+                            {inf.engagement_rate}%
+                          </div>
+                          <div className="ui-metric-label">Engagement</div>
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        <div className="text-muted text-xs mb-1.5 fw-semibold d-flex align-items-center justify-content-between" style={{ fontSize: '0.68rem' }}>
+                          <span>SPONSORSHIP PACKAGES</span>
+                          <span className="text-primary">{inf.packages?.length || 0} Available</span>
+                        </div>
+                        <div className="d-flex flex-column gap-1.5">
+                          {(inf.packages || []).slice(0, 2).map((pkg) => (
+                            <div key={pkg.id} className="ui-package-tile">
+                              <span
+                                className="text-truncate text-dark-emphasis fw-medium"
+                                style={{ fontSize: '0.72rem', minWidth: 0, flex: '1 1 auto' }}
+                                title={pkg.title}
+                              >
+                                {pkg.title}
+                              </span>
+                              <span
+                                className="badge bg-primary-subtle text-primary font-monospace fw-bold flex-shrink-0 px-2 py-1"
+                                style={{ whiteSpace: 'nowrap', fontSize: '0.7rem' }}
+                              >
+                                {formatPrice(pkg.price)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="d-flex align-items-center justify-content-between pt-3 border-top gap-2 mt-1">
+                      <button
+                        type="button"
+                        className="btn-ui btn-ui-secondary btn-ui-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1.5 py-2"
+                        onClick={() => setInspectingCreator(inf)}
+                      >
+                        <Eye size={13} />
+                        <span>Media Kit</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ui btn-ui-primary btn-ui-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1.5 py-2"
+                        onClick={() => handleOpenHireModal(inf)}
+                      >
+                        <Send size={13} />
+                        <span>Request Creator</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
+      {/* TAB 2: SPONSORSHIP REQUESTS & CONTRACTS */}
+      {activeTab === 'hired' && (() => {
+        const filteredHiredList = hiredList.filter((hc) => {
+          if (hiredStatusFilter === 'ALL') return true;
+          if (hiredStatusFilter === 'REQUEST') return !hc.status || hc.status === 'REQUEST_RECEIVED' || hc.status === 'PENDING_ACCEPTANCE' || hc.status === 'CONTRACT_ACTIVE';
+          if (hiredStatusFilter === 'OUTREACH') return hc.status === 'IN_OUTREACH' || hc.status === 'CONTACTED';
+          if (hiredStatusFilter === 'IN_PRODUCTION') return hc.status === 'IN_PRODUCTION' || hc.status === 'IN_PROGRESS';
+          if (hiredStatusFilter === 'COMPLETED') return hc.status === 'COMPLETED' || hc.status === 'SUBMITTED_FOR_REVIEW';
+          if (hiredStatusFilter === 'CANCELLED') return hc.status === 'CANCELLED' || hc.status === 'DECLINED';
+          return true;
+        });
+
+        const totalSpend = hiredList.reduce((acc, c) => acc + Number(c.agreed_fee || 0), 0);
+        const inProductionCount = hiredList.filter((c) => c.status === 'IN_PRODUCTION' || c.status === 'IN_PROGRESS').length;
+        const completedCount = hiredList.filter((c) => c.status === 'COMPLETED' || c.status === 'SUBMITTED_FOR_REVIEW').length;
+
+        return (
+          <div className="w-100 mb-5">
+            {/* Header & Refresh */}
+            <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4 w-100">
+              <div>
+                <h2 className="h5 fw-bold text-primary-emphasis mb-1">Brand Sponsorships &amp; Approvals</h2>
+                <span className="text-muted text-xs">
+                  Review brand sponsorship requests, manage outreach milestones, update deliverables, and approve contracts.
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5 align-self-start align-self-sm-center"
+                onClick={fetchHiredCreators}
+              >
+                <RefreshCw size={13} />
+                <span>Refresh Requests</span>
+              </button>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="row g-3 mb-4 w-100 m-0">
+              <div className="col-12 col-sm-4 p-2">
+                <div
+                  className="p-3 rounded-3 border d-flex align-items-center gap-3 w-100"
+                  style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: 'var(--color-border)', boxSizing: 'border-box' }}
+                >
+                  <div className="rounded-circle p-2.5 bg-primary-subtle text-primary d-flex align-items-center justify-content-center">
+                    <DollarSign size={20} />
+                  </div>
+                  <div>
+                    <div className="text-muted text-xs fw-semibold text-uppercase tracking-wider">Total Creator Spend</div>
+                    <div className="fs-5 fw-bold text-primary font-monospace">
+                      Rs. {totalSpend.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-12 col-sm-4 p-2">
+                <div
+                  className="p-3 rounded-3 border d-flex align-items-center gap-3 w-100"
+                  style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: inProductionCount > 0 ? 'rgba(245, 158, 11, 0.4)' : 'var(--color-border)', boxSizing: 'border-box' }}
+                >
+                  <div className="rounded-circle p-2.5 bg-warning-subtle text-warning d-flex align-items-center justify-content-center">
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <div className="text-muted text-xs fw-semibold text-uppercase tracking-wider">In Production</div>
+                    <div className="fs-5 fw-bold text-dark font-monospace">
+                      {inProductionCount} Active
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-12 col-sm-4 p-2">
+                <div
+                  className="p-3 rounded-3 border d-flex align-items-center gap-3 w-100"
+                  style={{ backgroundColor: 'var(--color-bg-surface)', borderColor: 'var(--color-border)', boxSizing: 'border-box' }}
+                >
+                  <div className="rounded-circle p-2.5 bg-success-subtle text-success d-flex align-items-center justify-content-center">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div>
+                    <div className="text-muted text-xs fw-semibold text-uppercase tracking-wider">Delivered &amp; Broadcasted</div>
+                    <div className="fs-5 fw-bold text-success font-monospace">
+                      {completedCount}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="d-flex align-items-center gap-2 flex-wrap mb-4 pb-2 border-bottom w-100">
+              <span className="text-xs fw-semibold text-muted text-uppercase me-2">Status:</span>
+              {[
+                { key: 'ALL', label: 'All Requests', count: hiredList.length },
+                { key: 'REQUEST', label: 'Request Received', count: hiredList.filter((c) => !c.status || c.status === 'REQUEST_RECEIVED' || c.status === 'PENDING_ACCEPTANCE' || c.status === 'CONTRACT_ACTIVE').length },
+                { key: 'OUTREACH', label: 'Agency Outreach', count: hiredList.filter((c) => c.status === 'IN_OUTREACH' || c.status === 'CONTACTED').length },
+                { key: 'IN_PRODUCTION', label: 'In Production', count: inProductionCount },
+                { key: 'COMPLETED', label: 'Delivered', count: completedCount },
+                { key: 'CANCELLED', label: 'Cancelled / Declined', count: hiredList.filter((c) => c.status === 'CANCELLED' || c.status === 'DECLINED').length },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  className={`btn btn-sm py-1 px-2.5 text-xs rounded-pill d-inline-flex align-items-center gap-1.5 transition-all ${
+                    hiredStatusFilter === f.key
+                      ? 'btn-primary shadow-xs'
+                      : 'btn-outline-secondary'
+                  }`}
+                  onClick={() => setHiredStatusFilter(f.key)}
+                >
+                  <span>{f.label}</span>
+                  <span
+                    className={`badge rounded-pill px-1.5 py-0.5 ${
+                      hiredStatusFilter === f.key ? 'bg-white text-primary' : 'bg-secondary-subtle text-secondary'
+                    }`}
+                    style={{ fontSize: '0.65rem' }}
+                  >
+                    {f.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {loadingHired ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary spinner-border-sm" role="status" />
+                <p className="text-muted small mt-2">Loading sponsorship contracts from database...</p>
+              </div>
+            ) : filteredHiredList.length === 0 ? (
+              <div className="p-5 text-center rounded-3 border bg-light-subtle w-100" style={{ boxSizing: 'border-box' }}>
+                <div className="rounded-circle p-3 d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary mb-3">
+                  <Sparkles size={28} />
+                </div>
+                <h4 className="h6 fw-bold text-dark mb-1">
+                  {hiredList.length === 0 ? 'No Sponsorship Requests Yet' : 'No Contracts Match Filter'}
+                </h4>
+                <p className="text-muted small mb-3" style={{ maxWidth: '440px', margin: '0 auto' }}>
+                  {hiredList.length === 0
+                    ? "You haven't requested any creators yet. Switch to the Creator Marketplace to discover vetted influencers and commission sponsorships for your campaigns."
+                    : 'Try selecting a different status filter above to view your contracts.'}
+                </p>
+                {hiredList.length === 0 ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm d-inline-flex align-items-center gap-1.5"
+                    onClick={() => setActiveTab('directory')}
+                  >
+                    <Users size={14} />
+                    <span>Explore Creator Marketplace</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => setHiredStatusFilter('ALL')}
+                  >
+                    <span>Show All Requests</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="d-flex flex-column w-100" style={{ gap: '1.5rem' }}>
+                {filteredHiredList.map((hc) => {
+                  const isRequest = !hc.status || hc.status === 'REQUEST_RECEIVED' || hc.status === 'PENDING_ACCEPTANCE' || hc.status === 'CONTRACT_ACTIVE';
+                  const isOutreach = hc.status === 'IN_OUTREACH' || hc.status === 'CONTACTED';
+                  const isInProduction = hc.status === 'IN_PRODUCTION' || hc.status === 'IN_PROGRESS';
+                  const isCompleted = hc.status === 'COMPLETED' || hc.status === 'SUBMITTED_FOR_REVIEW';
+                  const isCancelled = hc.status === 'CANCELLED' || hc.status === 'DECLINED';
+
+                  return (
+                    <div
+                      key={hc.id}
+                      className="p-4 rounded-3 border shadow-xs w-100"
+                      style={{
+                        backgroundColor: 'var(--color-bg-surface)',
+                        borderColor: isCompleted
+                          ? 'rgba(34, 197, 94, 0.4)'
+                          : isInProduction
+                          ? 'rgba(245, 158, 11, 0.4)'
+                          : isCancelled
+                          ? 'rgba(239, 68, 68, 0.35)'
+                          : 'var(--color-border)',
+                        borderLeftWidth: '5px',
+                        borderLeftColor: isCompleted
+                          ? '#22c55e'
+                          : isInProduction
+                          ? '#f59e0b'
+                          : isOutreach
+                          ? '#0284c7'
+                          : isCancelled
+                          ? '#64748b'
+                          : '#3b82f6',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      {/* Top Header Strip: Creator Details & Payout */}
+                      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3 w-100">
+                        <div className="d-flex align-items-center gap-3">
+                          <CreatorAvatar name={hc.influencer_name} avatarUrl={hc.avatar_url} size={50} />
+                          <div>
+                            <div className="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                              <span className="fw-bold text-primary-emphasis fs-6">{hc.influencer_name}</span>
+                              <span className="text-muted font-monospace text-xs">{hc.influencer_handle}</span>
+                              {getPlatformBadge(hc.platform)}
+                              {getStatusBadge(hc.status)}
+                            </div>
+                            <div className="text-muted text-xs">
+                              Contract ID: <span className="font-monospace fw-semibold text-dark">{hc.id}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-md-end">
+                          <div className="text-muted text-xs fw-semibold text-uppercase tracking-wider mb-0.5" style={{ fontSize: '0.68rem' }}>
+                            Agreed Fee
+                          </div>
+                          <div className="fw-bold text-primary font-monospace fs-5">
+                            Rs. {Number(hc.agreed_fee || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Package & Deliverables Card */}
+                      <div
+                        className="p-3 rounded-2 mb-3 w-100"
+                        style={{
+                          backgroundColor: 'var(--color-bg-subtle, #f8fafc)',
+                          border: '1px solid var(--color-border-subtle, #e2e8f0)',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between mb-1 flex-wrap gap-1">
+                          <div className="text-xs fw-bold text-dark text-uppercase tracking-wider">
+                            Package: <span className="text-primary">{hc.package_title}</span>
+                          </div>
+                          {hc.target_date && (
+                            <div className="text-xs text-muted d-inline-flex align-items-center gap-1">
+                              <Calendar size={12} />
+                              <span>Target Deadline: <strong className="text-dark">{hc.target_date}</strong></span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-muted text-xs mb-1" style={{ lineHeight: '1.6' }}>
+                          <strong className="text-secondary fw-semibold">Deliverables: </strong>
+                          <span>{hc.deliverables}</span>
+                        </div>
+                        {hc.brief_notes && (
+                          <div
+                            className="mt-2 pt-2 border-top text-muted text-xs fst-italic"
+                            style={{ lineHeight: '1.45', borderColor: 'var(--color-border-subtle, #e2e8f0)' }}
+                          >
+                            <span className="not-italic fw-semibold text-secondary">Advertiser Brief: </span>
+                            "{hc.brief_notes}"
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Live Deliverable Link Box (If Published) */}
+                      {hc.submission_url && (
+                        <div
+                          className="p-3 rounded-2 mb-3 w-100"
+                          style={{
+                            backgroundColor: 'rgba(34, 197, 94, 0.05)',
+                            border: '1px solid rgba(34, 197, 94, 0.25)',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <div className="d-flex align-items-center justify-content-between flex-wrap gap-1 mb-1">
+                            <span className="text-xs fw-bold text-success d-inline-flex align-items-center gap-1">
+                              <CheckCircle2 size={13} className="text-success" />
+                              Published Live Content Link:
+                            </span>
+                            {hc.submitted_at && (
+                              <span className="text-muted text-2xs font-monospace">
+                                {new Date(hc.submitted_at).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="d-flex align-items-center gap-2">
+                            <a
+                              href={hc.submission_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary text-xs font-monospace text-truncate d-inline-flex align-items-center gap-1"
+                              style={{ maxWidth: '600px' }}
+                            >
+                              <span>{hc.submission_url}</span>
+                              <ExternalLink size={12} className="flex-shrink-0" />
+                            </a>
+                          </div>
+                          {hc.submission_notes && (
+                            <div className="text-xs text-muted mt-1 fst-italic">
+                              <span className="not-italic fw-semibold text-secondary">Agency proof notes:</span> "{hc.submission_notes}"
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Bottom Footer Strip: Campaign info & Comprehensive Actions */}
+                      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 pt-3 border-top w-100">
+                        <div className="d-flex align-items-center gap-2 flex-wrap">
+                          <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 text-xs">
+                            Campaign: <strong>{hc.campaign_name || `Campaign #${hc.campaign_id}`}</strong>
+                          </span>
+                        </div>
+
+                        {/* Actions for Admin and Advertiser */}
+                        <div className="d-flex align-items-center gap-2 flex-wrap justify-content-md-end">
+                          {/* ADMIN COMPREHENSIVE ACTIONS */}
+                          {isAdminOrManager && (
+                            <>
+                              {/* 1. Request stage */}
+                              {isRequest && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary btn-sm py-1.5 px-3 text-xs fw-semibold text-white d-inline-flex align-items-center gap-1.5"
+                                    onClick={() => handleQuickStatusUpdate(hc.id, 'IN_OUTREACH', 'Moved to Agency Outreach. Start communicating with creator.')}
+                                  >
+                                    <PhoneCall size={13} />
+                                    <span>Accept &amp; Start Outreach</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-warning btn-sm py-1.5 px-2.5 text-xs d-inline-flex align-items-center gap-1"
+                                    onClick={() => handleQuickStatusUpdate(hc.id, 'IN_PRODUCTION', 'Confirmed contract and moved directly to In Production.')}
+                                  >
+                                    <Clock size={13} />
+                                    <span>Move to Production</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-danger btn-sm py-1.5 px-2.5 text-xs d-inline-flex align-items-center gap-1"
+                                    onClick={() => handleQuickStatusUpdate(hc.id, 'DECLINED', 'Marked request as Declined.')}
+                                  >
+                                    <X size={13} />
+                                    <span>Decline</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {/* 2. Outreach stage */}
+                              {isOutreach && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="btn btn-warning text-dark btn-sm py-1.5 px-3 text-xs fw-semibold d-inline-flex align-items-center gap-1.5"
+                                    onClick={() => handleQuickStatusUpdate(hc.id, 'IN_PRODUCTION', 'Creator confirmed! Deal is now in production.')}
+                                  >
+                                    <Clock size={13} />
+                                    <span>Confirm in Production</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-success text-white btn-sm py-1.5 px-3 text-xs fw-semibold d-inline-flex align-items-center gap-1.5"
+                                    onClick={() => handleOpenAgencyModal(hc, 'COMPLETED')}
+                                  >
+                                    <CheckCircle size={13} />
+                                    <span>Submit Live Link &amp; Complete</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-danger btn-sm py-1.5 px-2 text-xs"
+                                    onClick={() => handleQuickStatusUpdate(hc.id, 'DECLINED', 'Creator unavailable.')}
+                                  >
+                                    <span>Decline</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {/* 3. In Production stage */}
+                              {isInProduction && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="btn btn-success text-white btn-sm py-1.5 px-3 text-xs fw-semibold d-inline-flex align-items-center gap-1.5"
+                                    onClick={() => handleOpenAgencyModal(hc, 'COMPLETED')}
+                                  >
+                                    <CheckCircle size={13} />
+                                    <span>Submit Live Link &amp; Complete</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-danger btn-sm py-1.5 px-2 text-xs"
+                                    onClick={() => handleCancelHiredContract(hc.id)}
+                                  >
+                                    <span>Cancel</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {/* 4. Completed stage */}
+                              {isCompleted && (
+                                <>
+                                  {hc.submission_url && (
+                                    <a
+                                      href={hc.submission_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn btn-outline-success btn-sm py-1.5 px-2.5 text-xs d-inline-flex align-items-center gap-1"
+                                    >
+                                      <ExternalLink size={12} />
+                                      <span>View Live Post</span>
+                                    </a>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-primary btn-sm py-1.5 px-2.5 text-xs d-inline-flex align-items-center gap-1"
+                                    onClick={() => handleOpenAgencyModal(hc, 'COMPLETED')}
+                                  >
+                                    <Edit2 size={12} />
+                                    <span>Edit Link / Notes</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {/* 5. Cancelled stage */}
+                              {isCancelled && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-primary btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1"
+                                    onClick={() => handleQuickStatusUpdate(hc.id, 'REQUEST_RECEIVED', 'Request reopened.')}
+                                  >
+                                    <RotateCcw size={12} />
+                                    <span>Reopen Request</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-danger btn-sm py-1 px-2.5 text-xs d-inline-flex align-items-center gap-1"
+                                    onClick={() => handlePermanentDeleteContract(hc.id)}
+                                    title="Permanently remove record"
+                                  >
+                                    <Trash2 size={12} />
+                                    <span>Delete Record</span>
+                                  </button>
+                                </>
+                              )}
+
+                              {/* Universal Agency Manage Settings Button */}
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary btn-sm py-1.5 px-2.5 text-xs d-inline-flex align-items-center gap-1"
+                                onClick={() => handleOpenAgencyModal(hc)}
+                                title="Custom Status & Notes Management"
+                              >
+                                <Settings2 size={13} />
+                                <span>Manage Status</span>
+                              </button>
+                            </>
+                          )}
+
+                          {/* ADVERTISER USER ACTIONS */}
+                          {!isAdminOrManager && (
+                            <>
+                              {/* Advertiser can cancel early requests */}
+                              {(isRequest || isOutreach) && (
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-danger btn-sm py-1.5 px-3 text-xs d-inline-flex align-items-center gap-1"
+                                  onClick={() => handleCancelHiredContract(hc.id)}
+                                  title="Cancel Sponsorship Request"
+                                >
+                                  <Trash2 size={12} />
+                                  <span>Cancel Request</span>
+                                </button>
+                              )}
+
+                              {/* Advertiser can view live post once completed */}
+                              {hc.submission_url && (
+                                <a
+                                  href={hc.submission_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-success text-white btn-sm py-1.5 px-3 text-xs d-inline-flex align-items-center gap-1"
+                                >
+                                  <ExternalLink size={13} />
+                                  <span>View Live Post</span>
+                                </a>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* MEDIA KIT MODAL */}
       {inspectingCreator && (
         <div
           className="modal-backdrop-ui"
@@ -775,7 +1459,7 @@ export const InfluencersPage = () => {
                 </div>
                 <div>
                   <h3 className="modal-title-ui mb-0 fw-bold" style={{ fontSize: '0.95rem' }}>Creator Media Kit &amp; Rate Card</h3>
-                  <span className="text-muted" style={{ fontSize: '0.68rem' }}>Official sponsorship documentation &amp; brand collaboration details</span>
+                  <span className="text-muted" style={{ fontSize: '0.68rem' }}>Official sponsorship documentation &amp; channel analytics</span>
                 </div>
               </div>
               <button
@@ -1031,7 +1715,7 @@ export const InfluencersPage = () => {
                 <div className="d-flex align-items-center gap-2 mt-4 p-3 rounded-2 border" style={{ backgroundColor: 'var(--color-bg-subtle)' }}>
                   <Info size={14} className="text-primary flex-shrink-0" />
                   <span className="text-muted" style={{ fontSize: '0.7rem', lineHeight: '1.5' }}>
-                    All rates are in Pakistani Rupees (PKR). Prices may vary based on campaign requirements, exclusivity, and usage rights. Final pricing is confirmed upon contract signing.
+                    All rates are in Pakistani Rupees (PKR). Prices reflect standard single-activation deliverable rates. Final pricing and timeline are confirmed upon agency contract coordination.
                   </span>
                 </div>
               </div>
@@ -1064,7 +1748,7 @@ export const InfluencersPage = () => {
                   }}
                 >
                   <Send size={13} />
-                  <span>Hire {inspectingCreator.name.split(' ')[0]}</span>
+                  <span>Request {inspectingCreator.name.split(' ')[0]}</span>
                 </button>
               </div>
             </div>
@@ -1072,6 +1756,7 @@ export const InfluencersPage = () => {
         </div>
       )}
 
+      {/* REQUEST CREATOR / HIRE MODAL */}
       {hiringCreator && (
         <div
           className="modal-backdrop-ui"
@@ -1087,7 +1772,7 @@ export const InfluencersPage = () => {
             <div className="modal-header-ui" style={{ padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div className="d-flex align-items-center gap-2">
                 <Send size={16} className="text-primary" />
-                <h3 className="modal-title-ui mb-0 fw-bold" style={{ fontSize: '0.9rem' }}>Commission Creator Sponsorship</h3>
+                <h3 className="modal-title-ui mb-0 fw-bold" style={{ fontSize: '0.9rem' }}>Request Creator Sponsorship</h3>
               </div>
               <button
                 type="button"
@@ -1184,7 +1869,7 @@ export const InfluencersPage = () => {
                   <textarea
                     className="form-textarea-ui"
                     rows="3"
-                    placeholder="e.g. Focus on the mobile app's instant cash-back feature and mention promo code 'SAVE50' in description."
+                    placeholder="e.g. Highlight the instant mobile booking discount and include link in description."
                     value={hireForm.brief_notes}
                     onChange={(e) => setHireForm({ ...hireForm, brief_notes: e.target.value })}
                   />
@@ -1205,7 +1890,7 @@ export const InfluencersPage = () => {
                   className="btn-ui btn-ui-primary btn-ui-sm px-3"
                   disabled={submittingHire}
                 >
-                  {submittingHire ? 'Submitting...' : 'Confirm Sponsorship'}
+                  {submittingHire ? 'Submitting...' : 'Submit Sponsorship Request'}
                 </button>
               </div>
             </form>
@@ -1213,6 +1898,142 @@ export const InfluencersPage = () => {
         </div>
       )}
 
+      {/* AGENCY STATUS MANAGEMENT MODAL (Admin / Space Manager) */}
+      {updatingContract && (
+        <div
+          className="modal-backdrop-ui"
+          style={{ position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => e.target === e.currentTarget && setUpdatingContract(null)}
+        >
+          <div
+            className="modal-dialog-ui"
+            style={{ maxWidth: '600px', width: '100%', maxHeight: '92vh', background: 'var(--color-bg-surface)', borderRadius: '16px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="p-4 border-bottom d-flex align-items-center justify-content-between" style={{ backgroundColor: 'var(--color-bg-subtle)' }}>
+              <div className="d-flex align-items-center gap-2.5">
+                <div className="rounded-circle p-2 bg-primary text-white d-flex align-items-center justify-content-center">
+                  <Settings2 size={18} />
+                </div>
+                <div>
+                  <h3 className="h6 fw-bold mb-0 text-primary-emphasis">Manage Agency Sponsorship Status</h3>
+                  <span className="text-muted text-xs">Update outreach milestones, record deliverables, and finalize status</span>
+                </div>
+              </div>
+              <button type="button" className="btn-ui-icon p-1 text-muted" onClick={() => setUpdatingContract(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAgencyStatus} className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 140px)' }}>
+              {agencyError && (
+                <div className="alert alert-danger py-2 px-3 text-xs mb-3 d-flex align-items-center gap-2">
+                  <AlertTriangle size={14} className="flex-shrink-0" />
+                  <span>{agencyError}</span>
+                </div>
+              )}
+
+              {/* Booking Overview */}
+              <div className="p-3 rounded-2 border mb-3 bg-light-subtle">
+                <div className="d-flex align-items-center justify-content-between mb-1">
+                  <span className="fw-bold text-xs text-dark">{updatingContract.influencer_name} ({updatingContract.influencer_handle})</span>
+                  <span className="badge bg-primary-subtle text-primary font-monospace">Rs. {Number(updatingContract.agreed_fee || 0).toLocaleString()}</span>
+                </div>
+                <div className="text-xs text-muted mb-1">
+                  <strong>Campaign:</strong> {updatingContract.campaign_name || `Campaign #${updatingContract.campaign_id}`}
+                </div>
+                <div className="text-xs text-muted">
+                  <strong>Package:</strong> {updatingContract.package_title} — {updatingContract.deliverables}
+                </div>
+              </div>
+
+              {/* Status Select */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold text-xs mb-1 text-dark">
+                  Sponsorship Milestone Status <span className="text-danger">*</span>
+                </label>
+                <select
+                  className="form-select form-select-sm"
+                  value={agencyForm.status}
+                  onChange={(e) => setAgencyForm({ ...agencyForm, status: e.target.value })}
+                  required
+                >
+                  <option value="REQUEST_RECEIVED">1. REQUEST_RECEIVED (Brand submitted request)</option>
+                  <option value="IN_OUTREACH">2. IN_OUTREACH (Agency contacting creator manager)</option>
+                  <option value="IN_PRODUCTION">3. IN_PRODUCTION (Creator confirmed &amp; scripting)</option>
+                  <option value="COMPLETED">4. COMPLETED (Live video broadcasted &amp; link verified)</option>
+                  <option value="DECLINED">5. DECLINED (Creator unavailable / rejected)</option>
+                  <option value="CANCELLED">6. CANCELLED (Booking aborted)</option>
+                </select>
+              </div>
+
+              {/* Live Deliverable URL */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold text-xs mb-1 text-dark">
+                  Published Live Content Link / Proof URL (Optional / When Live)
+                </label>
+                <div className="input-group input-group-sm">
+                  <span className="input-group-text bg-light text-muted">
+                    <ExternalLink size={13} />
+                  </span>
+                  <input
+                    type="url"
+                    className="form-control"
+                    placeholder="https://youtube.com/watch?v=... or https://instagram.com/reel/..."
+                    value={agencyForm.submission_url}
+                    onChange={(e) => setAgencyForm({ ...agencyForm, submission_url: e.target.value })}
+                  />
+                </div>
+                <div className="form-text text-muted text-2xs mt-1" style={{ fontSize: '0.72rem' }}>
+                  Advertiser will be able to click and verify this link once status is Completed.
+                </div>
+              </div>
+
+              {/* Agency Notes */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold text-xs mb-1 text-dark">
+                  Agency Communication / Delivery Proof Notes
+                </label>
+                <textarea
+                  className="form-control form-control-sm"
+                  rows={3}
+                  placeholder="e.g. Creator confirmed scheduled release date for Friday evening. Sponsor link verified in video description."
+                  value={agencyForm.submission_notes}
+                  onChange={(e) => setAgencyForm({ ...agencyForm, submission_notes: e.target.value })}
+                />
+              </div>
+
+              <div className="d-flex align-items-center justify-content-end gap-2 pt-3 border-top">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary px-3"
+                  onClick={() => setUpdatingContract(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-sm btn-primary px-4 fw-semibold text-white d-inline-flex align-items-center gap-1.5"
+                  disabled={isUpdatingStatus}
+                >
+                  {isUpdatingStatus ? (
+                    <>
+                      <div className="spinner-border spinner-border-sm" role="status" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>Save Agency Status</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD / EDIT INFLUENCER MODAL (Admin only) */}
       {(editingCreator || isCreatingNew) && (
         <div
           className="modal-backdrop-ui"
@@ -1634,6 +2455,7 @@ export const InfluencersPage = () => {
         </div>
       )}
 
+      {/* DELETE CREATOR CONFIRMATION MODAL */}
       {deletingCreator && (
         <div
           className="modal-backdrop-ui"

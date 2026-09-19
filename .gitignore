@@ -1,15 +1,16 @@
 # Root .gitignore for Advertisement Space Booking & Campaign Management System
 
-# Environment Variables (Secrets)
+# Environment Variables & Secrets (Keep .env.example tracked)
 .env
 .env.*
 !.env.example
 *.local
 
-# Node / Frontend
+# Node.js / Frontend
 node_modules/
 dist/
 dist-ssr/
+*.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -30,7 +31,6 @@ ENV/
 .venv/
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -44,12 +44,18 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Databases & Local Instances
 instance/
+*.sqlite
 *.sqlite3
+*.db
 
 # Uploads & User Generated Content
 backend/uploads/*
 !backend/uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
 
 # IDE & Editor Configs
 .vscode/*
@@ -60,3 +66,4 @@ backend/uploads/*
 *~
 .DS_Store
 Thumbs.db
+
